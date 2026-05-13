@@ -12,41 +12,25 @@ node_modules/
 !.env.example
 
 # ===========================
-# Build outputs
-# ===========================
-dist/
-dist-ssr/
-
-# ===========================
 # Logs
 # ===========================
 logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
 
 # ===========================
-# Editor
+# Uploads (user-generated files)
 # ===========================
-.vscode/*
-!.vscode/extensions.json
-.idea/
+public/uploads/
+
+# ===========================
+# Prisma
+# ===========================
+prisma/migrations/
 
 # ===========================
 # OS files
 # ===========================
 .DS_Store
 Thumbs.db
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-
-# ===========================
-# Misc
-# ===========================
-*.local
