@@ -606,8 +606,8 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       // const stripeRes = await fetch("https://cap-stripewebhook-backend-production.up.railway.app/api/sendEmail/create-checkout-session", {
 
       ////////DEV Student Life////////
-      // const stripeRes = await fetch("https://cap-dev-backend-one.vercel.app/api/sendEmail/create-checkout-session", {
-      const stripeRes = await fetch("http://localhost:3000/api/sendEmail/create-checkout-session", {
+      const stripeRes = await fetch("https://cap-dev-backend-one.vercel.app/api/sendEmail/create-checkout-session", {
+      // const stripeRes = await fetch("http://localhost:3000/api/sendEmail/create-checkout-session", {
 
         ////////Production Student Life////////
         // const stripeRes = await fetch("https://cap-live-backend.vercel.app/api/sendEmail/create-checkout-session", {
