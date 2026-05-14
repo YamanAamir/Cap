@@ -273,6 +273,8 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
         selectedOptions.Type || getInitialType()
     );
 
+    // Flag section state
+    const [selectedFlag, setSelectedFlag] = useState(selectedOptions.Flag || null);
 
     // Define dynamic first options based on program
     const getFirstGoldColor = () => {
@@ -590,27 +592,31 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
 
 
 
+    // Static flag list for the Flag section
+    const staticFlags = [
+        { name: 'Danmark', icon: Denmark },
+        { name: 'Sweden', icon: Sweden },
+        { name: 'Palæstina', icon: Palestine },
+        { name: 'Tyrkiet', icon: Turkey },
+        { name: 'Pakistan', icon: Pakistan },
+        { name: 'Kurdistan', icon: Kurdistan },
+        { name: 'Irak', icon: Iraq },
+        { name: 'Iran', icon: Iran },
+        { name: 'Somalia', icon: Somalia },
+        { name: 'Somaliland', icon: Somaliland },
+        { name: 'Libanon', icon: Lebanon },
+        { name: 'Afghanistan', icon: Afghanistan },
+        { name: 'Albanien', icon: Albania },
+        { name: 'Serbien', icon: Serbia },
+        { name: 'Bosnien', icon: Bosnia },
+        { name: 'Marokko', icon: Morocco },
+        { name: 'Grønland', icon: Greenland },
+    ];
+
     // Define all options categorized by type and emblem
     const allTypeOptions = {
         Signature: {
             Guld: [
-                { name: 'Danmark', icon: Denmark },          // 1
-                { name: 'Sweden', icon: Sweden },            // 2
-                { name: 'Palæstina', icon: Palestine },      // 3
-                { name: 'Tyrkiet', icon: Turkey },           // 4
-                { name: 'Pakistan', icon: Pakistan },        // 5
-                { name: 'Kurdistan', icon: Kurdistan },      // 6
-                { name: 'Irak', icon: Iraq },                // 7
-                { name: 'Iran', icon: Iran },                // 8
-                { name: 'Somalia', icon: Somalia },          // 9
-                { name: 'Somaliland', icon: Somaliland },    // 10
-                { name: 'Libanon', icon: Lebanon },          // 11
-                { name: 'Afghanistan', icon: Afghanistan },  // 12
-                { name: 'Albanien', icon: Albania },         // 13
-                { name: 'Serbien', icon: Serbia },           // 14
-                { name: 'Bosnien', icon: Bosnia },           // 15
-                { name: 'Marokko', icon: Morocco },           // 15
-                { name: 'Grønland', icon: Greenland },
                 ...(getGoldEmblem() || []),
                 { name: 'F Key Guld', icon: FKeyGold },
                 { name: 'DNA Guld', icon: DnaGold },
@@ -640,23 +646,6 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
             ].filter(Boolean),
 
             Sølv: [
-                { name: 'Danmark', icon: Denmark },
-                { name: 'Sweden', icon: Sweden },
-                { name: 'Palæstina', icon: Palestine },
-                { name: 'Tyrkiet', icon: Turkey },
-                { name: 'Pakistan', icon: Pakistan },
-                { name: 'Kurdistan', icon: Kurdistan },
-                { name: 'Irak', icon: Iraq },
-                { name: 'Iran', icon: Iran },
-                { name: 'Somalia', icon: Somalia },
-                { name: 'Somaliland', icon: Somaliland },
-                { name: 'Libanon', icon: Lebanon },
-                { name: 'Afghanistan', icon: Afghanistan },
-                { name: 'Albanien', icon: Albania },
-                { name: 'Serbien', icon: Serbia },
-                { name: 'Bosnien', icon: Bosnia },
-                { name: 'Marokko', icon: Morocco },
-                { name: 'Grønland', icon: Greenland },
                 ...(getSilverEmblem() || []),
                 { name: 'F Key Sølv', icon: FKeySilver },
                 { name: 'DNA Sølv', icon: DnaSilver },
@@ -814,6 +803,8 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
             'Signature': 'StandardEmblem',
             'Prestige': 'PrestigeEmblem',
             'Stjernetegn': 'StjernetegnEmblem',
+            // PlayCanvas: same pattern as other kokarde modes; must exist in viewer script
+            'Flag': 'FlagEmblem',
         };
 
         const message = colorMap[selectedPrestige];
@@ -876,8 +867,6 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
 
 
     useEffect(() => {
-        let message = selectedType;
-
         const sendMessageToIframes = (msg) => {
             ['preview-iframe', 'preview-iframe2'].forEach((id) => {
                 const iframe = document.getElementById(id);
@@ -887,13 +876,20 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
             });
         };
 
-        sendMessageToIframes(message + " " + selectedEmblem.value);
+        // Country-flag mode: same string shape as Signature ("Teater Guld Guld") → "Kurdistan Guld"
+        if (selectedPrestige === 'Flag') {
+            if (!selectedFlag?.name) return;
+            sendMessageToIframes(`${selectedFlag.name} ${selectedEmblem.value}`);
+        } else {
+            sendMessageToIframes(`${selectedType} ${selectedEmblem.value}`);
+        }
+
         if (cameraTriggers.current["type"]) {
             sendMessageToIframes("type camera");
         } else {
             cameraTriggers.current["type"] = true;
         }
-    }, [selectedType, selectedEmblem]);
+    }, [selectedType, selectedEmblem, selectedPrestige, selectedFlag]);
 
     // Update local state when props change
     useEffect(() => {
@@ -922,6 +918,17 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
         }
     }, [selectedOptions.country]);
 
+    // Report flag changes to parent
+    useEffect(() => {
+        if (onOptionChange) {
+            onOptionChange('Flag', selectedFlag);
+        }
+    }, [selectedFlag]);
+
+    const handleFlagChange = (flag) => {
+        setSelectedFlag(prev => prev?.name === flag.name ? null : flag);
+    };
+
     const handleColorChange = (color) => {
         setSelectedColor(color);
     };
@@ -938,6 +945,10 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
     const handlePrestigeChange = (type) => {
         const currentBaseName = getBaseName(selectedType);
         setSelectedPrestige(type);
+
+        // Flag tab doesn't use allTypeOptions — just switch the tab
+        if (type === 'Flag') return;
+
         const newOptions = allTypeOptions[type]?.[selectedEmblem.name] || [];
 
         if (newOptions.length > 0) {
@@ -1068,12 +1079,12 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
                     <label className="text-sm font-semibold text-slate-700">Emblem</label>
                     <div className="flex items-center gap-2 mt-1">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {selectedPrestige}
+                            {selectedPrestige === 'Flag' ? (selectedFlag ? selectedFlag.name : 'Ingen flag valgt') : selectedPrestige}
                         </span>
                     </div>
                 </div>
-                <div className="flex space-x-3 flex-wrap">
-                    {['Signature', 'Prestige', 'Stjernetegn'].map((type) => (
+                <div className="flex space-x-3 flex-wrap gap-y-2">
+                    {['Signature', 'Prestige', 'Stjernetegn', 'Flag'].map((type) => (
                         <button
                             key={type}
                             onClick={() => handlePrestigeChange(type)}
@@ -1088,30 +1099,56 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
                 </div>
             </div>
 
-            {/* Type Selection */}
-            <div className="space-y-4 mt-4">
-                <div>
-                    <label className="text-sm font-semibold text-slate-700">Type</label>
-                    <p className="text-sm mt-1 text-slate-700">Valgt: {selectedType}</p>
+            {/* Type / Flag grid */}
+            {selectedPrestige === 'Flag' ? (
+                <div className="space-y-4 mt-4">
+                    <div>
+                        <label className="text-sm font-semibold text-slate-700">Flag</label>
+                        <p className="text-sm mt-1 text-slate-700">
+                            {selectedFlag ? `Valgt: ${selectedFlag.name}` : 'Ingen flag valgt'}
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                        {staticFlags.map((flag, index) => (
+                            <button
+                                key={index}
+                                onClick={() => handleFlagChange(flag)}
+                                title={flag.name}
+                                className={`w-15 h-15 border-2 rounded overflow-hidden hover:shadow-md
+                                    transition-all duration-200 flex items-center justify-center ${selectedFlag?.name === flag.name
+                                        ? 'border-blue-500 ring-2 ring-blue-200 ring-offset-2'
+                                        : 'border-slate-200 hover:border-blue-300'
+                                    }`}
+                            >
+                                <img src={flag.icon} className='w-40' alt={flag.name} />
+                            </button>
+                        ))}
+                    </div>
                 </div>
-
-                <div className="flex flex-wrap gap-3 ">
-                    {currentTypeOptions.map((type, index) => (
-                        <button
-                            key={index}
-                            onClick={() => handleTypeChange(type.name)}
-                            className={`w-15 h-15 border-2 rounded overflow-hidden hover:shadow-md 
-                                transition-all duration-200 flex items-center justify-center
-                                hover:from-red-100 hover:to-red-200 ${selectedType === type.name
-                                    ? 'border-blue-500 ring-2 ring-blue-200 ring-offset-2'
-                                    : 'border-slate-200 hover:border-blue-300'
-                                }`}
-                        >
-                            <img src={type.icon} className='w-40' alt={type.name} />
-                        </button>
-                    ))}
+            ) : (
+                <div className="space-y-4 mt-4">
+                    <div>
+                        <label className="text-sm font-semibold text-slate-700">Type</label>
+                        <p className="text-sm mt-1 text-slate-700">Valgt: {selectedType}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                        {currentTypeOptions.map((type, index) => (
+                            <button
+                                key={index}
+                                onClick={() => handleTypeChange(type.name)}
+                                className={`w-15 h-15 border-2 rounded overflow-hidden hover:shadow-md
+                                    transition-all duration-200 flex items-center justify-center
+                                    hover:from-red-100 hover:to-red-200 ${selectedType === type.name
+                                        ? 'border-blue-500 ring-2 ring-blue-200 ring-offset-2'
+                                        : 'border-slate-200 hover:border-blue-300'
+                                    }`}
+                            >
+                                <img src={type.icon} className='w-40' alt={type.name} />
+                            </button>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
         </>
     )
 }

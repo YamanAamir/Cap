@@ -213,6 +213,7 @@ const StudentDashboard = () => {
         Signature: 0,
         Prestige: 0,
         Stjernetegn: 0,
+        Flag: 0,
       },
       Emblem: {
         Guld: 0,
@@ -595,6 +596,7 @@ const StudentDashboard = () => {
         Signature: 0,
         Prestige: 0,
         Stjernetegn: 0,
+        Flag: 0,
       },
       Emblem: {
         Guld: 0,
@@ -734,6 +736,7 @@ const StudentDashboard = () => {
         Signature: 0,
         Prestige: 0,
         Stjernetegn: 0,
+        Flag: 0,
       },
       Emblem: {
         Guld: 0,
@@ -1111,6 +1114,7 @@ const StudentDashboard = () => {
         Signature: 0,
         Prestige: 0,
         Stjernetegn: 0,
+        Flag: 0,
       },
       Emblem: {
         Guld: 0,
@@ -1249,6 +1253,7 @@ const StudentDashboard = () => {
         Signature: 0,
         Prestige: 0,
         Stjernetegn: 0,
+        Flag: 0,
       },
       Emblem: {
         Guld: 0,
@@ -1607,6 +1612,7 @@ const StudentDashboard = () => {
         Signature: 0,
         Prestige: 0,
         Stjernetegn: 0,
+        Flag: 0,
       },
       Emblem: {
         Guld: 0,
@@ -1812,6 +1818,11 @@ const StudentDashboard = () => {
       selectedOptions.TILBEHØR.selectedFlags.forEach(flag => {
         if (flag.price) total += flag.price;
       });
+    }
+
+    // Add KOKARDE flag price (from Flag section)
+    if (selectedOptions.KOKARDE?.Flag?.price) {
+      total += selectedOptions.KOKARDE.Flag.price;
     }
 
     // Package base price
@@ -2066,6 +2077,7 @@ const StudentDashboard = () => {
             'Signature': 'StandardEmblem',
             'Prestige': 'PrestigeEmblem',
             'Stjernetegn': 'StjernetegnEmblem',
+            'Flag': 'FlagEmblem',
           };
           if (prestige && colorMap[prestige]) {
             send(colorMap[prestige]);
@@ -2081,9 +2093,12 @@ const StudentDashboard = () => {
             send(emblemMap[emblem.value]);
           }
 
-          // Type
+          // Type (Signature / Prestige / Stjernetegn) or country name when Kokarde mode is Flag
           const type = kokarde.Type || kokarde.selectedType;
-          if (type) {
+          const flagCountry = kokarde.Flag?.name;
+          if (prestige === 'Flag' && flagCountry) {
+            send(flagCountry + " " + (emblem?.value || "Guld"));
+          } else if (type) {
             send(type + " " + (emblem?.value || "Guld"));
           }
         }, 1000);
