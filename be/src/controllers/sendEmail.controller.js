@@ -758,12 +758,12 @@ const factoryOrderEmail = (orderData) => {
                                 <div style="font-size:16px;">${!selectedOptions.FOER['Silk Type'] ? 'Not Selected' : t(selectedOptions.FOER['Silk Type'])}</div>
                               </td>
                             </tr>`}
-                            ${!selectedOptions['Indvendigt foer billede'] ? '' : `
+                            ${!(selectedOptions.FOER?.['Indvendigt foer billede'] || selectedOptions['Indvendigt foer billede']) ? '' : `
                             <tr>
                               <td style="padding-top:20px; border-top: 1px dashed #cdcdcd; margin-top:10px;">
                                 <div style="font-size:14px; text-transform:uppercase; margin-bottom:10px; font-weight:bold; color: #4338ca;">Custom Inside Lining Photo:</div>
                                 <div style="border: 2px solid #ffffff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-radius: 12px; overflow: hidden; background-color: #ffffff; padding: 5px;">
-                                  <img src="${selectedOptions['Indvendigt foer billede']}" style="width: 100%; max-width: 400px; height: auto; display: block; border-radius: 8px;" alt="Lining Design" />
+                                  <img src="${selectedOptions.FOER?.['Indvendigt foer billede'] || selectedOptions['Indvendigt foer billede']}" style="width: 100%; max-width: 400px; height: auto; display: block; border-radius: 8px;" alt="Lining Design" />
                                 </div>
                               </td>
                             </tr>`}
