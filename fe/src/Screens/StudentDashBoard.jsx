@@ -38,6 +38,7 @@ import kosmetolog from "../Default/kosmetolog";
 import pædagog from "../Default/pædagog";
 import pau from "../Default/pau";
 import ernæringsassisten from "../Default/ernæringsassisten";
+import { getTilbehorForTier, syncTilbehorToIframes } from "../utils/tilbehorDefaults";
 
 const StudentDashboard = () => {
   const [activeMenu, setActiveMenu] = useState("KOKARDE");
@@ -151,53 +152,36 @@ const StudentDashboard = () => {
   };
 
   const [selectedOptions, setSelectedOptions] = useState(initialoption());
-
-  // When a package is selected, the accessories included in that package should automatically be selected as well
+  const prevPackageKeyRef = useRef(null);
 
   useEffect(() => {
-    if (packageName && isAppReady) {
-      setSelectedOptions((prev) => {
-        if (!prev.TILBEHØR) return prev;
+    if (!isAppReady) return;
 
-        // Only auto-select if they are still at default values to avoid overwriting user changes
-        const isDefault = prev.TILBEHØR.Hueæske === "Standard" && prev.TILBEHØR.Huekuglepen === "No";
-        if (!isDefault) return prev;
+    const tier =
+      packageName === "luksus" || packageName === "premium"
+        ? packageName
+        : "standard";
+    const packageKey = `${program}-${tier}`;
+    if (prevPackageKeyRef.current === packageKey) return;
+    prevPackageKeyRef.current = packageKey;
 
-        const newTilbehor = { ...prev.TILBEHØR };
+    const baseTilbehor = initialoption().TILBEHØR || {};
+    const newTilbehor = getTilbehorForTier(tier, baseTilbehor);
 
-        if (packageName === "luksus") {
-          newTilbehor.Hueæske = "Luksus æske";
-          newTilbehor.Huekuglepen = "Yes";
-          newTilbehor.Silkepude = "Yes";
-          newTilbehor["Ekstra korkarde"] = "Yes";
-          newTilbehor.Handsker = "Yes";
-          newTilbehor["Luksus champagneglas"] = "Yes";
-          newTilbehor.Fløjte = "Yes";
-        } else if (packageName === "premium") {
-          newTilbehor.Hueæske = "Premium æske";
-          newTilbehor["Premium æske"] = "Grøn velour";
-          newTilbehor.Huekuglepen = "Yes";
-          newTilbehor.Silkepude = "Yes";
-          newTilbehor["Ekstra korkarde"] = "Yes";
-          newTilbehor.Handsker = "Yes";
-          newTilbehor["Store kuglepen"] = "Yes";
-          newTilbehor["Smart Tag"] = "Yes";
-          newTilbehor.Lyskugle = "Yes";
-          newTilbehor["Luksus champagneglas"] = "Yes";
-          newTilbehor.Fløjte = "Yes";
-          newTilbehor.Trompet = "Yes";
-          newTilbehor.Bucketpins = "Yes";
-        }
+    setSelectedOptions((prev) => ({
+      ...prev,
+      TILBEHØR: newTilbehor,
+    }));
 
-        return {
-          ...prev,
-          TILBEHØR: newTilbehor
-        };
-      });
+    if (activeMenuRef.current === "TILBEHØR") {
+      syncTilbehorToIframes(newTilbehor);
     }
-  }, [packageName, isAppReady]);
+  }, [packageName, isAppReady, program]);
 
-  // When a package is selected, the accessories included in that package should automatically be selected as well
+  useEffect(() => {
+    if (!isAppReady || activeMenu !== "TILBEHØR") return;
+    syncTilbehorToIframes(selectedOptions.TILBEHØR);
+  }, [activeMenu, isAppReady]);
 
   const standardPrices = {
     KOKARDE: {
@@ -1849,13 +1833,13 @@ const StudentDashboard = () => {
   ];
 
   // Generic handler for all option changes
-  const handleOptionChange = useCallback((section, key, value) => {
+  const handleOptionChange = useCallback((section, keyOrValue, maybeValue) => {
     setSelectedOptions((prev) => ({
       ...prev,
-      [section]: {
-        ...prev[section],
-        [key]: value,
-      },
+      [section]:
+        maybeValue !== undefined
+          ? { ...prev[section], [keyOrValue]: maybeValue }
+          : keyOrValue,
     }));
   }, []);
 
@@ -2013,7 +1997,6 @@ const StudentDashboard = () => {
             : "KnapGuld"
         );
 
-        // ===== FOER COMPONENT – YEHI SABSE ZAROORI HAI TUMHARE LIYE AB =====
         const foer = selectedOptions.FOER || {};
 
         // Svederem
@@ -2112,7 +2095,7 @@ const StudentDashboard = () => {
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, [program, selectedOptions]); // ← selectedOptions dependency zaroori hai!
+  }, [program, selectedOptions]);
 
   // Add this useEffect to debug
   useEffect(() => {
@@ -2323,16 +2306,11 @@ const StudentDashboard = () => {
               )}
               {activeMenu === "TILBEHØR" && (
                 <Accessories
-                  selectedOptions={selectedOptions.TILBEHØR}
-                  onOptionChange={(key, value) =>
-                    handleOptionChange("TILBEHØR", key, value)
-                  }
+                  selectedOptions={selectedOptions}
+                  onOptionChange={handleOptionChange}
                   errors={errors}
                   setErrors={setErrors}
-                  // When a package is selected, the accessories included in that package should automatically be selected as well
                   pakke={packageName}
-                // When a package is selected, the accessories included in that package should automatically be selected as well
-
                 />
               )}
               {activeMenu === "STØRRELSE" && (
@@ -2599,12 +2577,11 @@ const StudentDashboard = () => {
                   )}
                   {activeMenu === "TILBEHØR" && (
                     <Accessories
-                      selectedOptions={selectedOptions.TILBEHØR}
-                      onOptionChange={(key, value) =>
-                        handleOptionChange("TILBEHØR", key, value)
-                      }
+                      selectedOptions={selectedOptions}
+                      onOptionChange={handleOptionChange}
                       errors={errors}
                       setErrors={setErrors}
+                      pakke={packageName}
                     />
                   )}
                   {activeMenu === "STØRRELSE" && (

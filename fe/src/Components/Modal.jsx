@@ -507,7 +507,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
     return Object.fromEntries(
       Object.entries(filtered).filter(([key, value]) => {
 
-        if (key === "Ingen" || key === "selectedFlags") return false;
+        if (key === "Ingen" || key === "selectedFlags" || key === "Indvendigt foer billede layout") return false;
         if (value === null || value === undefined) return false;
         if (Array.isArray(value)) return value.length > 0;
         if (typeof value === "object" && (!value.name || value.name === "")) return false;
@@ -578,7 +578,11 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       packageName: packageName,
       //zee//
       program: program,
-      liningPhoto: selectedOptions.FOER?.["Indvendigt foer billede"] || null,
+      liningPhoto:
+        (typeof selectedOptions.FOER?.['Indvendigt foer billede'] === 'string' &&
+        selectedOptions.FOER['Indvendigt foer billede'].startsWith('data:image')
+          ? selectedOptions.FOER['Indvendigt foer billede']
+          : null),
       //zee//
     };
 

@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getOrder, updateOrderStatus } from '../services/auth.service';
 import { Card, CardHeader, CardTitle, CardContent, Button, Badge } from '../components/ui';
-import { 
-  ChevronLeft, Loader2, User, Mail, CreditCard, Package, Calendar, 
-  MapPin, Phone, School, Truck, Notebook as Notes, Settings2, 
-  Info, AlertCircle, Code, CheckCircle2, XCircle, Clock 
+import {
+  ChevronLeft, Loader2, User, Mail, CreditCard, Package, Calendar,
+  MapPin, Phone, School, Truck, Notebook as Notes, Settings2,
+  Info, AlertCircle, Code, CheckCircle2, XCircle, Clock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -22,6 +22,7 @@ const OrderDetailPage = () => {
     setError(null);
     try {
       const data = await getOrder(id);
+      console.log("dataasasasas", data);
       setOrder(data);
     } catch (err) {
       console.error('Failed to fetch order details:', err);
@@ -98,6 +99,10 @@ const OrderDetailPage = () => {
 
   const customerDetails = safeParseJSON(order.customerDetails);
   const selectedOptions = safeParseJSON(order.selectedOptions);
+  const liningImageBase64 =
+    order?.selectedOptions?.FOER?.['Indvendigt foer billede']?.[0]?.url ||
+    selectedOptions?.FOER?.['Indvendigt foer billede'] ||
+    null;
 
   const InfoItem = ({ label, value, icon: Icon, className }) => (
     <div className={cn("flex flex-col space-y-1", className)}>
@@ -155,16 +160,16 @@ const OrderDetailPage = () => {
         <div className="flex items-center gap-2">
           {order.status === 'PENDING' && (
             <>
-              <Button 
-                onClick={() => handleStatusUpdate('ACCEPTED')} 
+              <Button
+                onClick={() => handleStatusUpdate('ACCEPTED')}
                 disabled={updating}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl px-6"
               >
                 {updating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
                 Accept Order
               </Button>
-              <Button 
-                onClick={() => handleStatusUpdate('REJECTED')} 
+              <Button
+                onClick={() => handleStatusUpdate('REJECTED')}
                 disabled={updating}
                 variant="outline"
                 className="border-red-200 text-red-600 hover:bg-red-50 font-bold rounded-xl px-6"
@@ -175,8 +180,8 @@ const OrderDetailPage = () => {
             </>
           )}
           {order.status !== 'PENDING' && (
-            <Button 
-              onClick={() => handleStatusUpdate('PENDING')} 
+            <Button
+              onClick={() => handleStatusUpdate('PENDING')}
               disabled={updating}
               variant="ghost"
               className="text-gray-400 hover:text-primary font-bold"
@@ -252,7 +257,7 @@ const OrderDetailPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-8">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left mb-8">
+              {/* <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left mb-8">
                 {Object.entries(selectedOptions || {}).map(([key, value]) => {
                   if (typeof value === 'object' && value !== null && !Array.isArray(value)) return null;
                   const displayValue = Array.isArray(value) ? value.join(', ') : value;
@@ -267,28 +272,28 @@ const OrderDetailPage = () => {
                     </div>
                   );
                 })}
-              </div>
-              {selectedOptions['Indvendigt foer billede'] && (
-                <div className="space-y-4 mb-8 pt-6 border-t border-gray-100">
+              </div> */}
+              {liningImageBase64?.startsWith?.('data:image') && (
+                <div className="space-y-4 ">
                   <div className="flex items-center space-x-2 text-primary font-black uppercase tracking-widest text-[10px]">
                     <Package className="h-4 w-4" />
                     <span>Custom Inside Lining (Customer Upload)</span>
                   </div>
-                  <div className="relative group max-w-lg overflow-hidden rounded-2xl border-4 border-white shadow-xl ring-1 ring-black/5">
-                    <img 
-                      src={selectedOptions['Indvendigt foer billede']} 
-                      alt="Inside Lining" 
-                      className="w-full h-auto object-cover transition-transform group-hover:scale-105 duration-700" 
+                  <div className="relative group max-w-lg overflow-hidden rounded-2xl shadow-xl ring-1 ring-black/5">
+                    <img
+                      src={liningImageBase64}
+                      alt="Inside Lining"
+                      className="w-full h-auto object-cover transition-transform group-hover:scale-105 duration-700"
                     />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                       <Button variant="outline" className="text-white border-white hover:bg-white/20 font-bold" onClick={() => window.open(selectedOptions['Indvendigt foer billede'])}>
-                          View Full Image
-                       </Button>
-                    </div>
+                    {/* <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Button variant="outline" className="text-white border-white hover:bg-white/20 font-bold" onClick={() => window.open(liningImageBase64)}>
+                        View Full Image
+                      </Button>
+                    </div> */}
                   </div>
                 </div>
               )}
-              <div className="space-y-4 text-left pt-6 border-t border-gray-100">
+              <div className="space-y-4 text-left pt-6 ">
                 <div className="flex items-center space-x-2 text-gray-400">
                   <Code className="h-4 w-4" />
                   <span className="text-[10px] font-black uppercase tracking-widest text-left">Meta Registry</span>

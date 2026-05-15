@@ -109,19 +109,65 @@ const Shade = ({ selectedOptions = {}, onOptionChange }) => {
     useEffect(() => { onOptionChange('Materiale', selectedMaterialType); }, [selectedMaterialType]);
     useEffect(() => { onOptionChange('Skyggebånd', selectedShadowTapeColor); }, [selectedShadowTapeColor]);
 
+    // useEffect(() => {
+    //     const colorMap = { 'mat': 'Skygge:Shiny', 'shiny': 'Skygge:Blank', 'glimmer': 'Skygge:Shimmer', 'shimmer': 'Skygge:Glimmer' };
+    //     const message = colorMap[selectedShadeType.toLowerCase()];
+    //     if (message) {
+    //         ['preview-iframe', 'preview-iframe2'].forEach(id => {
+    //             const iframe = document.getElementById(id);
+    //             if (iframe?.contentWindow) {
+    //                 iframe.contentWindow.postMessage(message, "*");
+    //                 if (cameraTriggers.current["shade"]) {
+    //                     iframe.contentWindow.postMessage("shade camera", "*");
+    //                 }
+    //             }
+    //         });
+    //         cameraTriggers.current["shade"] = true;
+    //     }
+    // }, [selectedShadeType]);
+
     useEffect(() => {
-        const colorMap = { 'mat': 'Skygge:Shiny', 'shiny': 'Skygge:Blank', 'glimmer': 'Skygge:Shimmer', 'shimmer': 'Skygge:Glimmer' };
+        const colorMap = {
+            'mat': 'Skygge:Shiny',
+            'shiny': 'Skygge:Blank',
+            'glimmer': 'Skygge:Shimmer',
+            'shimmer': 'Skygge:Glimmer'
+        };
+
         const message = colorMap[selectedShadeType.toLowerCase()];
+
         if (message) {
+
+            // NEW: shimmer/glimmer pe material auto none
+            if (
+                selectedShadeType.toLowerCase() === 'glimmer' ||
+                selectedShadeType.toLowerCase() === 'shimmer'
+            ) {
+                setSelectedMaterialType('Uden kant');
+            }
+
             ['preview-iframe', 'preview-iframe2'].forEach(id => {
                 const iframe = document.getElementById(id);
+
                 if (iframe?.contentWindow) {
+
+                    // Existing shade message
                     iframe.contentWindow.postMessage(message, "*");
+
+                    // NEW: send material none message
+                    if (
+                        selectedShadeType.toLowerCase() === 'glimmer' ||
+                        selectedShadeType.toLowerCase() === 'shimmer'
+                    ) {
+                        iframe.contentWindow.postMessage('SkyggeMateriale:none', "*");
+                    }
+
                     if (cameraTriggers.current["shade"]) {
                         iframe.contentWindow.postMessage("shade camera", "*");
                     }
                 }
             });
+
             cameraTriggers.current["shade"] = true;
         }
     }, [selectedShadeType]);

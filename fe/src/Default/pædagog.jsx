@@ -24,9 +24,9 @@ const Pædagog = {
   },
   BETRÆK: {
     Farve: "Purple",
-    Kantbånd: "Gold",
+    Kantbånd: "NONE",
     Stjerner: "NONE",
-    Topkant: "Guld"
+    Topkant: "NONE"
   },
   SKYGGE: {
     Materiale: "Uden kant",
