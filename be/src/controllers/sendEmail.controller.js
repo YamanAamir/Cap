@@ -2963,14 +2963,31 @@ const capOrderAdminEmail = (orderData) => {
                                 </table>
                               </td>
                             </tr>
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                                  <tr><td style="font-size:14px; text-transform:uppercase; padding-bottom:5px;">Forring</td></tr>
-                                  <tr><td style="font-size:16px;">${selectedOptions.FOER.Foer}</td></tr>
-                                </table>
-                              </td>
-                            </tr>
+                           <tr>
+  <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
+    <table width="100%" border="0" cellpadding="0" cellspacing="0">
+      <tr>
+        <td style="font-size:14px; text-transform:uppercase; padding-bottom:5px;">
+          Indvendigt foer billede
+        </td>
+      </tr>
+      <tr>
+        <td style="font-size:16px;">
+          ${selectedOptions?.FOER?.['Indvendigt foer billede']
+      ? `
+                <img 
+                  src="${selectedOptions?.FOER?.['Indvendigt foer billede']}" 
+                  alt="Custom Inside Lining Photo"
+                  style="width:100%; max-width:400px; height:auto; display:block; border-radius:10px;"
+                />
+              `
+      : 'Ingen billede uploaded'
+    }
+        </td>
+      </tr>
+    </table>
+  </td>
+</tr>
                             ${!selectedOptions.FOER || !selectedOptions.FOER['Satin Type'] ? '' : `
                             <tr>
                               <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
