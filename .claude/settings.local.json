@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir \"d:\\\\Cap\\\\fe\\\\public\\\\alphabets\" /s /b)",
+      "PowerShell(Get-ChildItem \"d:\\\\Cap\\\\fe\\\\public\\\\alphabets\" -Recurse -Force | ForEach-Object { $_.FullName })"
+    ]
+  }
+}

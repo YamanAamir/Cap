@@ -1,4 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import {
+    generateAllEmbroideryMaps,
+    preloadAlphabetMaps,
+    sanitizeEmbroideryLetters,
+    sendEmbroideryMapsToIframes,
+} from '../utils/embroideryAlphabet';
 import coverColorOptionsimg2 from '../assets/cover images/none.webp';
 import matteleather from '../assets/button images/matteleather.webp';
 import shinyblack from '../assets/button images/shinyblack.webp';
@@ -79,8 +85,6 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
     const [selectedYear, setSelectedYear] = useState(
         selectedOptions.år || currentYear.toString()
     );
-    // Hidden canvases for generating Base-64 image of embroidery text
-    const canvasRef = useRef(document.createElement('canvas'));
     const yearCanvasRef = useRef(document.createElement('canvas'));
     // --- COLOR MAPPING: Broderi farve → Hex Code ---
     const getTextColorHex = () => {
@@ -98,40 +102,31 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
         };
         return map[selectedEmbroideryColor] || '#000000';
     };
-    const handleEmbroideryTextChange = async (text) => {
-        setEmbroideryText(text);
-        onOptionChange("Broderi foran", text);
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext("2d");
-        const fontSize = 150; // always same
-        const fontFamily = "lucidaCalligraphyItalic"; // your font
-        // --- STEP 1: Set font temporarily for measurement ---
-        ctx.font = `italic ${fontSize}px ${fontFamily}`;
-        // --- STEP 2: Dynamic width + fixed height ---
-        canvas.width = 2800; // 200px padding
-        canvas.height = 512;
-        // --- STEP 3: Font resets after resizing → set again ---
-        ctx.font = `italic ${fontSize}px ${fontFamily}`;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#fff";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-        // --- STEP 4: Draw clean centered text ---
-        ctx.fillText(text || " ", canvas.width / 2, canvas.height / 2);
-        // --- STEP 5: Export ---
-        const base64Image = canvas.toDataURL("image/png", 10);
-        const message = `BroderiImage:${base64Image}`;
-        ["preview-iframe", "preview-iframe2"].forEach((id) => {
-            const iframe = document.getElementById(id);
-            if (iframe?.contentWindow) {
-                iframe.contentWindow.postMessage(message, "*");
-            }
-        });
+    const embroideryTimeoutRef = useRef(null);
+
+    const handleEmbroideryTextChange = (text) => {
+        const upperText = sanitizeEmbroideryLetters(text, 20);
+        setEmbroideryText(upperText);
+        onOptionChange('Broderi foran', upperText);
+
+        clearTimeout(embroideryTimeoutRef.current);
+        embroideryTimeoutRef.current = setTimeout(async () => {
+            const { text: renderedText, maps } = await generateAllEmbroideryMaps(upperText);
+            sendEmbroideryMapsToIframes({ text: renderedText, maps });
+            console.log("Embroidery text updated:", maps);
+        }, 300);
     };
+
     useEffect(() => {
-        handleEmbroideryTextChange(embroideryText);
+        preloadAlphabetMaps();
+    }, []);
+
+    // color change: resend current text maps without touching state
+    useEffect(() => {
+        if (!embroideryText) return;
+        generateAllEmbroideryMaps(embroideryText).then(({ text: renderedText, maps }) => {
+            sendEmbroideryMapsToIframes({ text: renderedText, maps });
+        });
     }, [selectedEmbroideryColor]);
     ///zee///
     // Standard package mein fancy hagerem block karne ke liye
@@ -312,10 +307,6 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
         sendMessageToIframes(message);
         if (cameraTriggers.current['knapfarve']) { sendMessageToIframes("knapfarve camera") } else { cameraTriggers.current['knapfarve'] = true }
     }, [selectedButtonColor])
-    useEffect(() => {
-        // Use the new handler to ensure Broderi foran is always set
-        handleEmbroideryTextChange(embroideryText);
-    }, [embroideryText])
     // NEW FUNCTION: Generate 512×512 Year Image
     const generateYearImage = (yearText) => {
         if (!yearText || yearText === 'Ingen') {
