@@ -111,9 +111,8 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
 
         clearTimeout(embroideryTimeoutRef.current);
         embroideryTimeoutRef.current = setTimeout(async () => {
-            const { text: renderedText, maps } = await generateAllEmbroideryMaps(upperText);
-            sendEmbroideryMapsToIframes({ text: renderedText, maps });
-            console.log("Embroidery text updated:", maps);
+            const result = await generateAllEmbroideryMaps(upperText);
+            sendEmbroideryMapsToIframes(result);
         }, 300);
     };
 
@@ -124,8 +123,8 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
     // color change: resend current text maps without touching state
     useEffect(() => {
         if (!embroideryText) return;
-        generateAllEmbroideryMaps(embroideryText).then(({ text: renderedText, maps }) => {
-            sendEmbroideryMapsToIframes({ text: renderedText, maps });
+        generateAllEmbroideryMaps(embroideryText).then((result) => {
+            sendEmbroideryMapsToIframes(result);
         });
     }, [selectedEmbroideryColor]);
     ///zee///
