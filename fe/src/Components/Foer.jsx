@@ -354,19 +354,19 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program }) 
         const photos = liningPhotosRef.current;
         const imgs = imageObjectsRef.current;
 
-        if (photos.length === 0) {
-            const emptyImageBase64 =
-                'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
-            lastLiningHashRef.current = '';
-            onOptionChange(LINING_LAYOUT_KEY, []);
-            onOptionChange(LINING_IMAGE_KEY, '');
-            sendMessage(`Innerlining:${emptyImageBase64}`);
-            if (withCamera && !liningCameraSentRef.current) {
-                sendMessage('liningphoto camera');
-                liningCameraSentRef.current = true;
-            }
-            return;
-        }
+        // if (photos.length === 0) {
+        //     const emptyImageBase64 =
+        //         'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+        //     lastLiningHashRef.current = '';
+        //     onOptionChange(LINING_LAYOUT_KEY, []);
+        //     onOptionChange(LINING_IMAGE_KEY, '');
+        //     sendMessage(`Innerlining:${emptyImageBase64}`);
+        //     if (withCamera && !liningCameraSentRef.current) {
+        //         sendMessage('liningphoto camera');
+        //         liningCameraSentRef.current = true;
+        //     }
+        //     return;
+        // }
 
         if (!photos.every((p) => imgs[p.id])) return;
 

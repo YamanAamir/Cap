@@ -173,24 +173,47 @@ const Shade = ({ selectedOptions = {}, onOptionChange }) => {
     }, [selectedShadeType]);
 
     useEffect(() => {
-        const colorMap = { 'uden kant': 'SkyggeMateriale:none', 'med kant': 'SkyggeMateriale:Med kant' };
+
+        // ALWAYS NONE for Glimmer/Shimmer
+        if (
+            selectedShadeType === 'Glimmer' ||
+            selectedShadeType === 'Shimmer'
+        ) {
+
+            ['preview-iframe', 'preview-iframe2'].forEach(id => {
+                const iframe = document.getElementById(id);
+
+                if (iframe?.contentWindow) {
+                    iframe.contentWindow.postMessage('SkyggeMateriale:none', "*");
+                }
+            });
+
+            return;
+        }
+
+        const colorMap = {
+            'uden kant': 'SkyggeMateriale:none',
+            'med kant': 'SkyggeMateriale:Med kant'
+        };
+
         const message = colorMap[selectedMaterialType.toLowerCase()];
 
-        const sendMessage = (msg) => {
-            if (msg) {
-                ['preview-iframe', 'preview-iframe2'].forEach(id => {
-                    const iframe = document.getElementById(id);
-                    if (iframe?.contentWindow) {
-                        iframe.contentWindow.postMessage(msg, "*");
-                        if (cameraTriggers.current["shade2"]) {
-                            iframe.contentWindow.postMessage("shade camera", "*");
-                        }
+        if (message) {
+            ['preview-iframe', 'preview-iframe2'].forEach(id => {
+                const iframe = document.getElementById(id);
+
+                if (iframe?.contentWindow) {
+                    iframe.contentWindow.postMessage(message, "*");
+
+                    if (cameraTriggers.current["shade2"]) {
+                        iframe.contentWindow.postMessage("shade camera", "*");
                     }
-                });
-                cameraTriggers.current["shade2"] = true;
-            }
-        };
-        sendMessage(message);
+                }
+            });
+
+            cameraTriggers.current["shade2"] = true;
+        }
+
     }, [selectedMaterialType, selectedShadeType]);
 
     useEffect(() => {
@@ -261,10 +284,26 @@ const Shade = ({ selectedOptions = {}, onOptionChange }) => {
     };
 
     useEffect(() => {
+
+        // FORCE none on Glimmer/Shimmer
+        if (
+            selectedShadeType === 'Glimmer' ||
+            selectedShadeType === 'Shimmer'
+        ) {
+            setSelectedMaterialType('Uden kant');
+            onOptionChange('Materiale', 'Uden kant');
+            return;
+        }
+
         const materialOptions = getMaterialOptions();
-        if (materialOptions.length > 0 && !materialOptions.includes(selectedMaterialType)) {
+
+        if (
+            materialOptions.length > 0 &&
+            !materialOptions.includes(selectedMaterialType)
+        ) {
             setSelectedMaterialType(materialOptions[0]);
         }
+
     }, [selectedShadeType]);
 
     const shadeTypeOptions = [
