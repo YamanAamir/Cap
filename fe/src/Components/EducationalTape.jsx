@@ -112,7 +112,7 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
         clearTimeout(embroideryTimeoutRef.current);
         embroideryTimeoutRef.current = setTimeout(async () => {
             const result = await generateAllEmbroideryMaps(upperText);
-            sendEmbroideryMapsToIframes(result);
+            sendEmbroideryMapsToIframes('front',result);
         }, 300);
     };
 
@@ -124,7 +124,7 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
     useEffect(() => {
         if (!embroideryText) return;
         generateAllEmbroideryMaps(embroideryText).then((result) => {
-            sendEmbroideryMapsToIframes(result);
+            sendEmbroideryMapsToIframes('front',result);
         });
     }, [selectedEmbroideryColor]);
     ///zee///

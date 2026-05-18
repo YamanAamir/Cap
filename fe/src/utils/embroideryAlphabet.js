@@ -128,7 +128,7 @@ export async function generateAllEmbroideryMaps(text) {
 
 // 4. send 5 stitched maps as separate postMessages (like YearImage)
 // format: "EmbroideryBasecolor:<base64>", "EmbroideryNormal:<base64>", ...
-export function sendEmbroideryMapsToIframes(payload) {
+export function sendEmbroideryMapsToIframes(prefix, payload) {
     const ids = ['preview-iframe', 'preview-iframe2'];
 
     const send = (msg) => {
@@ -139,10 +139,10 @@ export function sendEmbroideryMapsToIframes(payload) {
         });
     };
 
-    if (payload.basecolor) send(`frontEmbroideryBasecolor:${payload.basecolor}`);
-    if (payload.normal) send(`frontEmbroideryNormal:${payload.normal}`);
-    if (payload.roughness) send(`frontEmbroideryRoughness:${payload.roughness}`);
-    if (payload.height) send(`frontEmbroideryHeight:${payload.height}`);
-    if (payload.ambient) send(`frontEmbroideryAmbient:${payload.ambient}`);
-    if (payload.opacity) send(`frontEmbroideryOpacity:${payload.opacity}`);
+    if (payload.basecolor) send(`${prefix}EmbroideryBasecolor:${payload.basecolor}`);
+    if (payload.normal) send(`${prefix}EmbroideryNormal:${payload.normal}`);
+    if (payload.roughness) send(`${prefix}EmbroideryRoughness:${payload.roughness}`);
+    if (payload.height) send(`${prefix}EmbroideryHeight:${payload.height}`);
+    if (payload.ambient) send(`${prefix}EmbroideryAmbient:${payload.ambient}`);
+    if (payload.opacity) send(`${prefix}EmbroideryOpacity:${payload.opacity}`);
 }
