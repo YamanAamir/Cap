@@ -1,9 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import noneImg from '../assets/cover images/none.webp';
+import {
+    generateAllEmbroideryMaps,
+    preloadAlphabetMaps,
+    sanitizeEmbroideryLetters,
+    sendEmbroideryMapsToIframes,
+} from '../utils/embroideryAlphabet';
 
 const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke }) => {
     // Default value functions
     const cameraTriggers = useRef({});
+    const nameTimeoutRef = useRef(null);
+    const schoolTimeoutRef = useRef(null);
     const getDefaultNameEmbroideryColor = () => {
         switch (program?.toLowerCase()) {
             case 'hhx': return 'HHX';
@@ -40,9 +48,9 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke }) =>
         selectedOptions['Top broderi'] || 'Ingen'
     );
 
-    // Canvas refs
-    const nameCanvasRef = useRef(document.createElement('canvas'));
-    const schoolCanvasRef = useRef(document.createElement('canvas'));
+    useEffect(() => {
+        preloadAlphabetMaps();
+    }, []);
 
     // --- COLOR MAPPING ---
     const getNameColorHex = () => {
@@ -70,106 +78,132 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke }) =>
         return map[selectedSchoolEmbroideryColor] || '#ffffff';
     };
 
-    // --- Render text to canvas and send Base64 (including empty case) ---
-    const renderTextToCanvas = (text, colorHex, canvasRef, messagePrefix) => {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext("2d");
 
-        // If empty text
-        if (!text || text.trim() === "") {
-            canvas.width = 1;
-            canvas.height = 1;
-            ctx.clearRect(0, 0, 1, 1);
-            const emptyBase64 = canvas.toDataURL("image/png");
-            const message = messagePrefix + emptyBase64;
-
-            ["preview-iframe", "preview-iframe2"].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(message, "*");
-                }
-            });
-            return;
-        }
-
-        // --- FIXED FONT SIZE ---
-        const fontSize = 150;
-        const fontFamily = "lucidaCalligraphyItalic"; // 🔥 your downloaded font
-
-        // STEP 1 — temporarily set font to measure width
-        ctx.font = `italic ${fontSize}px ${fontFamily}`;
-
-        // STEP 2 — dynamic width according to text
-        canvas.width = 5200;
-        canvas.height = 512; // fixed height
-
-        // STEP 3 — canvas resize resets context → apply font again!
-        ctx.font = `italic ${fontSize}px ${fontFamily}`;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // styling
-        ctx.fillStyle = "#ffffff";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-
-        // STEP 4 — draw clean centered text
-        ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-
-        // STEP 5 — export
-        const base64Image = canvas.toDataURL("image/png", 10);
-        const message = messagePrefix + base64Image;
-
-        ["preview-iframe", "preview-iframe2"].forEach((id) => {
-            const iframe = document.getElementById(id);
-            if (iframe?.contentWindow) {
-                iframe.contentWindow.postMessage(message, "*");
-            }
-        });
-    };
 
 
     // --- Handlers ---
     const handleNameTextChange = (text) => {
-        setNameEmbroideryText(text);
-        onOptionChange('Navne broderi', text);
-        renderTextToCanvas(text, getNameColorHex(), nameCanvasRef, 'NameBroderiImage');
+        const clean = sanitizeEmbroideryLetters(text, 26);
+
+        setNameEmbroideryText(clean);
+        onOptionChange('Navne broderi', clean);
+
+        clearTimeout(nameTimeoutRef.current);
+
+        nameTimeoutRef.current = setTimeout(async () => {
+            const result = await generateAllEmbroideryMaps(clean);
+
+            sendEmbroideryMapsToIframes(
+                'backTop',
+                result
+            );
+        }, 300);
     };
 
     const handleSchoolTextChange = (text) => {
-        setSchoolEmbroideryText(text);
-        onOptionChange('Skolebroderi', text);
-        renderTextToCanvas(text, getSchoolColorHex(), schoolCanvasRef, 'SchoolBroderiImage');
+        const clean = sanitizeEmbroideryLetters(text, 35);
+
+        setSchoolEmbroideryText(clean);
+        onOptionChange('Skolebroderi', clean);
+
+        clearTimeout(schoolTimeoutRef.current);
+
+        schoolTimeoutRef.current = setTimeout(async () => {
+            const result = await generateAllEmbroideryMaps(clean);
+
+            sendEmbroideryMapsToIframes(
+                'backBottom',
+                result
+            );
+        }, 300);
     };
 
     // Re-render on color change
     useEffect(() => {
-        renderTextToCanvas(nameEmbroideryText, getNameColorHex(), nameCanvasRef, 'NameBroderiImage');
+        if (!nameEmbroideryText) return;
+
+        generateAllEmbroideryMaps(nameEmbroideryText)
+            .then((result) => {
+                sendEmbroideryMapsToIframes(
+                    'backTop',
+                    result
+                );
+            });
+
     }, [selectedNameEmbroideryColor]);
 
     useEffect(() => {
-        if (ingenButton) {
-            renderTextToCanvas('', getSchoolColorHex(), schoolCanvasRef, 'SchoolBroderiImage');
-        } else {
-            renderTextToCanvas(schoolEmbroideryText, getSchoolColorHex(), schoolCanvasRef, 'SchoolBroderiImage');
-        }
-    }, [selectedSchoolEmbroideryColor, ingenButton]);
 
-    // Initial render on mount
-    useEffect(() => {
-        renderTextToCanvas(nameEmbroideryText, getNameColorHex(), nameCanvasRef, 'NameBroderiImage');
-        renderTextToCanvas(ingenButton ? '' : schoolEmbroideryText, getSchoolColorHex(), schoolCanvasRef, 'SchoolBroderiImage');
-    }, []);
+        if (ingenButton) {
+            sendEmbroideryMapsToIframes('backBottom', {
+                text: '',
+                basecolor: null,
+                normal: null,
+                roughness: null,
+                height: null,
+                ambient: null,
+                opacity: null
+            });
+
+            return;
+        }
+
+        if (!schoolEmbroideryText) return;
+
+        generateAllEmbroideryMaps(schoolEmbroideryText)
+            .then((result) => {
+                sendEmbroideryMapsToIframes(
+                    'backBottom',
+                    result
+                );
+            });
+
+    }, [
+        selectedSchoolEmbroideryColor,
+        ingenButton
+    ]);
 
     // "Ingen" button handling
     useEffect(() => {
         onOptionChange('Ingen', ingenButton);
         if (ingenButton) {
             setSchoolEmbroideryText('');
-            renderTextToCanvas('', getSchoolColorHex(), schoolCanvasRef, 'SchoolBroderiImage');
+            sendEmbroideryMapsToIframes('backBottom', {
+                text: '',
+                basecolor: null,
+                normal: null,
+                roughness: null,
+                height: null,
+                ambient: null,
+                opacity: null
+            });
         }
     }, [ingenButton]);
+
+    // Initial load effect
+    useEffect(() => {
+
+        if (nameEmbroideryText) {
+            generateAllEmbroideryMaps(nameEmbroideryText)
+                .then((result) => {
+                    sendEmbroideryMapsToIframes(
+                        'backTop',
+                        result
+                    );
+                });
+        }
+
+        if (!ingenButton && schoolEmbroideryText) {
+            generateAllEmbroideryMaps(schoolEmbroideryText)
+                .then((result) => {
+                    sendEmbroideryMapsToIframes(
+                        'backBottom',
+                        result
+                    );
+                });
+        }
+
+    }, []);
 
     // --- Rest of the original postMessage effects (unchanged) ---
     useEffect(() => {
