@@ -10,6 +10,7 @@ export function sanitizeEmbroideryLetters(text, max = 20) {
         .replace(/[^a-zA-Z0-9\s]/g, '')
         .slice(0, max);
 }
+const RENDER_SCALE = 3; //temp
 
 // 2. preload hook
 export function preloadAlphabetMaps() { }
@@ -68,10 +69,10 @@ const LETTER_CONFIG = {
     c: { folder: 'Small', width: 45, height: 45, yOffset: 125 },
     d: { folder: 'Small', width: 60, height: 70, yOffset: 100, overlap: 10 },
     e: { folder: 'Small', width: 45, height: 45, yOffset: 125 },
-    f: { folder: 'Small', width: 50, height: 70, yOffset: 100, overlap: 15 },
+    f: { folder: 'Small', width: 50, height: 70, yOffset: 100, overlap: 25 },
     g: { folder: 'Small', width: 45, height: 75, yOffset: 125 },
     h: { folder: 'Small', width: 40, height: 70, yOffset: 100 },
-    i: { folder: 'Small', width: 20, height: 45, yOffset: 125, overlap: 10, zIndex: 10      },
+    i: { folder: 'Small', width: 20, height: 45, yOffset: 125, overlap: 10, zIndex: 10 },
     j: { folder: 'Small', width: 35, height: 75, yOffset: 125 },
     k: { folder: 'Small', width: 40, height: 70, yOffset: 100 },
     l: { folder: 'Small', width: 35, height: 70, yOffset: 100, overlap: 10 },
@@ -80,7 +81,7 @@ const LETTER_CONFIG = {
     o: { folder: 'Small', width: 45, height: 45, yOffset: 125, overlap: 10, zIndex: 10 },
     p: { folder: 'Small', width: 55, height: 75, yOffset: 125 },
     q: { folder: 'Small', width: 45, height: 75, yOffset: 125 },
-    r: { folder: 'Small', width: 45, height: 45, yOffset: 125, overlap: 8, zIndex: 10},
+    r: { folder: 'Small', width: 45, height: 45, yOffset: 125, overlap: 8, zIndex: 10 },
     s: { folder: 'Small', width: 45, height: 45, yOffset: 125 },
     t: { folder: 'Small', width: 35, height: 70, yOffset: 100 },
     u: { folder: 'Small', width: 60, height: 45, yOffset: 125 },
@@ -188,9 +189,9 @@ export async function generateAllEmbroideryMaps(text) {
                     ambient: null,
                     opacity: null,
 
-                    width: meta?.width || 0,
-                    heightSize: meta?.height || 0,
-                    yOffset: meta?.yOffset || 0,
+                    width: (meta?.width || 0) * RENDER_SCALE,
+                    heightSize: (meta?.height || 0) * RENDER_SCALE,
+                    yOffset: (meta?.yOffset || 0) * RENDER_SCALE,
                     overlap: meta?.overlap || 0,
                     shiftX: meta?.shiftX || 0,
                     zIndex: meta?.zIndex !== undefined ? meta.zIndex : 1
@@ -198,7 +199,6 @@ export async function generateAllEmbroideryMaps(text) {
             }
 
             const dir = `${base}/${meta.folder}/${char}`;
-
             const [
                 basecolor,
                 normal,
@@ -225,9 +225,11 @@ export async function generateAllEmbroideryMaps(text) {
                 ambient,
                 opacity,
 
-                width: meta.width,
-                heightSize: meta.height,
-                yOffset: meta.yOffset,
+                // width: meta.width,
+                // heightSize: meta.height,
+                width: meta.width * RENDER_SCALE,
+                heightSize: meta.height * RENDER_SCALE,
+                yOffset: meta.yOffset * RENDER_SCALE,
                 overlap: meta.overlap || 0,
                 shiftX: meta.shiftX || 0,
                 zIndex: meta.zIndex !== undefined ? meta.zIndex : 1
@@ -251,15 +253,18 @@ export async function generateAllEmbroideryMaps(text) {
             zIndex: l.zIndex !== undefined ? l.zIndex : 1
         }));
 
-        const FIXED_WIDTH = 1024;
-        const FIXED_HEIGHT = 300;
+        // const FIXED_WIDTH = 1024;
+        // const FIXED_HEIGHT = 300;
+        const FIXED_WIDTH = 1024 * RENDER_SCALE;
+        const FIXED_HEIGHT = 300 * RENDER_SCALE;
 
         let contentWidth = 0;
         for (let i = 0; i < items.length; i++) {
             if (i === items.length - 1) {
                 contentWidth += items[i].width;
             } else {
-                contentWidth += items[i].width - (items[i].overlap || 0);
+                // contentWidth += items[i].width - (items[i].overlap || 0);
+                contentWidth += items[i].width - (items[i].overlap || 0) * RENDER_SCALE;
             }
         }
 
@@ -270,9 +275,12 @@ export async function generateAllEmbroideryMaps(text) {
         canvas.width = FIXED_WIDTH;
         canvas.height = FIXED_HEIGHT;
 
-        const ctx = canvas.getContext("2d");
+        const ctx = canvas.getContext("2d", {
+            willReadFrequently: true
+        });
 
         ctx.clearRect(0, 0, FIXED_WIDTH, FIXED_HEIGHT);
+
 
         // Calculate pre-drawn layout positions in original left-to-right order
         let currentX = (FIXED_WIDTH - contentWidth) / 2;
@@ -297,7 +305,7 @@ export async function generateAllEmbroideryMaps(text) {
                     const img = await loadImage(item.src);
                     ctx.drawImage(
                         img,
-                        item.drawX + item.shiftX,
+                        item.drawX + item.shiftX * RENDER_SCALE,
                         item.yOffset,
                         item.width,
                         item.height
@@ -307,6 +315,13 @@ export async function generateAllEmbroideryMaps(text) {
                 }
             }
         }
+
+        // WAIT FOR CANVAS RENDER FLUSH
+        await new Promise((resolve) =>
+            requestAnimationFrame(() =>
+                requestAnimationFrame(resolve)
+            )
+        );
 
         return canvas.toDataURL("image/png");
     }
