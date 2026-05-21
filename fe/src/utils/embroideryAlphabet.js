@@ -165,7 +165,7 @@ export async function generateAllEmbroideryMaps(text) {
     const baseUrl =
         window.location.hostname === 'localhost'
             ? 'http://localhost:5173/devstudentlife'
-            : 'https://elipsestudio.com/devstudentlife';
+            : 'https://devstudentlife.netlify.app';
 
     const base = `${baseUrl}/alphabets`;
 
@@ -323,7 +323,7 @@ export async function generateAllEmbroideryMaps(text) {
             )
         );
 
-        return canvas.toDataURL("image/png");
+        return canvas.toDataURL("image/jpeg");
     }
 
     // ========================================
