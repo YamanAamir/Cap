@@ -60,7 +60,7 @@ const LiningPhotoEditor = ({
             : { w: 80, h: 80 };
         const cx = photo.x * CW;
         const cy = photo.y * CH;
-        const rad = -(photo.rotation || 0) * Math.PI / 180;
+        const rad = -(photo.rotation || 0) * Math.PI / 90;
         const dx = px - cx;
         const dy = py - cy;
         const lx = dx * Math.cos(rad) - dy * Math.sin(rad);
@@ -68,38 +68,83 @@ const LiningPhotoEditor = ({
         return Math.abs(lx) <= w / 2 && Math.abs(ly) <= h / 2;
     };
 
-    const drawPreviewCanvas = useCallback(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
+    // const drawPreviewCanvas = useCallback(() => {
+    //     const canvas = canvasRef.current;
+    //     if (!canvas) return;
+    //     const ctx = canvas.getContext('2d');
 
-        if (liningPhotos.length === 0) {
-            ctx.fillStyle = '#f1f5f9';
-            ctx.fillRect(0, 0, CW, CH);
-            ctx.fillStyle = '#94a3b8';
-            ctx.font = '600 13px system-ui, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('Upload Design', CW / 2, CH / 2 + 22);
-            return;
-        }
+    //     if (liningPhotos.length === 0) {
+    //         ctx.fillStyle = '#f1f5f9';
+    //         ctx.fillRect(0, 0, CW, CH);
+    //         ctx.fillStyle = '#94a3b8';
+    //         ctx.font = '600 13px system-ui, sans-serif';
+    //         ctx.textAlign = 'center';
+    //         ctx.textBaseline = 'middle';
+    //         ctx.fillText('Upload Design', CW / 2, CH / 2 + 22);
+    //         return;
+    //     }
 
-        drawLiningPhotos(
-            ctx,
-            CW,
-            CH,
-            PREVIEW_CIRCLE_R,
-            LINING_OVAL_CX,
-            LINING_OVAL_CY,
-            getPhotosForDraw(),
-            imageObjects,
-            null,
-            '#f1f5f9'
-        );
+    //     drawLiningPhotos(
+    //         ctx,
+    //         CW,
+    //         CH,
+    //         PREVIEW_CIRCLE_R,
+    //         LINING_OVAL_CX,
+    //         LINING_OVAL_CY,
+    //         getPhotosForDraw(),
+    //         imageObjects,
+    //         null,
+    //         '#f1f5f9'
+    //     );
 
-        strokeLiningOval(ctx, LINING_OVAL_CX, LINING_OVAL_CY, LINING_OVAL_RX, LINING_OVAL_RY);
-    }, [liningPhotos, imageObjects, getPhotosForDraw]);
+    //     strokeLiningOval(ctx, LINING_OVAL_CX, LINING_OVAL_CY, LINING_OVAL_RX, LINING_OVAL_RY);
+    // }, [liningPhotos, imageObjects, getPhotosForDraw]);
+const drawPreviewCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
+    const ctx = canvas.getContext('2d');
+
+    // ✅ CLEAR OLD FRAME
+    ctx.clearRect(0, 0, CW, CH);
+
+    // optional reset
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+    if (liningPhotos.length === 0) {
+        ctx.fillStyle = '#f1f5f9';
+        ctx.fillRect(0, 0, CW, CH);
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '600 13px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        ctx.fillText('Upload Design', CW / 2, CH / 2 + 22);
+        return;
+    }
+
+    drawLiningPhotos(
+        ctx,
+        CW,
+        CH,
+        PREVIEW_CIRCLE_R,
+        LINING_OVAL_CX,
+        LINING_OVAL_CY,
+        getPhotosForDraw(),
+        imageObjects,
+        null,
+        '#f1f5f9'
+    );
+
+    strokeLiningOval(
+        ctx,
+        1,
+        1,
+        1,
+        1
+    );
+}, [liningPhotos, imageObjects, getPhotosForDraw]);
     const schedulePreviewRedraw = useCallback(() => {
         if (dragState.current.rafId) return;
         dragState.current.rafId = requestAnimationFrame(() => {

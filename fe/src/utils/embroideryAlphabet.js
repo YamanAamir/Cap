@@ -10,7 +10,7 @@ export function sanitizeEmbroideryLetters(text, max = 20) {
         .replace(/[^a-zA-Z0-9\s]/g, '')
         .slice(0, max);
 }
-const RENDER_SCALE = 3; //temp
+const RENDER_SCALE = 2; //temp
 
 // 2. preload hook
 export function preloadAlphabetMaps() { }

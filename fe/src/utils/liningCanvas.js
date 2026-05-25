@@ -1,6 +1,6 @@
 /** Lining photo editor — preview + export share the same draw math */
 
-export const LINING_CW = 400;
+export const LINING_CW = 500;
 export const LINING_CH = 560;
 export const LINING_OVAL_CX = LINING_CW / 2;
 export const LINING_OVAL_CY = LINING_CH / 2;
@@ -10,7 +10,7 @@ export const LINING_OVAL_RY = LINING_CH / 2 - 14;
 export const EXPORT_SIZE = 1000;
 export const EXPORT_CX = EXPORT_SIZE / 2;
 export const EXPORT_CY = EXPORT_SIZE / 2;
-export const EXPORT_CIRCLE_R = 468;
+export const EXPORT_CIRCLE_R = 550;
 
 export const PREVIEW_CIRCLE_R = (EXPORT_CIRCLE_R / EXPORT_SIZE) * LINING_CW;
 
