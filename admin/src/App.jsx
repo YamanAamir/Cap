@@ -7,10 +7,10 @@ import DashboardLayout from './components/layout/DashboardLayout';
 import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import FlagsPage from './pages/FlagsPage';
-
+// basename="/studentlife-dashboard"
 function App() {
   return (
-    <Router basename="/studentlife-dashboard">
+    <Router >
       <AuthProvider>
         <Routes>
           {/* Public Routes */}
