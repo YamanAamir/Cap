@@ -3,7 +3,7 @@ const EUX = {
     Emblem: { name: 'Guld', value: 'Guld', color: '#FCD34D' },
     Kokarde: "Signature",
     "Roset farve": { name: 'Rød', value: 'EudRed', img: '/studentlife/src/assets/rosent/laalgold.webp' },
-    Type: "EUX Guld Simli"
+    Type: "EUX Guld"
   },
   UDDANNELSESBÅND: {
     "Broderi farve": "EUX",
@@ -51,7 +51,7 @@ const EUX = {
   TILBEHØR: {
     Bucketpins: "No",
     "Ekstra korkarde": "No",
-        "Ekstra korkarde Text": "",
+    "Ekstra korkarde Text": "",
     "Flag 1": "",
     "Flag 2": "",
     "Flag 3": "",

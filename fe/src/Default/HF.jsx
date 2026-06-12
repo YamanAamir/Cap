@@ -3,7 +3,7 @@ const HF = {
     Emblem: { name: 'Guld', value: 'Guld', color: '#FCD34D' },
     Kokarde: "Signature",
     "Roset farve": { name: 'Light blå', value: '#7F1D1D', img: '/studentlife/src/assets/rosent/lightbluegold.webp' },
-    Type: "HF Guld Simli"
+    Type: "HF Guld"
   },
   UDDANNELSESBÅND: {
     "Broderi farve": "HF",

@@ -3,7 +3,7 @@ const HTX = {
     Emblem: { name: 'Guld', value: 'Guld', color: '#FCD34D' },
     Kokarde: "Signature",
     "Roset farve": { name: 'Navy blå', value: '#7F1D1D', img: '/studentlife/src/assets/rosent/black%20gold.webp' },
-    Type: "HTX Guld Simli"
+    Type: "HTX Guld"
   },
   UDDANNELSESBÅND: {
     "Broderi farve": "HTX",
