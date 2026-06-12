@@ -580,7 +580,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       program: program,
       liningPhoto:
         (typeof selectedOptions.FOER?.['Indvendigt foer billede'] === 'string' &&
-        selectedOptions.FOER['Indvendigt foer billede'].startsWith('data:image')
+          selectedOptions.FOER['Indvendigt foer billede'].startsWith('data:image')
           ? selectedOptions.FOER['Indvendigt foer billede']
           : null),
       //zee//
@@ -611,7 +611,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
 
       ////////DEV Student Life////////
       const stripeRes = await fetch("https://cap-dev-backend-one.vercel.app/api/sendEmail/create-checkout-session", {
-      // const stripeRes = await fetch("http://localhost:3000/api/sendEmail/create-checkout-session", {
+        // const stripeRes = await fetch("http://localhost:3000/api/sendEmail/create-checkout-session", {
 
         ////////Production Student Life////////
         // const stripeRes = await fetch("https://cap-live-backend.vercel.app/api/sendEmail/create-checkout-session", {

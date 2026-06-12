@@ -1809,11 +1809,23 @@ const StudentDashboard = () => {
       total += selectedOptions.KOKARDE.Flag.price;
     }
 
+    ////////////////////////////////////zee///////////////////////////////////////
+
     // Package base price
+    // let iniialPrice = 0;
+    // if (packageName === "standard") iniialPrice = 449;
+    // else if (packageName === "luksus") iniialPrice = 995;
+    // else if (packageName === "premium") iniialPrice = 1850;
+
     let iniialPrice = 0;
+    const programsWithSurcharge = ["stx", "hf", "hhx", "htx"];
+    const hasSurcharge = programsWithSurcharge.includes(program?.toLowerCase());
+
     if (packageName === "standard") iniialPrice = 449;
-    else if (packageName === "luksus") iniialPrice = 995;
-    else if (packageName === "premium") iniialPrice = 1850;
+    else if (packageName === "luksus") iniialPrice = hasSurcharge ? 1595 : 995;
+    else if (packageName === "premium") iniialPrice = hasSurcharge ? 2450 : 1850;
+
+    ////////////////////////////////////zee///////////////////////////////////////
 
     ///zee///
     return total + iniialPrice + 79;
