@@ -3,7 +3,7 @@ const HHX = {
         Emblem: { name: 'Guld', value: 'Guld', color: '#FCD34D' },
         Kokarde: "Signature",
         "Roset farve": { name: 'Royal blå', value: '#7F1D1D', img: '/studentlife/src/assets/rosent/gold%20blue.webp' },
-        Type: "HHX Guld Simli"
+        Type: "HHX Guld"
       },
       UDDANNELSESBÅND: {
         "Broderi farve": "HHX",

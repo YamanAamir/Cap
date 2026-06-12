@@ -3,13 +3,13 @@ const STX = {
     Emblem: { name: 'Guld', value: 'Guld', color: '#FCD34D' },
     Kokarde: "Signature",
     "Roset farve": { name: 'Bordeaux', value: '#7F1D1D', img: '/studentlife/src/assets/rosent/red%20silv.webp' },
-    Type: "STX Guld Simli"
+    Type: "STX Guld"
   },
   UDDANNELSESBÅND: {
     "Broderi farve": "STX",
     "Broderi foran": "",
     Hagerem: "Mat",
-   
+
     Huebånd: "STX",
     "Knap farve": "Guld",
     Materiale: "BOMULD",
@@ -17,7 +17,7 @@ const STX = {
   },
   BRODERI: {
     Broderifarve: "STX",
-     // Ingen: false,
+    // Ingen: false,
     "Navne broderi": "",
     Skolebroderi: "",
     "Skolebroderi farve": "Hvid"
@@ -27,7 +27,7 @@ const STX = {
     Kantbånd: "NONE",
     Stjerner: "NONE",
     Topkant: "NONE",
-    
+
   },
   SKYGGE: {
     Materiale: "Uden kant",
@@ -40,7 +40,7 @@ const STX = {
   FOER: {
     Farve: "Hvid",
     Foer: "Polyester",
-    
+
     Sløjfe: "Hvid",
     Svederem: "Læder",
     'Silk Type': "",
