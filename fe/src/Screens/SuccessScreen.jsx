@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { CheckCircle, ShoppingCart, Settings } from "lucide-react";
 import gold from '../assets/Student Life.jpg';
+import { trackEvent } from "../utils/metaPixel";
 
 const SuccessScreen = ({ onContinueConfiguring, handleResetModal, onClose }) => {
   const [searchParams] = useSearchParams();
@@ -17,10 +18,18 @@ const SuccessScreen = ({ onContinueConfiguring, handleResetModal, onClose }) => 
       );
       const data = await res.json();
       setSession(data);
+      
+      if (data && data.amount_total) {
+        trackEvent('Purchase', {
+          value: data.amount_total / 100,
+          currency: data.currency ? data.currency.toUpperCase() : 'DKK'
+        });
+      }
     };
 
     fetchSession();
   }, [searchParams]);
+
  
 
 

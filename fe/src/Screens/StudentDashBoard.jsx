@@ -900,10 +900,10 @@ const StudentDashboard = () => {
     BRODERI: {
       "Top broderi": {
         Ingen: 0,
-        "Top broderi 1": 149,
-        "Top broderi 2": 149,
-        "Top broderi 3": 149,
-        "Top broderi 4": 149,
+        "Top broderi 1": 0,
+        "Top broderi 2": 0,
+        "Top broderi 3": 0,
+        "Top broderi 4": 0,
       },
       Broderifarve: {
         Guld: 0,
@@ -2314,6 +2314,7 @@ const StudentDashboard = () => {
                   currentEmblem={globalEmblem}
                   program={program}
                   priceReset={setExtraCoverReset}
+                  pakke={packageName}
                 />
               )}
               {activeMenu === "TILBEHØR" && (
@@ -2585,6 +2586,7 @@ const StudentDashboard = () => {
                       currentEmblem={globalEmblem}
                       program={program}
                       priceReset={setExtraCoverReset}
+                      pakke={packageName}
                     />
                   )}
                   {activeMenu === "TILBEHØR" && (
