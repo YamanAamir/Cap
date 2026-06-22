@@ -164,7 +164,7 @@ import purplegold from '../assets/rosent/purplegold.webp';
 import purplesilver from '../assets/rosent/purplesilver.webp';
 
 
-const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions }) => {
+const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, pakke }) => {
 
 
     const accessoryOptions = [
@@ -1043,9 +1043,15 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions }
                 <div>
                     <label className="text-sm font-semibold text-slate-700">Top broderi</label>
                     <div className="flex items-center gap-2 mt-1">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-amber-100 to-yellow-200 text-amber-800">
-                            + 149 DKK
-                        </span>
+                        {pakke?.toLowerCase() === 'luksus' || pakke?.toLowerCase() === 'premium' ? (
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-amber-100 to-yellow-200 text-amber-800">
+                                Inkluderet i pakken
+                            </span>
+                        ) : (
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-amber-100 to-yellow-200 text-amber-800">
+                                + 149 DKK
+                            </span>
+                        )}
                     </div>
                 </div>
                 <div className="flex space-x-3 mt-4">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ForExtraCover from './ForExtraCover';
 
-const ExtraCover = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, priceReset }) => {
+const ExtraCover = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, priceReset, pakke }) => {
     // Default value function
     const getDefaultExtraCoverOption = () => {
         return 'No'; // Default to not selecting extra cover
@@ -201,6 +201,7 @@ const ExtraCover = ({ selectedOptions = {}, onOptionChange, currentEmblem, progr
                     programNew={`${theProgram}`}
                     forOptionChange={onOptionChange}
                     selectedOptions={selectedOptions}
+                    pakke={pakke}
                 />
             )}
         </>
