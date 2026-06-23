@@ -7,6 +7,11 @@ import {
     sendEmbroideryMapsToIframes,
 } from '../utils/embroideryAlphabet';
 
+import topDesign1 from '../assets/topDesignImg/1Gold.png';
+import topDesign2 from '../assets/topDesignImg/2.png';
+import topDesign3 from '../assets/topDesignImg/3.png';
+import topDesign4 from '../assets/topDesignImg/4.png';
+
 const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke }) => {
     // Default value functions
     const cameraTriggers = useRef({});
@@ -370,10 +375,10 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke }) =>
                 <div className="flex space-x-3 mt-4">
                     {[
                         { value: 'Ingen', label: 'Ingen', img: noneImg },
-                        { value: 'Top broderi 1', label: 'Top broderi 1', img: null },
-                        { value: 'Top broderi 2', label: 'Top broderi 2', img: null },
-                        { value: 'Top broderi 3', label: 'Top broderi 3', img: null },
-                        { value: 'Top broderi 4', label: 'Top broderi 4', img: null },
+                        { value: 'Top broderi 1', label: 'Top broderi 1', img: topDesign1 },
+                        { value: 'Top broderi 2', label: 'Top broderi 2', img: topDesign3 },
+                        { value: 'Top broderi 3', label: 'Top broderi 3', img: topDesign2 },
+                        { value: 'Top broderi 4', label: 'Top broderi 4', img: topDesign4 },
                     ].map((option) => (
                         <button
                             key={option.value}
@@ -385,7 +390,7 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke }) =>
                             title={option.label}
                         >
                             {option.img ? (
-                                <img src={option.img} alt={option.label} className="w-full h-full object-contain p-2" />
+                                <img src={option.img} alt={option.label} className="w-full h-full object-contain rounded-lg " />
                             ) : (
                                 <span className="text-[10px] text-slate-400 font-medium text-center">Img</span>
                             )}
