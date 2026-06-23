@@ -2145,11 +2145,19 @@ const StudentDashboard = () => {
             </div>
           </div>
           <button
-            onClick={(!isExpired && sizeFlag) ? collectSelectedOptions : undefined}
-            disabled={!sizeFlag || isExpired}
-            className={`w-full py-3 rounded-xl font-semibold transition-all duration-200 shadow-md ${(sizeFlag && !isExpired)
+            onClick={
+              // (!isExpired && sizeFlag) ?
+               collectSelectedOptions
+                // : undefined
+              }
+            // disabled={!sizeFlag || isExpired}
+            disabled={false}
+            className={`w-full py-3 rounded-xl font-semibold transition-all duration-200 shadow-md 
+               ${ //(sizeFlag && !isExpired)
+                (true) 
               ? 'bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800 hover:shadow-lg'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              : 
+              'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
           >
             Godkend og Betal
@@ -2398,7 +2406,8 @@ const StudentDashboard = () => {
           position: 'fixed',
           inset: 0,
           zIndex: 99999,
-          display: 'grid', // changed to grid for better scrolling behavior
+          display:'none',
+          //display: 'grid', // changed to grid for better scrolling behavior
           placeItems: 'center',
           background: 'rgba(0,0,0,0.45)',
           backdropFilter: 'blur(4px)',
