@@ -152,6 +152,86 @@ const StudentDashboard = () => {
   };
 
   const [selectedOptions, setSelectedOptions] = useState(initialoption());
+  const prevPackageKeyRef = useRef(null);
+
+  // Premium package: set TILBEHØR defaults once isAppReady
+  useEffect(() => {
+    if (!isAppReady || packageName?.toLowerCase() !== "premium") return;
+
+    const packageKey = `${program}-premium`;
+    if (prevPackageKeyRef.current === packageKey) return;
+    prevPackageKeyRef.current = packageKey;
+
+    setSelectedOptions((prev) => ({
+      ...prev,
+      TILBEHØR: {
+        ...prev.TILBEHØR,
+        Hueæske: "Premium æske",
+        "Premium æske": "Grøn velour",
+        Huekuglepen: "Yes",
+        Silkepude: "Yes",
+        "Ekstra korkarde": "Yes",
+        "Lille Flag": "Yes",
+        Handsker: "Yes",
+        "Store kuglepen": "Yes",
+        "Smart Tag": "Yes",
+        Lyskugle: "Yes",
+        "Luksus champagneglas": "Yes",
+        Fløjte: "Yes",
+        Trompet: "Yes",
+        Bucketpins: "Yes",
+      },
+    }));
+    setErrors({});
+  }, [packageName, isAppReady, program]);
+
+  // Luksus package: set TILBEHØR defaults once isAppReady
+  useEffect(() => {
+    if (!isAppReady || packageName?.toLowerCase() !== "luksus") return;
+
+    const packageKey = `${program}-luksus`;
+    if (prevPackageKeyRef.current === packageKey) return;
+    prevPackageKeyRef.current = packageKey;
+
+    setSelectedOptions((prev) => ({
+      ...prev,
+      TILBEHØR: {
+        ...prev.TILBEHØR,
+        Hueæske: "Luksus æske",
+        Huekuglepen: "Yes",
+        Silkepude: "Yes",
+        "Ekstra korkarde": "Yes",
+        "Lille Flag": "Yes",
+        Handsker: "Yes",
+        "Store kuglepen": "No",
+        "Smart Tag": "No",
+        Lyskugle: "No",
+        "Luksus champagneglas": "Yes",
+        Fløjte: "Yes",
+        Trompet: "No",
+        Bucketpins: "No",
+      },
+    }));
+    setErrors({});
+  }, [packageName, isAppReady, program]);
+
+  useEffect(() => {
+    if (!isAppReady || activeMenu !== "TILBEHØR" || packageName?.toLowerCase() !== "premium") return;
+    setErrors({});
+  }, [activeMenu, isAppReady, packageName]);
+
+  // Hide the box when navigating AWAY from TILBEHØR — all packages
+  // STØRRELSE (last page) pe jaane par hide nahi karna — wahan box se koi conflict nahi
+  useEffect(() => {
+    if (activeMenu !== "TILBEHØR" && activeMenu !== "STØRRELSE") {
+      ["preview-iframe", "preview-iframe2"].forEach((id) => {
+        const iframe = document.getElementById(id);
+        if (iframe?.contentWindow) {
+          iframe.contentWindow.postMessage("Accessories Hueæske:standard", "*");
+        }
+      });
+    }
+  }, [activeMenu]);
 
   const standardPrices = {
     KOKARDE: {
@@ -2046,6 +2126,8 @@ const StudentDashboard = () => {
                   onOptionChange={(key, value) =>
                     handleOptionChange("TILBEHØR", key, value)
                   }
+                  program={program}
+                  pakke={packageName}
                   errors={errors}
                   setErrors={setErrors}
                 />
@@ -2324,6 +2406,8 @@ const StudentDashboard = () => {
                       onOptionChange={(key, value) =>
                         handleOptionChange("TILBEHØR", key, value)
                       }
+                      program={program}
+                      pakke={packageName}
                       errors={errors}
                       setErrors={setErrors}
                     />

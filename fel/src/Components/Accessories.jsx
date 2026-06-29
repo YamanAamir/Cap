@@ -1,23 +1,85 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors }) => {
+const Accessories = ({ selectedOptions = {}, onOptionChange, program, pakke, errors, setErrors }) => {
+    const isPremiumPackage = pakke?.toLowerCase() === 'premium' || program?.toLowerCase() === 'premium';
+    const isLuksusPackage = pakke?.toLowerCase() === 'luksus';
+
     const [hatBoxColor, setHatBoxColor] = useState('#DC2626');
-    const [selectedHatBoxType, setSelectedHatBoxType] = useState(selectedOptions.Hueæske || 'Standard');
-    const [selectedPremiumæske, setSelectedPremiumæske] = useState(selectedOptions['Premium æske'] || '');
+    const [selectedHatBoxType, setSelectedHatBoxType] = useState(
+        isPremiumPackage
+            ? 'Premium æske'
+            : isLuksusPackage
+                ? 'Luksus æske'
+                : (selectedOptions.Hueæske && selectedOptions.Hueæske !== 'Premium æske' ? selectedOptions.Hueæske : 'Standard')
+    );
+    const [selectedPremiumæske, setSelectedPremiumæske] = useState(
+        isPremiumPackage
+            ? 'Grøn velour'
+            : (selectedOptions['Premium æske'] && selectedOptions.Hueæske === 'Premium æske' ? selectedOptions['Premium æske'] : '')
+    );
 
     // Individual accessory selections
-    const [ballpointPenSelection, setBallpointPenSelection] = useState(selectedOptions.Huekuglepen || 'No');
-    const [silkPillowSelection, setSilkPillowSelection] = useState(selectedOptions.Silkepude || 'No');
-    const [badgesSelection, setBadgesSelection] = useState(selectedOptions['Ekstra korkarde'] || 'No');
-    const [lilFlagSelection, setLilFlagSelection] = useState(selectedOptions['Lille Flag'] || 'No');
-    const [glovesSelection, setGlovesSelection] = useState(selectedOptions.Handsker || 'No');
-    const [largeBallpointPenSelection, setLargeBallpointPenSelection] = useState(selectedOptions['Store kuglepen'] || 'No');
-    const [smartTagSelection, setSmartTagSelection] = useState(selectedOptions['Smart Tag'] || 'No');
-    const [lightBallSelection, setLightBallSelection] = useState(selectedOptions.Lyskugle || 'No');
-    const [champagneGlassSelection, setChampagneGlassSelection] = useState(selectedOptions['Luksus champagneglas'] || 'No');
-    const [whistleSelection, setWhistleSelection] = useState(selectedOptions.Fløjte || 'No');
-    const [trumpetSelection, setTrumpetSelection] = useState(selectedOptions.Trompet || 'No');
-    const [bucketpinsSelection, setBucketpinsSelection] = useState(selectedOptions.Bucketpins || 'No');
+    const [ballpointPenSelection, setBallpointPenSelection] = useState(
+        selectedOptions.Huekuglepen && selectedOptions.Huekuglepen !== 'No'
+            ? selectedOptions.Huekuglepen
+            : (isPremiumPackage || isLuksusPackage ? 'Yes' : 'No')
+    );
+    const [silkPillowSelection, setSilkPillowSelection] = useState(
+        selectedOptions.Silkepude && selectedOptions.Silkepude !== 'No'
+            ? selectedOptions.Silkepude
+            : (isPremiumPackage || isLuksusPackage ? 'Yes' : 'No')
+    );
+    const [badgesSelection, setBadgesSelection] = useState(
+        selectedOptions['Ekstra korkarde'] && selectedOptions['Ekstra korkarde'] !== 'No'
+            ? selectedOptions['Ekstra korkarde']
+            : (isPremiumPackage || isLuksusPackage ? 'Yes' : 'No')
+    );
+    const [lilFlagSelection, setLilFlagSelection] = useState(
+        selectedOptions['Lille Flag'] && selectedOptions['Lille Flag'] !== 'No'
+            ? selectedOptions['Lille Flag']
+            : (isPremiumPackage || isLuksusPackage ? 'Yes' : 'No')
+    );
+    const [glovesSelection, setGlovesSelection] = useState(
+        selectedOptions.Handsker && selectedOptions.Handsker !== 'No'
+            ? selectedOptions.Handsker
+            : (isPremiumPackage || isLuksusPackage ? 'Yes' : 'No')
+    );
+    // Luksus mein Store kuglepen, Smart Tag, Lyskugle, Trompet, Bucketpins → No
+    const [largeBallpointPenSelection, setLargeBallpointPenSelection] = useState(
+        selectedOptions['Store kuglepen'] && selectedOptions['Store kuglepen'] !== 'No'
+            ? selectedOptions['Store kuglepen']
+            : (isPremiumPackage ? 'Yes' : 'No')
+    );
+    const [smartTagSelection, setSmartTagSelection] = useState(
+        selectedOptions['Smart Tag'] && selectedOptions['Smart Tag'] !== 'No'
+            ? selectedOptions['Smart Tag']
+            : (isPremiumPackage ? 'Yes' : 'No')
+    );
+    const [lightBallSelection, setLightBallSelection] = useState(
+        selectedOptions.Lyskugle && selectedOptions.Lyskugle !== 'No'
+            ? selectedOptions.Lyskugle
+            : (isPremiumPackage ? 'Yes' : 'No')
+    );
+    const [champagneGlassSelection, setChampagneGlassSelection] = useState(
+        selectedOptions['Luksus champagneglas'] && selectedOptions['Luksus champagneglas'] !== 'No'
+            ? selectedOptions['Luksus champagneglas']
+            : (isPremiumPackage || isLuksusPackage ? 'Yes' : 'No')
+    );
+    const [whistleSelection, setWhistleSelection] = useState(
+        selectedOptions.Fløjte && selectedOptions.Fløjte !== 'No'
+            ? selectedOptions.Fløjte
+            : (isPremiumPackage || isLuksusPackage ? 'Yes' : 'No')
+    );
+    const [trumpetSelection, setTrumpetSelection] = useState(
+        selectedOptions.Trompet && selectedOptions.Trompet !== 'No'
+            ? selectedOptions.Trompet
+            : (isPremiumPackage ? 'Yes' : 'No')
+    );
+    const [bucketpinsSelection, setBucketpinsSelection] = useState(
+        selectedOptions.Bucketpins && selectedOptions.Bucketpins !== 'No'
+            ? selectedOptions.Bucketpins
+            : (isPremiumPackage ? 'Yes' : 'No')
+    );
     const [extraKokardeText, setExtraKokardeText] = useState(selectedOptions['Ekstra korkarde Text'] || '');
     const [lilFlagText, setLilFlagText] = useState(selectedOptions['Lille Flag Text'] || '');
 
@@ -141,8 +203,33 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors }
 
     // Initialize on mount
     useEffect(() => {
+        if (isPremiumPackage || isLuksusPackage) {
+            setErrors({});
+        }
         if (badgesSelection === 'Yes') renderTextToCanvas(extraKokardeText, korkardeCanvasRef, 'KorkardeImage');
         if (lilFlagSelection === 'Yes') renderTextToCanvas(lilFlagText, flagCanvasRef, 'FlagImage');
+
+        // Premium: re-send after delay so iframe receives it after hueæske camera settles
+        if (isPremiumPackage) {
+            const timer = setTimeout(() => {
+                sendMessageToIframes(`Accessories Hueæske:premium æske`);
+                sendMessageToIframes("hueæske camera");
+                setTimeout(() => {
+                    sendMessageToIframes(`Accessories Premiumæske:grøn velour`);
+                    sendMessageToIframes("premiumæske camera");
+                }, 100);
+            }, 200);
+            return () => clearTimeout(timer);
+        }
+
+        // Luksus: same fix for luksus æske box
+        if (isLuksusPackage) {
+            const timer = setTimeout(() => {
+                sendMessageToIframes(`Accessories Hueæske:luksus æske`);
+                sendMessageToIframes("hueæske camera");
+            }, 200);
+            return () => clearTimeout(timer);
+        }
     }, []);
 
     // =====================
@@ -151,12 +238,14 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors }
     const validateFields = () => {
         const newErrors = {};
 
-        if (badgesSelection === 'Yes' && !extraKokardeText.trim()) {
-            newErrors.extraKokardeText = 'Ekstra korkarde tekst er påkrævet';
-        }
+        if (!isPremiumPackage && !isLuksusPackage) {
+            if (badgesSelection === 'Yes' && !extraKokardeText.trim()) {
+                newErrors.extraKokardeText = 'Ekstra korkarde tekst er påkrævet';
+            }
 
-        if (lilFlagSelection === 'Yes' && !lilFlagText.trim()) {
-            newErrors.lilFlagText = 'Lille flag tekst er påkrævet';
+            if (lilFlagSelection === 'Yes' && !lilFlagText.trim()) {
+                newErrors.lilFlagText = 'Lille flag tekst er påkrævet';
+            }
         }
 
         setErrors(newErrors);
