@@ -120,7 +120,7 @@ export async function generateAllEmbroideryMaps(text) {
     const baseUrl = window.location.hostname === 'localhost'
         ? 'http://localhost:5175/devstudentlife'
         // : 'https://studentcap.studentlife.dk/devstudentlife';
-        : 'https://elipsestudio.com/devstudentlife';
+        : 'https://studenterhue.studentlife.dk/devstudentlife';
     const base = `${baseUrl}/alphabets`;
 
     // ── 1. Fetch all images ──────────────────────────────────
