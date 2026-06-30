@@ -591,7 +591,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       // const stripeRes = await fetch("https://cap-dev-backend-one.vercel.app/api/sendEmail/create-checkout-session", {
 
         ////////Production Student Life////////
-        const stripeRes = await fetch("https://cap-live-backend.vercel.app/api/sendEmail/create-checkout-session", {
+        const stripeRes = await fetch("https://capliveapi.studentlife.dk/api/sendEmail/create-checkout-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderData),

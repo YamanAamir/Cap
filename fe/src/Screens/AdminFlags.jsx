@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 const BASE_URL = window.location.hostname === 'localhost'
   ? 'http://localhost:3000'
-  : 'https://cap-dev-backend-one.vercel.app';
+  : 'https://capdevapi.studentlife.dk';
 
 const formatDkk = (value) => {
   const n = Number(value);

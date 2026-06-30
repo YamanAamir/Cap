@@ -60,7 +60,7 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
             try {
                 const baseUrl = window.location.hostname === 'localhost'
                     ? 'http://localhost:3000'
-                    : 'https://cap-dev-backend-one.vercel.app';
+                    : 'https://capdevapi.studentlife.dk';
                 const response = await fetch(`${baseUrl}/api/flags`);
                 if (response.ok) {
                     const data = await response.json();
