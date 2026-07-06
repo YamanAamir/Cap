@@ -2228,15 +2228,17 @@ const StudentDashboard = () => {
           </div>
           <button
             onClick={
-              // (!isExpired && sizeFlag) ?
+              (
+              // !isExpired && 
+              sizeFlag) ?
                collectSelectedOptions
-                // : undefined
+              : undefined
               }
-            // disabled={!sizeFlag || isExpired}
-            disabled={false}
+            disabled={!sizeFlag
+              //  || isExpired
+              }
             className={`w-full py-3 rounded-xl font-semibold transition-all duration-200 shadow-md 
-               ${ //(sizeFlag && !isExpired)
-                (true) 
+               ${(sizeFlag)
               ? 'bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800 hover:shadow-lg'
               : 
               'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -2461,9 +2463,16 @@ const StudentDashboard = () => {
               </div>
             </div>
             <button
-              onClick={(!isExpired && sizeFlag) ? collectSelectedOptions : undefined}
-              disabled={!sizeFlag || isExpired}
-              className={`w-full py-3 rounded-xl font-semibold transition-all duration-200 shadow-md ${(sizeFlag && !isExpired)
+              onClick={
+                //(!isExpired && sizeFlag) ? 
+                collectSelectedOptions
+                //  : undefined
+                }
+              disabled={
+                !sizeFlag
+                //  || isExpired
+                }
+              className={`w-full py-3 rounded-xl font-semibold transition-all duration-200 shadow-md ${(sizeFlag)
                 ? 'bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800 hover:shadow-lg'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
