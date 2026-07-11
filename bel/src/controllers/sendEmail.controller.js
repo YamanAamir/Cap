@@ -982,10 +982,10 @@ const capOrderEmail = (orderData) => {
 
   const shippingPrices = {
     "Denmark": 79,
-    "Greenland": 348,
+    "Grønland": 348,
   };
   const country = customerDetails?.country || "Denmark";
-  const handlingFee = customerDetails?.country === 'Greenland' ? 348 : shippingPrices[country] || 79;
+  const handlingFee = customerDetails?.country === 'Grønland' ? 348 : shippingPrices[country] || 79;
   const orderSum = (parseFloat(totalPrice) + handlingFee).toFixed(2);
 
   const hideSelectorsPrograms = [

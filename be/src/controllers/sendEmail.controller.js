@@ -3446,8 +3446,7 @@ const sendCapEmail = async (req, res) => {
 
     const mailOptionsAdmin = {
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-      // to: 'salg@studentlife.dk',
-      to: 'abdulahad010274@gmail.com',
+      to: 'salg@studentlife.dk',
       subject: emailContentAdmin.subject,
       html: emailContentAdmin.html,
       text: emailContentAdmin.text
@@ -3455,8 +3454,7 @@ const sendCapEmail = async (req, res) => {
 
     const mailOptionsFactory = {
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-      // to: 'salg@studentlife.dk',
-      to: 'abdulahad010274@gmail.com',
+      to: 'salg@studentlife.dk',
       subject: emailContentFactory.subject,
       html: emailContentFactory.html,
       text: emailContentFactory.text
