@@ -137,7 +137,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       },
       country: {
         "Denmark": 0,
-        "Greenland": 0,
+        "Grønland": 0,
         "Sweden": 25,
         "Norway": 25,
         "Germany": 25,
@@ -516,10 +516,10 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
   // --- price calculation logic ---
   const shippingPrices = {
     "Denmark": 79,
-    "Greenland": 348,
+    "Grønland": 348,
   };
 
-  // For Greenland, we replace the 79 DKK default fee with the 348 DKK shipping fee.
+  // For Grønland, we replace the 79 DKK default fee with the 348 DKK shipping fee.
   const country = customerDetails.country || "Denmark";
   const finalPrice = (parseFloat(price) - 79 + (shippingPrices[country] || 79)).toFixed(2);
 
@@ -824,7 +824,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
                 >
                   <option value="Denmark">Denmark</option>
-                  <option value="Greenland">Greenland</option>
+                  <option value="Grønland">Grønland</option>
                   <option value="Sweden">Sweden</option>
                   <option value="Norway">Norway</option>
                   <option value="Germany">Germany</option>
@@ -1254,7 +1254,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
                 <div>
                   <span className="text-base font-bold text-gray-900">Din pris</span>
                   <p className="text-gray-600 text-xs mt-1">
-                    {country === "Greenland"
+                    {country === "Grønland"
                       ? "Inkluderet forsendelse og gebyr (348 DKK)"
                       : "Inkluderet forsendelse og gebyr (79 DKK)"}
                   </p>
