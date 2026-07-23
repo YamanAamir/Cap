@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { CheckCircle, ShoppingCart, Settings } from "lucide-react";
 import gold from '../assets/Student Life.jpg';
 import { trackEvent } from "../utils/metaPixel";
+import { pushEvent } from '../lib/tracking';
 
 const SuccessScreen = ({ onContinueConfiguring, handleResetModal, onClose }) => {
   const [searchParams] = useSearchParams();
@@ -24,6 +25,15 @@ const SuccessScreen = ({ onContinueConfiguring, handleResetModal, onClose }) => 
           value: data.amount_total / 100,
           currency: data.currency ? data.currency.toUpperCase() : 'DKK'
         });
+        
+        // Push purchase_completed to our new tracking
+        pushEvent('purchase_completed', {
+          value: data.amount_total / 100,
+          currency: data.currency ? data.currency.toUpperCase() : 'DKK',
+          order_ref: data.metadata?.orderNumber || sessionId,
+          email: data.customer_email || null,
+          consentGiven: false // Assuming false unless there's a global consent flag
+        }, 'gradcap_configurator');
       }
     };
 

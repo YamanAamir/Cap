@@ -7,9 +7,13 @@ import CancelScreen from './Screens/CancelScreen'
 import AdminFlags from './Screens/AdminFlags'
 import { initPixel } from './utils/metaPixel'
 
+import { identifyVisitor, pushEvent } from './lib/tracking';
+
 function App() {
   useEffect(() => {
     initPixel();
+    identifyVisitor('graduation_cap', 'gradcap_configurator');
+    pushEvent('configurator_started', {}, 'gradcap_configurator');
   }, []);
 
   return (

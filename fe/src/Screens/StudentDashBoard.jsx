@@ -113,6 +113,8 @@ const StudentDashboard = () => {
   });
   const [isAppReady, setIsAppReady] = useState(false);
   const [isIframeLoaded, setIsIframeLoaded] = useState(false);
+  const [isModelLoaded, setIsModelLoaded] = useState(false);
+  const [showBlurEffect, setShowBlurEffect] = useState(false);
   const [extraCoverReset, setExtraCoverReset] = useState(false);
   const [sizeFlag, setSizeFlag] = useState(false);
   const [errors, setErrors] = useState({});
@@ -1887,17 +1889,66 @@ const StudentDashboard = () => {
   const handleIframeLoad = () => {
     console.log("Iframe loaded");
     setIsIframeLoaded(true);
+
+    // Inject a console.log proxy into the iframe to intercept
+    // "All Models & Assets Loaded Successfully!" and forward it as postMessage.
+    // This works when iframe is same-origin or when browser allows it.
+    ["preview-iframe", "preview-iframe2"].forEach((id) => {
+      try {
+        const iframe = document.getElementById(id);
+        if (!iframe?.contentWindow) return;
+        const iframeConsole = iframe.contentWindow.console;
+        const originalLog = iframeConsole.log.bind(iframeConsole);
+        iframeConsole.log = function (...args) {
+          originalLog(...args);
+          const msg = args.join(" ");
+          if (msg.includes("All Models & Assets Loaded Successfully!")) {
+            window.postMessage("All Models & Assets Loaded Successfully!", "*");
+          }
+        };
+        console.log(`✅ console.log proxy injected into ${id}`);
+      } catch (e) {
+        // Cross-origin: can't inject — postMessage listener is the fallback
+        console.log(`ℹ️ Cross-origin iframe (${id}), proxy not possible — relying on postMessage`);
+      }
+    });
   };
+
+  // Ref to make sure we only start the loader-hide timer once
+  const modelLoadTimerRef = useRef(null);
 
   // Listen for messages from the iframe
   useEffect(() => {
     const handleMessage = (event) => {
+      // Debug: log ALL incoming postMessages
+      if (event.data !== null && event.data !== undefined) {
+        const preview = typeof event.data === "string"
+          ? event.data.slice(0, 120)
+          : JSON.stringify(event.data).slice(0, 120);
+        console.log("📨 postMessage received:", preview);
+      }
+
+      // Check for the model-loaded signal (string or object form)
+      const rawStr = typeof event.data === "string"
+        ? event.data
+        : (event.data ? JSON.stringify(event.data) : "");
+
+      if (rawStr.includes("All Models & Assets Loaded Successfully!")) {
+        console.log("✅ Models loaded signal received — hiding loader in 5s");
+        if (!modelLoadTimerRef.current) {
+          modelLoadTimerRef.current = setTimeout(() => {
+            setIsModelLoaded(true);
+          }, 5000);
+        }
+      }
+
       if (event.data === "app:ready") {
         console.log(
           "Iframe ready → Sab components ke initial messages bhej rahe hain"
         );
 
         setIsAppReady(true);
+        setTimeout(() => setShowBlurEffect(true), 3000);
 
         // Program bhejo
         if (program) {
@@ -2373,6 +2424,81 @@ const StudentDashboard = () => {
                   onLoad={handleIframeLoad}
                 />
 
+                {/* Model Loading Overlay - Desktop */}
+                {!isModelLoaded && (
+                  <div style={{
+                    position: "absolute",
+                    inset: 0,
+                    background: showBlurEffect ? "rgba(255, 255, 255, 0.5)" : "#ffffff",
+                    backdropFilter: showBlurEffect ? "blur(8px)" : "none",
+                    WebkitBackdropFilter: showBlurEffect ? "blur(8px)" : "none",
+                    transition: "all 0.5s ease",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 30,
+                    gap: 36,
+                  }}>
+
+                    {/* Large Student Life Logo — no circle */}
+                    <img
+                      src={LOGO}
+                      alt="Student Life"
+                      style={{
+                        height: 160,
+                        objectFit: "contain",
+                        userSelect: "none",
+                        filter: "brightness(0)",
+                      }}
+                    />
+
+                    {/* Premium shimmer loader bar */}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
+                      <div style={{
+                        width: 200,
+                        height: 2,
+                        borderRadius: 99,
+                        background: "#cbd5e1",
+                        overflow: "hidden",
+                        position: "relative",
+                      }}>
+                        <div style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          height: "100%",
+                          width: "45%",
+                          borderRadius: 99,
+                          background: "linear-gradient(90deg, transparent, #475569, #0f172a, #475569, transparent)",
+                          animation: "sl-shimmer 1.8s ease-in-out infinite",
+                        }} />
+                      </div>
+
+                      <p style={{
+                        margin: 0,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "#0f172a",
+                        letterSpacing: "0.18em",
+                        textTransform: "uppercase",
+                        fontFamily: "'Inter', 'Segoe UI', sans-serif",
+                      }}>{showBlurEffect ? "Indlæser standardkonfiguration…" : "Indlæser din model…"}</p>
+                    </div>
+
+                    <style>{`
+                      @keyframes sl-float {
+                        0%, 100% { transform: translateY(0px); opacity: 1; }
+                        50% { transform: translateY(-8px); opacity: 0.92; }
+                      }
+                      @keyframes sl-shimmer {
+                        0% { left: -50%; }
+                        100% { left: 110%; }
+                      }
+                    `}</style>
+                  </div>
+                )}
+
                 {/* Floating AR Button */}
                 <button
                   onClick={() => window.open("https://elipsestudio.com/CapAR/", "_blank")}
@@ -2447,7 +2573,7 @@ const StudentDashboard = () => {
                   </div>
                 </div>
 
-                <div className="h-full overflow-hidden">
+                <div className="h-full overflow-hidden relative">
                   <iframe
                     id="preview-iframe2"
                     src=""
@@ -2456,6 +2582,69 @@ const StudentDashboard = () => {
                     title="3D Student Card Preview"
                     onLoad={handleIframeLoad}
                   />
+
+                  {/* Model Loading Overlay - Mobile */}
+                  {!isModelLoaded && (
+                    <div style={{
+                      position: "absolute",
+                      inset: 0,
+                      background: showBlurEffect ? "rgba(255, 255, 255, 0.5)" : "#ffffff",
+                      backdropFilter: showBlurEffect ? "blur(8px)" : "none",
+                      WebkitBackdropFilter: showBlurEffect ? "blur(8px)" : "none",
+                      transition: "all 0.5s ease",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      zIndex: 30,
+                      gap: 24,
+                    }}>
+
+                      {/* Large Student Life Logo — no circle */}
+                      <img
+                        src={LOGO}
+                        alt="Student Life"
+                        style={{
+                          height: 90,
+                          objectFit: "contain",
+                          userSelect: "none",
+                          filter: "brightness(0)",
+                        }}
+                      />
+
+                      {/* Shimmer bar */}
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                        <div style={{
+                          width: 140,
+                          height: 2,
+                          borderRadius: 99,
+                          background: "#cbd5e1",
+                          overflow: "hidden",
+                          position: "relative",
+                        }}>
+                          <div style={{
+                            position: "absolute",
+                            top: 0,
+                            left: 0,
+                            height: "100%",
+                            width: "45%",
+                            borderRadius: 99,
+                            background: "linear-gradient(90deg, transparent, #475569, #0f172a, #475569, transparent)",
+                            animation: "sl-shimmer 1.8s ease-in-out infinite",
+                          }} />
+                        </div>
+                        <p style={{
+                          margin: 0,
+                          fontSize: 10,
+                          fontWeight: 600,
+                          color: "#0f172a",
+                          letterSpacing: "0.15em",
+                          textTransform: "uppercase",
+                          fontFamily: "'Inter', 'Segoe UI', sans-serif",
+                        }}>{showBlurEffect ? "Indlæser standardkonfiguration…" : "Indlæser…"}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

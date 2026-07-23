@@ -1,5 +1,5 @@
 export const initPixel = () => {
-  const id = import.meta.env.VITE_META_PIXEL_ID;
+  const id = import.meta.env.VITE_META_PIXEL_ID || '1453781165823059';
   if (!id || window.fbq) return;
 
   !function(f,b,e,v,n,t,s)

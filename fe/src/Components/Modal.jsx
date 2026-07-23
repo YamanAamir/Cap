@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Printer, Download, Mail, CheckCircle, Package, Star, User, CreditCard, ArrowLeft, ArrowRight, Loader2, ShoppingCart, Settings } from 'lucide-react';
 import { loadStripe } from "@stripe/stripe-js";
 import { useRef } from 'react';
-import { useEffect } from 'react';
+import { pushEvent } from '../lib/tracking';
 
 ////////Production Student Life////////
 // const stripePromise = loadStripe("pk_live_51S0HgIFDBW3pcErGOmI6vsVCXStMih46KJXjrOiFHppAj6h0tHOp4zDYMoLyTQn7Uk99pePatnCFrqLh6AAblGa300Wm8qbiRe");
@@ -626,6 +626,12 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
 
       const { id: sessionId } = await stripeRes.json();
       const stripe = await stripePromise;
+
+      pushEvent('checkout_started', {
+        value: orderData.totalAmount || 0,
+        currency: 'DKK',
+        package: orderData.packageName
+      }, 'gradcap_configurator');
 
       // 3️⃣ Redirect to Stripe Checkout
       await stripe.redirectToCheckout({ sessionId });
