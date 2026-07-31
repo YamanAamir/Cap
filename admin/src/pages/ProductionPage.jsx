@@ -96,7 +96,7 @@ const ProductionPage = () => {
 
   const getBaseUrl = () => {
     if (window.location.hostname === 'localhost') return 'http://localhost:3000';
-    return 'https://cap-dev-backend-one.vercel.app';
+    return 'https://capdevapi.studentlife.dk';
   };
 
   return (
