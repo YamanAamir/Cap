@@ -5,6 +5,7 @@ import StudentDashboard from './Screens/StudentDashBoard'
 import SuccessScreen from './Screens/SuccessScreen'
 import CancelScreen from './Screens/CancelScreen'
 import AdminFlags from './Screens/AdminFlags'
+import SmsSignupScreen from './Screens/SmsSignupScreen'
 import { initPixel } from './utils/metaPixel'
 
 import { identifyVisitor, pushEvent } from './lib/tracking';
@@ -21,6 +22,7 @@ function App() {
       <Route path="/" element={<StudentDashboard />} />
       <Route path="/success" element={<SuccessScreen />} />
       <Route path="/cancel" element={<CancelScreen />} />
+      <Route path="/sms-signup" element={<SmsSignupScreen />} />
       <Route path="/admin/flags" element={<AdminFlags />} />
     </Routes>
   )

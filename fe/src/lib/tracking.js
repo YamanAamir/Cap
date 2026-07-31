@@ -38,10 +38,10 @@ export const getOrCreateVisitorId = () => {
 
 // This needs to be configured based on the environment
 export const getApiBaseUrl = () => {
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_TRACKING_API_BASE) {
-    return import.meta.env.VITE_TRACKING_API_BASE;
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
   }
-  return 'http://localhost:3000'; // Default backend dev port
+  return 'http://localhost:5000'; // Default backend dev port
 };
 
 export const identifyVisitor = async (productInterest, sourceApp) => {

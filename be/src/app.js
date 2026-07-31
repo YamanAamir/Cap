@@ -8,6 +8,8 @@ const sendEmailRoutes = require('./routes/sendEmail.routes');
 const authRoutes = require('./routes/auth.routes');
 const orderRoutes = require('./routes/order.routes');
 const flagRoutes = require('./routes/flag.routes');
+const adminRoutes = require('./routes/admin.routes');
+const marketingRoutes = require('./routes/marketing.routes');
 const cookieParser = require('cookie-parser');
 
 const app = express();
@@ -32,12 +34,15 @@ app.use(cors({
 // static
 app.use(express.static(path.join(__dirname, '../public')));
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
+app.use('/exports', express.static(path.join(__dirname, '../public/exports')));
 
 // routes
 app.use('/api/sendEmail', sendEmailRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/flags', flagRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/marketing', marketingRoutes);
 
 // root
 app.get('/', (req, res) => {

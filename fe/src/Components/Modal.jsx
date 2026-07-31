@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, Printer, Download, Mail, CheckCircle, Package, Star, User, CreditCard, ArrowLeft, ArrowRight, Loader2, ShoppingCart, Settings } from 'lucide-react';
+import { X, Printer, Download, Mail, CheckCircle, Package, Star, User, CreditCard, ArrowLeft, ArrowRight, Loader2, ShoppingCart, Settings, Tag } from 'lucide-react';
 import { loadStripe } from "@stripe/stripe-js";
 import { useRef } from 'react';
 import { pushEvent } from '../lib/tracking';
+import { captureCapViews } from '../utils/capCapture';
+import { validateDiscountCode } from '../services/marketing.api';
 
 ////////Production Student Life////////
 // const stripePromise = loadStripe("pk_live_51S0HgIFDBW3pcErGOmI6vsVCXStMih46KJXjrOiFHppAj6h0tHOp4zDYMoLyTQn7Uk99pePatnCFrqLh6AAblGa300Wm8qbiRe");
@@ -10,11 +12,19 @@ import { pushEvent } from '../lib/tracking';
 ////////DEV Student Life////////
 const stripePromise = loadStripe("pk_test_51S0HgS2ZnQzLDaK40M9tlj1n72wtQNsUNhG986xbE6bfHxWmFfOMJfWGAbg4QrAlFtnhVCtOajoIqUbRgSBnRnkb00iMo1bD1o");
 
+import { getBaseUrl } from '../services/marketing.api';
+
 const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfiguring, packageName, program }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
-  const [expressSurcharge, setExpressSurcharge] = useState(250); // Added for Express logic with 250 DKK fallback
+  const [expressConfig, setExpressConfig] = useState({ active: true, price: 250 });
+  const [discountCodeInput, setDiscountCodeInput] = useState('');
+  const [appliedDiscount, setAppliedDiscount] = useState(null);
+  const [discountError, setDiscountError] = useState('');
+  const [discountLoading, setDiscountLoading] = useState(false);
+  const [priceConfig, setPriceConfig] = useState(null);
+  const [deliverySettings, setDeliverySettings] = useState({ "Denmark": 79, "Grønland": 348 });
 
   const [customerDetails, setCustomerDetails] = useState({
     firstName: '',
@@ -31,22 +41,22 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
 
   // Fetch Express Surcharge from Admin-editable Flags
   useEffect(() => {
-    const fetchExpressPrice = async () => {
+    const fetchDynamicPrices = async () => {
       try {
-        const res = await fetch('https://capdevapi.studentlife.dk/api/flags');
-        // const res = await fetch('http://localhost:3000/api/flags');
+        const res = await fetch(`${getBaseUrl()}/marketing/configurator-settings`);
         if (res.ok) {
           const data = await res.json();
-          const expressFlag = data.find(f => f.name.toLowerCase().includes('express'));
-          if (expressFlag) {
-            setExpressSurcharge(parseFloat(expressFlag.price));
-          }
+          if (data.priceConfig) setPriceConfig(data.priceConfig);
+          if (data.deliveryCharges) setDeliverySettings(data.deliveryCharges);
+          if (data.expressDelivery) setExpressConfig(data.expressDelivery);
         }
       } catch (err) {
-        console.error('Failed to fetch express surcharge:', err);
+        console.error('Failed to fetch dynamic prices:', err);
       }
     };
-    if (isOpen) fetchExpressPrice();
+    if (isOpen) {
+      fetchDynamicPrices();
+    }
   }, [isOpen]);
 
   // --- outside renderCustomerDetails, in your component ---
@@ -139,263 +149,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
   const steps = orderComplete ? ['Thank You'] : ['Ordre oversigt', 'Leveringsoplysninger', 'Ordrebekræftelse'];
 
   // Price definitions for each option
-  const priceConfig = {
-    basePrice: 299,
-    bows: {
-      color: {
-        "Standard": 0,
-        "Premium": 50,
-        "Luxury": 100
-      },
-      bowType: {
-        "Standard": 0,
-        "Premium": 75,
-        "Luxury": 150
-      },
-      emblem: {
-        "Standard": 0,
-        "Premium": 60,
-        "Luxury": 120
-      },
-      country: {
-        "Denmark": 0,
-        "Grønland": 0,
-        "Sweden": 25,
-        "Norway": 25,
-        "Germany": 25,
-        "Other": 30
-      }
-    },
-    educationalTape: {
-      hatbandColor: {
-        "Standard": 0,
-        "Premium": 40,
-        "Luxury": 80
-      },
-      materialType: {
-        "Standard": 0,
-        "Premium": 55,
-        "Luxury": 110
-      },
-      chinStrapColor: {
-        "Standard": 0,
-        "Premium": 30,
-        "Luxury": 60
-      },
-      buttonMaterial: {
-        "Standard": 0,
-        "Premium": 20,
-        "Luxury": 40
-      },
-      embroideryColor: {
-        "Standard": 0,
-        "Premium": 35,
-        "Luxury": 70
-      },
-      buttonColor: {
-        "Standard": 0,
-        "Premium": 15,
-        "Luxury": 30
-      },
-      embroideryText: {
-        "Standard": 0,
-        "Premium": 25,
-        "Luxury": 50
-      }
-    },
-    embroidery: {
-      nameEmbroideryColor: {
-        "Standard": 0,
-        "Premium": 45,
-        "Luxury": 90
-      },
-      nameEmbroideryText: {
-        "Standard": 0,
-        "Premium": 25,
-        "Luxury": 50
-      },
-      schoolEmbroideryColor: {
-        "Standard": 0,
-        "Premium": 45,
-        "Luxury": 90
-      },
-      schoolEmbroideryText: {
-        "Standard": 0,
-        "Premium": 25,
-        "Luxury": 50
-      }
-    },
-    cover: {
-      coverColor: {
-        "Standard": 0,
-        "Premium": 70,
-        "Luxury": 140
-      },
-      edgebandColor: {
-        "Standard": 0,
-        "Premium": 40,
-        "Luxury": 80
-      },
-      starsStyle: {
-        "Standard": 0,
-        "Premium": 50,
-        "Luxury": 100
-      }
-    },
-    shade: {
-      shadeType: {
-        "Standard": 0,
-        "Premium": 85,
-        "Luxury": 170
-      },
-      materialType: {
-        "Standard": 0,
-        "Premium": 60,
-        "Luxury": 120
-      },
-      shadowTapeColor: {
-        "Standard": 0,
-        "Premium": 35,
-        "Luxury": 70
-      },
-      engravingLine1: {
-        "Standard": 0,
-        "Premium": 15,
-        "Luxury": 30
-      },
-      engravingLine2: {
-        "Standard": 0,
-        "Premium": 15,
-        "Luxury": 30
-      },
-      engravingLine3: {
-        "Standard": 0,
-        "Premium": 15,
-        "Luxury": 30
-      }
-    },
-    foer: {
-      kokardeMaterial: {
-        "Standard": 0,
-        "Premium": 50,
-        "Luxury": 100
-      },
-      kokardeColor: {
-        "Standard": 0,
-        "Premium": 30,
-        "Luxury": 60
-      },
-      bowColor: {
-        "Standard": 0,
-        "Premium": 40,
-        "Luxury": 80
-      },
-      foerMaterial: {
-        "Standard": 0,
-        "Premium": 65,
-        "Luxury": 130
-      },
-      bowMaterialType: {
-        "Standard": 0,
-        "Premium": 45,
-        "Luxury": 90
-      }
-    },
-    extraCover: {
-      extraCoverOption: {
-        "None": 0,
-        "Standard": 50,
-        "Premium": 100,
-        "Luxury": 200
-      }
-    },
-    accessories: {
-      hatBoxColor: {
-        "Standard": 0,
-        "Premium": 25,
-        "Luxury": 50
-      },
-      hatBoxType: {
-        "None": 0,
-        "Standard": 50,
-        "Premium": 100,
-        "Luxury": 200
-      },
-      ballpointPenSelection: {
-        "None": 0,
-        "Standard": 20,
-        "Premium": 40
-      },
-      silkPillowSelection: {
-        "None": 0,
-        "Standard": 30,
-        "Premium": 60
-      },
-      badgesSelection: {
-        "None": 0,
-        "Standard": 25,
-        "Premium": 50
-      },
-      glovesSelection: {
-        "None": 0,
-        "Standard": 35,
-        "Premium": 70
-      },
-      largeBallpointPenSelection: {
-        "None": 0,
-        "Standard": 30,
-        "Premium": 60
-      },
-      smartTagSelection: {
-        "None": 0,
-        "Standard": 15,
-        "Premium": 30
-      },
-      lightBallSelection: {
-        "None": 0,
-        "Standard": 40,
-        "Premium": 80
-      },
-      champagneGlassSelection: {
-        "None": 0,
-        "Standard": 25,
-        "Premium": 50
-      },
-      whistleSelection: {
-        "None": 0,
-        "Standard": 20,
-        "Premium": 40
-      },
-      trumpetSelection: {
-        "None": 0,
-        "Standard": 80,
-        "Premium": 160
-      }
-    },
-    size: {
-      selectedSize: {
-        "49.5": 0,
-        "50": 0,
-        "51": 0,
-        "52": 0,
-        "53": 0,
-        "54": 0,
-        "55": 0,
-        "56": 0,
-        "57": 0,
-        "58": 0,
-        "59": 0,
-        "60": 0,
-        "61": 0
-      },
-      millimeterAdjustment: {
-        "0": 0,
-        "5": 10,
-        "10": 20,
-        "15": 30
-      }
-    }
-  };
+  const currentPriceConfig = priceConfig?.[packageName || 'standard'] || {};
 
   // Function to calculate total price
 
@@ -407,22 +161,22 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
 
     if (typeof value === 'object' && value.name) {
       displayValue = value.name;
-      if (priceConfig[section] && priceConfig[section][key] && priceConfig[section][key][value.name] !== undefined) {
-        price = priceConfig[section][key][value.name];
+      if (currentPriceConfig[section] && currentPriceConfig[section][key] && currentPriceConfig[section][key][value.name] !== undefined) {
+        price = currentPriceConfig[section][key][value.name];
       }
     } else if (typeof value === 'string') {
       if (value.startsWith('data:image')) {
         displayValue = 'Billede uploadet';
       } else {
         displayValue = value;
-        if (priceConfig[section] && priceConfig[section][key] && priceConfig[section][key][value] !== undefined) {
-          price = priceConfig[section][key][value];
+        if (currentPriceConfig[section] && currentPriceConfig[section][key] && currentPriceConfig[section][key][value] !== undefined) {
+          price = currentPriceConfig[section][key][value];
         }
       }
     } else if (typeof value === 'number') {
       displayValue = value.toString();
-      if (priceConfig[section] && priceConfig[section][key] && priceConfig[section][key][value.toString()] !== undefined) {
-        price = priceConfig[section][key][value.toString()];
+      if (currentPriceConfig[section] && currentPriceConfig[section][key] && currentPriceConfig[section][key][value.toString()] !== undefined) {
+        price = currentPriceConfig[section][key][value.toString()];
       }
     }
 
@@ -530,16 +284,32 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
 
   // --- price calculation logic ---
   // --- price calculation logic ---
-  const shippingPrices = {
-    "Denmark": 79,
-    "Grønland": 348,
-  };
-
   // For Grønland, we replace the 79 DKK default fee with the 348 DKK shipping fee.
   const country = customerDetails.country || "Denmark";
   // zee express price logic
-  const deliverySurcharge = customerDetails.deliveryType === 'express' ? expressSurcharge : 0;
-  const finalPrice = (parseFloat(price) - 79 + (shippingPrices[country] || 79) + deliverySurcharge).toFixed(2);
+  const deliverySurcharge = customerDetails.deliveryType === 'express' ? expressConfig.price : 0;
+  const basePrice = parseFloat(price) - 79 + (deliverySettings[country] || 79) + deliverySurcharge;
+  const discountAmount = appliedDiscount?.discountAmount || 0;
+  const finalPrice = Math.max(0, basePrice - discountAmount).toFixed(2);
+
+  const handleApplyDiscount = async () => {
+    if (!discountCodeInput.trim()) return;
+    setDiscountLoading(true);
+    setDiscountError('');
+    try {
+      const result = await validateDiscountCode({
+        code: discountCodeInput.trim(),
+        phone: customerDetails.phone,
+        totalPrice: basePrice,
+      });
+      setAppliedDiscount(result);
+    } catch (err) {
+      setAppliedDiscount(null);
+      setDiscountError(err.message);
+    } finally {
+      setDiscountLoading(false);
+    }
+  };
 
   const handleInputChange = (field, value) => {
     setCustomerDetails(prev => ({
@@ -566,7 +336,14 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
   const handleConfirmOrder = async () => {
     setIsLoading(true);
 
-    const orderDate = new Date().toISOString(); // ✅ local definition
+    const orderDate = new Date().toISOString();
+    let capImages = {};
+    try {
+      capImages = await captureCapViews();
+    } catch (err) {
+      console.warn('Cap image capture failed:', err);
+    }
+
     const orderData = {
       customerDetails,
       selectedOptions: buildFilteredOptions(selectedOptions),
@@ -576,20 +353,20 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       orderNumber: `CAP-${orderDate}`,
       email: customerDetails.email,
       packageName: packageName,
-      //zee//
       program: program,
+      capImages: Object.keys(capImages).length > 0 ? capImages : null,
+      discountCode: appliedDiscount?.discount?.code || null,
       liningPhoto:
         (typeof selectedOptions.FOER?.['Indvendigt foer billede'] === 'string' &&
           selectedOptions.FOER['Indvendigt foer billede'].startsWith('data:image')
           ? selectedOptions.FOER['Indvendigt foer billede']
           : null),
-      //zee//
     };
 
     try {
       // 1️⃣ Send order + email
       // const response = await fetch(
-      //   // "http://localhost:3000/api/sendEmail/capconfigurator",
+      //   // "http://localhost:5000/api/sendEmail/capconfigurator",
       //   "https://new-capbackend.vercel.app/api/sendEmail/capconfigurator",
       //   {
       //     method: "POST",
@@ -604,17 +381,8 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       //   throw new Error("Failed to submit order");
       // }
 
-      // 2️⃣ Create Stripe Checkout session
-      // const stripeRes = await fetch("https://new-capbackend.vercel.app/api/sendEmail/create-checkout-session", {
-      // const stripeRes = await fetch("https://cap-stripe-webhook-backend.vercel.app/api/sendEmail/create-checkout-session", {
-      // const stripeRes = await fetch("https://cap-stripewebhook-backend-production.up.railway.app/api/sendEmail/create-checkout-session", {
-
-      ////////DEV Student Life////////
-      const stripeRes = await fetch("https://capdevapi.studentlife.dk/api/sendEmail/create-checkout-session", {
-        // const stripeRes = await fetch("http://localhost:3000/api/sendEmail/create-checkout-session", {
-
-        ////////Production Student Life////////
-        // const stripeRes = await fetch("https://cap-live-backend.vercel.app/api/sendEmail/create-checkout-session", {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+      const stripeRes = await fetch(`${baseUrl}/api/sendEmail/create-checkout-session`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderData),
@@ -971,17 +739,21 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
             <br />
 
             {/* Express Delivery */}
-            <input
-              type="radio"
-              name="deliveryType"
-              checked={customerDetails.deliveryType === "express"}
-              onChange={() => handleInputChange("deliveryType", "express")}
-              className="h-4 w-4 text-green-600 border-gray-300"
-              id="expressDelivery"
-            />
-            <label htmlFor="expressDelivery" className="ml-2 text-sm font-bold text-green-700">
-              Ekspres levering – estimeret leveringstid (3 uger) +{expressSurcharge} DKK
-            </label>
+            {expressConfig.active && (
+              <>
+                <input
+                  type="radio"
+                  name="deliveryType"
+                  checked={customerDetails.deliveryType === "express"}
+                  onChange={() => handleInputChange("deliveryType", "express")}
+                  className="h-4 w-4 text-green-600 border-gray-300"
+                  id="expressDelivery"
+                />
+                <label htmlFor="expressDelivery" className="ml-2 text-sm font-bold text-green-700">
+                  Ekspres levering – estimeret leveringstid (3 uger) +{expressConfig.price} DKK
+                </label>
+              </>
+            )}
           </div>
 
 
@@ -1053,6 +825,37 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
           )}
 
 
+        </div>
+
+        {/* Discount Code */}
+        <div className="bg-gradient-to-r from-violet-50 to-violet-100/50 rounded-xl p-4 border border-violet-200">
+          <div className="flex items-center mb-3">
+            <Tag className="w-4 h-4 text-violet-600 mr-2" />
+            <h3 className="text-lg font-bold text-gray-800">Rabatkode</h3>
+          </div>
+          <div className="flex gap-2">
+            <input
+              value={discountCodeInput}
+              onChange={(e) => { setDiscountCodeInput(e.target.value.toUpperCase()); setDiscountError(''); }}
+              placeholder="Indtast rabatkode"
+              className="flex-1 px-4 py-2 rounded-lg border border-violet-200 text-sm font-medium uppercase"
+              disabled={!!appliedDiscount}
+            />
+            <button
+              type="button"
+              onClick={handleApplyDiscount}
+              disabled={discountLoading || !!appliedDiscount || !discountCodeInput.trim()}
+              className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-bold hover:bg-violet-700 disabled:opacity-50"
+            >
+              {discountLoading ? '...' : appliedDiscount ? 'Anvendt' : 'Anvend'}
+            </button>
+          </div>
+          {discountError && <p className="text-red-600 text-xs mt-2">{discountError}</p>}
+          {appliedDiscount && (
+            <p className="text-emerald-700 text-sm font-semibold mt-2">
+              Rabat anvendt: −{appliedDiscount.discountAmount?.toFixed(2)} DKK
+            </p>
+          )}
         </div>
 
         {/* Product Configuration Summary */}
@@ -1283,10 +1086,13 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
                 <div>
                   <span className="text-base font-bold text-gray-900">Din pris</span>
                   <p className="text-gray-600 text-xs mt-1">
-                    {country === "Grønland"
-                      ? "Inkluderet forsendelse og gebyr (348 DKK)"
-                      : "Inkluderet forsendelse og gebyr (79 DKK)"}
+                    Inkluderet forsendelse og gebyr ({deliverySettings[country] || 79} DKK)
                   </p>
+                  {appliedDiscount && (
+                    <p className="text-violet-600 text-xs mt-1 font-semibold">
+                      Rabat: −{discountAmount.toFixed(2)} DKK
+                    </p>
+                  )}
                 </div>
                 <div className="text-right">
                   <span className="text-2xl font-bold bg-gradient-to-r from-green-600 to-green-700 bg-clip-text text-transparent">

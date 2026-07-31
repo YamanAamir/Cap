@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../utils/prisma');
 
 const getOrders = async (req, res) => {
   try {
@@ -10,12 +9,12 @@ const getOrders = async (req, res) => {
       sortBy = 'createdAt',
       order = 'desc',
       status = 'all',
+      statusId = 'all',
     } = req.query;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
 
-    // Build filter
     const where = {};
     if (search) {
       where.OR = [
@@ -26,29 +25,33 @@ const getOrders = async (req, res) => {
     if (status !== 'all') {
       where.status = status;
     }
+    if (statusId !== 'all') {
+      where.statusId = parseInt(statusId);
+    }
 
-    // Sorting
     const orderBy = {};
     orderBy[sortBy] = order;
 
-    // Fetch data and total count
     const [orders, totalCount] = await prisma.$transaction([
       prisma.order.findMany({
         where,
         skip,
         take,
         orderBy,
+        include: {
+          orderStatus: true,
+          customer: true,
+          discountCode: true,
+        },
       }),
       prisma.order.count({ where }),
     ]);
-
-    const totalPages = Math.ceil(totalCount / take);
 
     res.status(200).json({
       orders,
       pagination: {
         totalCount,
-        totalPages,
+        totalPages: Math.ceil(totalCount / take),
         currentPage: parseInt(page),
         limit: take,
       },
@@ -64,6 +67,12 @@ const getOrderById = async (req, res) => {
     const { id } = req.params;
     const order = await prisma.order.findUnique({
       where: { id: parseInt(id) },
+      include: {
+        orderStatus: true,
+        customer: true,
+        discountCode: true,
+        productionBatch: true,
+      },
     });
 
     if (!order) {
@@ -79,11 +88,27 @@ const getOrderById = async (req, res) => {
 const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, statusId } = req.body;
+
+    const data = {};
+    if (statusId) {
+      const orderStatus = await prisma.orderStatus.findUnique({ where: { id: parseInt(statusId) } });
+      if (orderStatus) {
+        data.statusId = orderStatus.id;
+        data.status = orderStatus.name.toUpperCase().replace(/\s+/g, '_');
+      }
+    } else if (status) {
+      data.status = status;
+      const orderStatus = await prisma.orderStatus.findFirst({
+        where: { name: { equals: status.replace(/_/g, ' ') } },
+      });
+      if (orderStatus) data.statusId = orderStatus.id;
+    }
 
     const updatedOrder = await prisma.order.update({
       where: { id: parseInt(id) },
-      data: { status },
+      data,
+      include: { orderStatus: true },
     });
 
     res.status(200).json(updatedOrder);
@@ -92,8 +117,51 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
+const deleteOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.order.delete({
+      where: { id: parseInt(id) }
+    });
+    res.status(200).json({ message: 'Order deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting order:', error);
+    res.status(500).json({ message: 'Error deleting order' });
+  }
+};
+
+const updateOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { customerEmail, customerDetails, totalPrice, statusId, packageName, program } = req.body;
+
+    const updatedOrder = await prisma.order.update({
+      where: { id: parseInt(id) },
+      data: {
+        customerEmail,
+        customerDetails,
+        totalPrice: parseFloat(totalPrice),
+        statusId: statusId ? parseInt(statusId) : undefined,
+        packageName,
+        program
+      },
+      include: {
+        orderStatus: true,
+        customer: true,
+      }
+    });
+
+    res.status(200).json(updatedOrder);
+  } catch (error) {
+    console.error('Error updating order:', error);
+    res.status(500).json({ message: 'Error updating order' });
+  }
+};
+
 module.exports = {
   getOrders,
   getOrderById,
   updateOrderStatus,
+  updateOrder,
+  deleteOrder,
 };

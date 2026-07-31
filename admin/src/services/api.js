@@ -4,7 +4,7 @@ import Cookies from 'js-cookie';
 // Dynamic API URL detection
 const getBaseUrl = () => {
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return 'http://localhost:3000/api';
+    return 'http://localhost:5000/api';
   }
   return 'https://cap-dev-backend-one.vercel.app/api';
 };

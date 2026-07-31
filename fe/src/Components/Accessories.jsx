@@ -58,9 +58,7 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
     useEffect(() => {
         const fetchFlags = async () => {
             try {
-                const baseUrl = window.location.hostname === 'localhost'
-                    ? 'http://localhost:3000'
-                    : 'https://capdevapi.studentlife.dk';
+                const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
                 const response = await fetch(`${baseUrl}/api/flags`);
                 if (response.ok) {
                     const data = await response.json();

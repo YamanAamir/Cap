@@ -3388,11 +3388,27 @@ const sendCapEmail = async (req, res) => {
       orderDate,
       email,
       packageName,
-      program
+      program,
+      capImages,
     } = req.body;
 
+    const buildCapAttachments = (images) => {
+      if (!images) return [];
+      const parsed = typeof images === 'string' ? JSON.parse(images) : images;
+      const labels = { front: 'Front View', back: 'Back View', top: 'Top View', bottom: 'Bottom View' };
+      return Object.entries(labels).map(([key, label]) => {
+        const data = parsed[key];
+        if (!data || typeof data !== 'string' || !data.startsWith('data:image')) return null;
+        const base64 = data.replace(/^data:image\/\w+;base64,/, '');
+        return {
+          filename: `${key}-view.png`,
+          content: Buffer.from(base64, 'base64'),
+          cid: `cap-${key}`,
+        };
+      }).filter(Boolean);
+    };
 
-
+    const capAttachments = buildCapAttachments(capImages);
 
     // Validate required fields
     if (!customerDetails || !selectedOptions || !email) {
@@ -3441,12 +3457,14 @@ const sendCapEmail = async (req, res) => {
       to: email,
       subject: emailContent.subject,
       html: emailContent.html,
-      text: emailContent.text
+      text: emailContent.text,
+      attachments: capAttachments,
     };
 
     const mailOptionsAdmin = {
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-      to: 'salg@studentlife.dk',
+      // to: 'salg@studentlife.dk',
+      to: 'abdulahad010274@gmail.com',
       subject: emailContentAdmin.subject,
       html: emailContentAdmin.html,
       text: emailContentAdmin.text
@@ -3454,7 +3472,8 @@ const sendCapEmail = async (req, res) => {
 
     const mailOptionsFactory = {
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-      to: 'salg@studentlife.dk',
+      // to: 'salg@studentlife.dk',
+      to: 'abdulahad010274@gmail.com',
       subject: emailContentFactory.subject,
       html: emailContentFactory.html,
       text: emailContentFactory.text
@@ -3522,35 +3541,55 @@ const stripePayment = async (req, res) => {
     orderDate,
     email,
     packageName,
-    program } = req.body;
+    program,
+    capImages,
+    discountCode,
+  } = req.body;
 
   try {
-    const order = await prisma.order.create({
-      data: {
-        customerDetails,
-        selectedOptions,
-        totalPrice: parseFloat(totalPrice),
-        currency,
-        orderNumber,
-        orderDate,
-        customerEmail: email,
-        status: 'PENDING',
-        packageName: packageName,
-        program: program
-      }
-    });
+    const { upsertCustomerFromOrder, applyDiscountCode, getStatusBySlug } = require('../services/core.service');
+
+    const customer = await upsertCustomerFromOrder(customerDetails, email);
+    let finalPrice = parseFloat(totalPrice);
+    let discountRecord = null;
+    let discountAmount = null;
+
+    if (discountCode) {
+      const result = await applyDiscountCode(discountCode, customerDetails?.phone, finalPrice);
+      discountRecord = result.discount;
+      discountAmount = result.discountAmount;
+      finalPrice = result.finalPrice;
+    }
+
+    const { v4: uuidv4 } = require('uuid');
+    const tempOrderId = uuidv4();
+    
+    // Store in temporary table using raw SQL to avoid needing a prisma generate restart
+    await prisma.$executeRaw`
+      INSERT INTO TempOrder (id, orderData) 
+      VALUES (${tempOrderId}, ${JSON.stringify({
+        ...req.body,
+        customerId: customer.id,
+        finalPrice,
+        discountRecord,
+        discountAmount
+      })})
+    `;
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       customer_email: email,
+      metadata: {
+        tempOrderId: tempOrderId
+      },
       line_items: [
         {
           price_data: {
             currency: "dkk",
             product_data: {
-              name: `Cap Order : ${order.orderNumber}`,
+              name: `Cap Order : ${orderNumber}`,
             },
-            unit_amount: totalPrice * 100,
+            unit_amount: Math.round(finalPrice * 100),
           },
           quantity: 1,
         },
@@ -3559,9 +3598,6 @@ const stripePayment = async (req, res) => {
       locale: "da",
       success_url: `https://shop.studentlife.dk/thankyou/?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: "https://elipsestudio.com/devstudentlife/cancel",
-      metadata: {
-        orderId: order.id,   // 👈 only store a small reference here
-      },
     });
     res.json({ id: session.id });
   } catch (err) {
@@ -3610,17 +3646,51 @@ const stripeWebhook = async (req, res) => {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
 
-    const orderId = session.metadata.orderId;
+    const tempOrderId = session.metadata.tempOrderId;
 
     try {
-      const order = await prisma.order.findUnique({
-        where: { id: parseInt(orderId) }
-      });
-
-      if (!order) {
-        console.log("❌ Order not found");
+      const tempOrders = await prisma.$queryRaw`SELECT * FROM TempOrder WHERE id = ${tempOrderId}`;
+      if (!tempOrders || tempOrders.length === 0) {
+        console.log("❌ TempOrder not found");
         return res.json({ received: true });
       }
+
+      const tempOrder = tempOrders[0];
+      let orderData = tempOrder.orderData;
+      if (typeof orderData === 'string') {
+        orderData = JSON.parse(orderData);
+      }
+
+      const paidStatus = await prisma.orderStatus.findUnique({ where: { slug: 'paid' } });
+      
+      const order = await prisma.order.create({
+        data: {
+          customerDetails: orderData.customerDetails,
+          selectedOptions: orderData.selectedOptions,
+          totalPrice: orderData.finalPrice,
+          currency: orderData.currency,
+          orderNumber: orderData.orderNumber,
+          orderDate: orderData.orderDate,
+          customerEmail: orderData.email,
+          status: paidStatus ? paidStatus.name.toUpperCase().replace(/\s+/g, '_') : 'PAID',
+          statusId: paidStatus?.id || null,
+          packageName: orderData.packageName,
+          program: orderData.program,
+          customerId: orderData.customerId,
+          capImages: orderData.capImages || null,
+          discountCodeId: orderData.discountRecord?.id || null,
+          discountAmount: orderData.discountAmount,
+        },
+      });
+
+      if (orderData.discountRecord) {
+        await prisma.discountCode.update({
+          where: { id: orderData.discountRecord.id },
+          data: { usedAt: new Date(), usedByOrderId: order.id },
+        });
+      }
+
+      await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${tempOrderId}`;
 
       await sendCapEmail(
         {
@@ -3633,7 +3703,8 @@ const stripeWebhook = async (req, res) => {
             orderDate: order.orderDate,
             email: order.customerEmail,
             packageName: order.packageName,
-            program: order.program
+            program: order.program,
+            capImages: order.capImages,
           }
         },
         { status: () => ({ json: () => { } }) }

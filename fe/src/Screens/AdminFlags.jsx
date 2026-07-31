@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const BASE_URL = window.location.hostname === 'localhost'
-  ? 'http://localhost:3000'
-  : 'https://capdevapi.studentlife.dk';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 const formatDkk = (value) => {
   const n = Number(value);

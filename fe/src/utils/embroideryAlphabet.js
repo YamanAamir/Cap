@@ -117,10 +117,7 @@ export async function generateAllEmbroideryMaps(text) {
     };
 
     const chars = text.split('');
-    const baseUrl = window.location.hostname === 'localhost'
-        ? 'http://localhost:5175/devstudentlife'
-        // : 'https://studentcap.studentlife.dk/devstudentlife';
-        : 'https://studenterhue.studentlife.dk/devstudentlife';
+    const baseUrl = import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5175/devstudentlife';
     const base = `${baseUrl}/alphabets`;
 
     // ── 1. Fetch all images ──────────────────────────────────
