@@ -6,7 +6,7 @@ import {
   ListOrdered, Tag, MessageSquare, FileSpreadsheet, Mail, Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
+import logo from '../../assets/logo.png';
 const navSections = [
   {
     label: '',
@@ -133,28 +133,24 @@ const DashboardLayout = () => {
               </button>
             </div>
           ) : (
-            <div className="flex items-center gap-3 w-full">
-              <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center shrink-0">
-                <span className="text-white font-black text-lg">C</span>
-              </div>
-              <div className="flex flex-col overflow-hidden">
-                <span className="text-[10px] text-slate-500 leading-none mb-1">Hello,</span>
-                <span className="text-sm font-bold text-slate-900 leading-none truncate">{user?.name || 'Admin User'}</span>
+            <div className="flex items-center justify-between w-full px-1">
+              <div className="h-10 w-36 flex items-center justify-start shrink-0">
+                <img src={logo} alt="StudentLife" className="w-full h-full object-contain object-left scale-[1.8] origin-left pointer-events-none" />
               </div>
               {!isMobile && (
                 <button 
                   onClick={() => setIsSidebarOpen(false)} 
-                  className="ml-auto text-slate-400 hover:text-slate-600"
+                  className="ml-auto text-slate-400 hover:text-slate-600 shrink-0 relative z-10 p-2 -mr-2"
                 >
-                  <ChevronLeftIcon className="h-4 w-4" />
+                  <ChevronLeftIcon className="h-5 w-5" />
                 </button>
               )}
               {isMobile && (
                 <button 
                   onClick={() => setIsSidebarOpen(false)} 
-                  className="ml-auto text-slate-400 hover:text-slate-600"
+                  className="ml-auto text-slate-400 hover:text-slate-600 shrink-0 relative z-10 p-2 -mr-2"
                 >
-                  <XIcon className="h-5 w-5" />
+                  <XIcon className="h-6 w-6" />
                 </button>
               )}
             </div>
@@ -173,18 +169,22 @@ const DashboardLayout = () => {
                   (isSidebarOpen || isMobile) ? 'px-6 py-3' : 'justify-center py-3'
                 )}
               >
-                <div className="flex items-center w-full relative z-10">
+                <div className={cn("flex items-center w-full relative z-10", !(isSidebarOpen || isMobile) && "justify-center")}>
                   <item.icon className={cn(
                     'h-[18px] w-[18px] shrink-0 transition-colors', 
                     active ? 'text-[#1e3a8a]' : 'text-slate-500 group-hover:text-slate-900'
                   )} />
-                  {(isSidebarOpen || isMobile) && (
+                  {(isSidebarOpen || isMobile) ? (
                     <span className={cn(
                       "text-sm font-medium flex-1 ml-4 transition-colors", 
                       active ? "text-[#1e3a8a] font-bold" : "text-slate-700 group-hover:text-slate-900"
                     )}>
                       {item.title}
                     </span>
+                  ) : (
+                    <div className="absolute left-12 bg-slate-800 text-white text-xs px-2.5 py-1.5 rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 font-medium shadow-lg">
+                      {item.title}
+                    </div>
                   )}
                 </div>
                 {/* Active Indicator Line */}
@@ -219,7 +219,12 @@ const DashboardLayout = () => {
             </div>
           </div>
 
-          <div className="flex items-center">
+          <div className="flex items-center gap-5 md:gap-8">
+            <div className="hidden md:flex flex-col items-end">
+              <span className="text-[10px] text-slate-500 leading-none mb-1">Hello,</span>
+              <span className="text-sm font-bold text-slate-900 leading-none">{user?.name || 'Admin User'}</span>
+            </div>
+            <div className="hidden md:block w-px h-8 bg-slate-200"></div>
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-bold text-xs uppercase tracking-wider transition-colors"

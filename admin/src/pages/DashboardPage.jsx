@@ -104,7 +104,7 @@ const DashboardPage = () => {
           <section>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-slate-800">Recent Orders</h2>
-              <Link to="/admin/orders" className="bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-4 py-2 rounded shadow-sm transition-colors">
+              <Link to="/dashboard/orders" className="bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold px-4 py-2 rounded shadow-sm transition-colors">
                 View All Orders
               </Link>
             </div>

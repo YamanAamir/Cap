@@ -16,13 +16,9 @@ const CustomersPage = () => {
   const [editModal, setEditModal] = useState({ isOpen: false, customer: null });
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [activeDropdown, setActiveDropdown] = useState(null);
 
-  useEffect(() => {
-    const handleClickOutside = () => setActiveDropdown(null);
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
+
+
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search), 400);
@@ -185,29 +181,21 @@ const CustomersPage = () => {
                   <td className="px-6 py-4 text-slate-600">
                     {new Date(c.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </td>
-                  <td className="px-6 py-4 text-slate-400 text-center relative">
+                  <td className="px-6 py-4 text-center flex items-center justify-center gap-2">
                     <button 
-                      className="p-1 hover:bg-slate-100 rounded"
-                      onClick={(e) => { e.stopPropagation(); setActiveDropdown(activeDropdown === c.id ? null : c.id); }}
+                      className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                      title="Edit"
+                      onClick={() => setEditModal({ isOpen: true, customer: c })}
                     >
-                      <MoreHorizontal className="h-4 w-4" />
+                      <Edit2 className="w-4 h-4" />
                     </button>
-                    {activeDropdown === c.id && (
-                      <div className="absolute right-6 top-10 bg-white border border-slate-200 rounded shadow-lg z-10 w-32 py-1">
-                        <button 
-                          className="w-full text-left px-4 py-2 text-xs hover:bg-slate-50 flex items-center gap-2 text-slate-700"
-                          onClick={() => setEditModal({ isOpen: true, customer: c })}
-                        >
-                          <Edit2 className="w-3 h-3" /> Edit
-                        </button>
-                        <button 
-                          className="w-full text-left px-4 py-2 text-xs hover:bg-red-50 flex items-center gap-2 text-red-600"
-                          onClick={() => setDeleteModal({ isOpen: true, customerId: c.id })}
-                        >
-                          <Trash2 className="w-3 h-3" /> Delete
-                        </button>
-                      </div>
-                    )}
+                    <button 
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                      title="Delete"
+                      onClick={() => setDeleteModal({ isOpen: true, customerId: c.id })}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </td>
                 </tr>
               ))

@@ -950,13 +950,7 @@ const StudentDashboard = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <button 
-                    onClick={handleCaptureFullView}
-                    disabled={isCapturingFullView}
-                    className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg shadow-sm transition"
-                  >
-                    TEST SCREENSHOTS
-                  </button>
+
                   <div className="flex items-center space-x-2">
                     <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                     <span className="text-xs font-medium text-slate-600 uppercase tracking-widest">
