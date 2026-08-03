@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getOrders, updateOrderStatus } from '../services/auth.service';
 import { getOrderStatuses } from '../services/admin.service';
 import { Loader2, Search, Filter, RefreshCw, ImageIcon } from 'lucide-react';
+import ConfirmModal from '../components/common/ConfirmModal';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
@@ -20,6 +21,8 @@ const ProductionFactoryPage = () => {
   const [debounceSearch, setDebounceSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [statuses, setStatuses] = useState([]);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, orderId: null, statusId: null });
+  const [updatingId, setUpdatingId] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -56,13 +59,18 @@ const ProductionFactoryPage = () => {
     fetchOrders();
   }, [page, debounceSearch, statusFilter]);
 
-  const handleStatusUpdate = async (orderId, newStatusId) => {
+  const handleStatusUpdate = async () => {
+    if (!confirmModal.orderId || !confirmModal.statusId) return;
+    setUpdatingId(confirmModal.orderId);
     try {
-      await updateOrderStatus(orderId, { statusId: parseInt(newStatusId) });
+      await updateOrderStatus(confirmModal.orderId, { statusId: parseInt(confirmModal.statusId) });
       toast.success('Status updated');
       fetchOrders();
     } catch (error) {
       toast.error('Failed to update status');
+    } finally {
+      setUpdatingId(null);
+      setConfirmModal({ isOpen: false, orderId: null, statusId: null });
     }
   };
 
@@ -149,8 +157,9 @@ const ProductionFactoryPage = () => {
                     <td className="px-6 py-4">
                        <select
                           value={order.statusId || ''}
-                          onChange={(e) => handleStatusUpdate(order.id, e.target.value)}
-                          className="px-2.5 py-1.5 border border-slate-200 rounded text-xs font-bold text-slate-700 bg-[#fafafa] focus:outline-none focus:border-blue-500"
+                          onChange={(e) => setConfirmModal({ isOpen: true, orderId: order.id, statusId: e.target.value })}
+                          disabled={updatingId === order.id}
+                          className="px-2.5 py-1.5 border border-slate-200 rounded text-xs font-bold text-slate-700 bg-[#fafafa] focus:outline-none focus:border-blue-500 disabled:opacity-50"
                         >
                           {statuses.map(s => (
                             <option key={s.id} value={s.id}>{s.name}</option>
@@ -190,6 +199,17 @@ const ProductionFactoryPage = () => {
            >Next</button>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title="Update Order Status"
+        message="Are you sure you want to update the status of this order? If an email template is linked to the new status, it will be automatically sent to the customer."
+        confirmText="Yes, Update Status"
+        isDestructive={false}
+        isLoading={!!updatingId}
+        onConfirm={handleStatusUpdate}
+        onCancel={() => !updatingId && setConfirmModal({ isOpen: false, orderId: null, statusId: null })}
+      />
     </div>
   );
 };

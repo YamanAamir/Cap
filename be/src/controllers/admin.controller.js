@@ -375,6 +375,17 @@ exports.createExcelColumn = async (req, res) => {
   }
 };
 
+exports.deleteExcelColumn = async (req, res) => {
+  try {
+    await prisma.excelColumnConfig.delete({
+      where: { id: parseInt(req.params.id) },
+    });
+    res.json({ message: 'Excel column deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // Email Templates
 exports.getEmailTemplates = async (req, res) => {
   try {

@@ -43,6 +43,7 @@ router.get('/sms/messages', admin, adminController.getSmsMessages);
 router.get('/excel/columns', admin, adminController.getExcelColumns);
 router.post('/excel/columns', admin, adminController.createExcelColumn);
 router.put('/excel/columns', admin, adminController.updateExcelColumns);
+router.delete('/excel/columns/:id', admin, adminController.deleteExcelColumn);
 
 router.get('/email-templates', admin, adminController.getEmailTemplates);
 router.post('/email-templates', admin, adminController.createEmailTemplate);

@@ -6,6 +6,7 @@ import { ChevronLeft, Loader2, User, Mail, MapPin, Phone, School, Truck, ImageIc
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import ConfigBlueprintCards from '../components/orders/ConfigBlueprintCards';
+import ConfirmModal from '../components/common/ConfirmModal';
 
 const safeParseJSON = (jsonString) => {
   if (!jsonString) return {};
@@ -22,6 +23,7 @@ const ProductionOrderDetailPage = () => {
   const [updating, setUpdating] = useState(false);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, statusId: null });
 
   const fetchOrder = async () => {
     setLoading(true);
@@ -43,17 +45,18 @@ const ProductionOrderDetailPage = () => {
     }).catch(console.error);
   }, [id]);
 
-  const handleStatusUpdate = async (newStatusId) => {
-    if (!newStatusId) return;
+  const handleStatusUpdate = async () => {
+    if (!confirmModal.statusId) return;
     setUpdating(true);
     try {
-      await updateOrderStatus(id, { statusId: parseInt(newStatusId) });
+      await updateOrderStatus(id, { statusId: parseInt(confirmModal.statusId) });
       toast.success('Status updated');
       await fetchOrder();
     } catch (err) {
       toast.error('Failed to update status');
     } finally {
       setUpdating(false);
+      setConfirmModal({ isOpen: false, statusId: null });
     }
   };
 
@@ -97,7 +100,7 @@ const ProductionOrderDetailPage = () => {
         <div className="flex items-center gap-4">
            <select
               value={order.statusId || ''}
-              onChange={(e) => handleStatusUpdate(e.target.value)}
+              onChange={(e) => setConfirmModal({ isOpen: true, statusId: e.target.value })}
               disabled={updating}
               className="px-3 py-2 border border-slate-200 rounded text-sm font-bold text-slate-700 bg-white focus:outline-none focus:border-blue-500 min-w-[200px]"
             >
@@ -246,6 +249,17 @@ const ProductionOrderDetailPage = () => {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title="Update Order Status"
+        message="Are you sure you want to update the status of this order? If an email template is linked to the new status, it will be automatically sent to the customer."
+        confirmText="Yes, Update Status"
+        isDestructive={false}
+        isLoading={updating}
+        onConfirm={handleStatusUpdate}
+        onCancel={() => !updating && setConfirmModal({ isOpen: false, statusId: null })}
+      />
     </div>
   );
 };

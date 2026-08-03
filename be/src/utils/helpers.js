@@ -52,11 +52,21 @@ const extractOrderField = (order, fieldKey) => {
     const path = fieldKey.replace('options.', '').split('.');
     let current = selectedOptions;
     for (const part of path) {
-      if (current == null) return '';
+      if (current == null) return 'x';
       current = current[part];
     }
     if (typeof current === 'object') return JSON.stringify(current);
-    return current ?? '';
+    if (current === '' || current == null) return 'x';
+    return current;
+  }
+
+  if (fieldKey.startsWith('static:')) {
+    const val = fieldKey.substring(7);
+    const suffixIndex = val.lastIndexOf('::');
+    if (suffixIndex !== -1) {
+      return val.substring(0, suffixIndex);
+    }
+    return val;
   }
 
   return '';

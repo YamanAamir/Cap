@@ -34,9 +34,10 @@ export const updateSmsCampaign = (id, data) => api.patch(`/admin/sms/campaigns/$
 export const getSmsMessages = () => api.get('/admin/sms/messages').then(r => r.data);
 
 // Excel
-export const getExcelColumns = () => api.get('/admin/excel/columns').then(r => r.data);
-export const updateExcelColumns = (columns) => api.put('/admin/excel/columns', { columns }).then(r => r.data);
-export const createExcelColumn = (data) => api.post('/admin/excel/columns', data).then(r => r.data);
+export const getExcelColumns = () => api.get('/admin/excel/columns').then(res => res.data);
+export const createExcelColumn = (data) => api.post('/admin/excel/columns', data).then(res => res.data);
+export const updateExcelColumns = (columns) => api.put('/admin/excel/columns', { columns }).then(res => res.data);
+export const deleteExcelColumn = (id) => api.delete(`/admin/excel/columns/${id}`).then(res => res.data);
 
 // Email Templates
 export const getEmailTemplates = () => api.get('/admin/email-templates').then(r => r.data);

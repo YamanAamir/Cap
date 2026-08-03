@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ConfigBlueprintCards from '../components/orders/ConfigBlueprintCards';
+import ConfirmModal from '../components/common/ConfirmModal';
 
 const OrderDetailPage = () => {
   const { id } = useParams();
@@ -23,6 +24,9 @@ const OrderDetailPage = () => {
   // Gallery State
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  
+  // Confirmation Modal
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
   const fetchOrder = async () => {
     setLoading(true);
@@ -58,6 +62,7 @@ const OrderDetailPage = () => {
       alert('Failed to update order status');
     } finally {
       setUpdating(false);
+      setConfirmModal({ isOpen: false });
     }
   };
 
@@ -182,7 +187,7 @@ const OrderDetailPage = () => {
             ))}
           </select>
           <button
-            onClick={handleStatusUpdate}
+            onClick={() => setConfirmModal({ isOpen: true })}
             disabled={updating || !selectedStatusId || String(order.statusId) === selectedStatusId}
             className={cn(
               "flex items-center justify-center h-10 px-4 rounded text-white font-bold transition-colors shrink-0",
@@ -390,6 +395,17 @@ const OrderDetailPage = () => {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title="Update Order Status"
+        message="Are you sure you want to update the status of this order? If an email template is linked to the new status, it will be automatically sent to the customer."
+        confirmText="Yes, Update Status"
+        isDestructive={false}
+        isLoading={updating}
+        onConfirm={handleStatusUpdate}
+        onCancel={() => !updating && setConfirmModal({ isOpen: false })}
+      />
     </div>
   );
 };

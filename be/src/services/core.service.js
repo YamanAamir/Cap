@@ -14,21 +14,40 @@ const DEFAULT_ORDER_STATUSES = [
 ];
 
 const DEFAULT_EXCEL_COLUMNS = [
-  { fieldKey: 'orderNumber', headerLabel: 'Order Number', sortOrder: 1 },
-  { fieldKey: 'orderDate', headerLabel: 'Order Date', sortOrder: 2 },
-  { fieldKey: 'customerName', headerLabel: 'Customer Name', sortOrder: 3 },
-  { fieldKey: 'customerEmail', headerLabel: 'Email', sortOrder: 4 },
-  { fieldKey: 'customerPhone', headerLabel: 'Phone', sortOrder: 5 },
-  { fieldKey: 'customerAddress', headerLabel: 'Address', sortOrder: 6 },
-  { fieldKey: 'customerCity', headerLabel: 'City', sortOrder: 7 },
-  { fieldKey: 'customerPostalCode', headerLabel: 'Postal Code', sortOrder: 8 },
-  { fieldKey: 'schoolName', headerLabel: 'School', sortOrder: 9 },
-  { fieldKey: 'program', headerLabel: 'Program', sortOrder: 10 },
-  { fieldKey: 'packageName', headerLabel: 'Package', sortOrder: 11 },
-  { fieldKey: 'totalPrice', headerLabel: 'Price', sortOrder: 12 },
-  { fieldKey: 'currency', headerLabel: 'Currency', sortOrder: 13 },
-  { fieldKey: 'discountCode', headerLabel: 'Discount Code', sortOrder: 14 },
-  { fieldKey: 'status', headerLabel: 'Status', sortOrder: 15 },
+  { fieldKey: 'orderNumber', headerLabel: 'Order nr', sortOrder: 1 },
+  { fieldKey: 'static:1', headerLabel: 'PAX', sortOrder: 2 }, // PAX remains static 1
+  { fieldKey: 'options.STØRRELSE.Size', headerLabel: 'Size', sortOrder: 3 },
+  { fieldKey: 'options.KOKARDE.Farve', headerLabel: 'Cap Color', sortOrder: 4 },
+  { fieldKey: 'options.KOKARDE.Materiale', headerLabel: 'Material', sortOrder: 5 },
+  { fieldKey: 'options.BRODERI.Navne broderi', headerLabel: 'Back Embroidery Name', sortOrder: 6 },
+  { fieldKey: 'options.BRODERI.Broderifarve', headerLabel: 'Back Embroidery Color', sortOrder: 7 },
+  { fieldKey: 'options.UDDANNELSESBÅND.Broderi foran', headerLabel: 'Front Embroidery Name', sortOrder: 8 },
+  { fieldKey: 'options.UDDANNELSESBÅND.Broderi farve', headerLabel: 'Front Embroidery Color', sortOrder: 9 },
+  { fieldKey: 'options.BRODERI.Skole broderi text', headerLabel: 'School Embroidery Text', sortOrder: 10 },
+  { fieldKey: 'options.BRODERI.Skole broderi trådfarve', headerLabel: 'School Embroidery Color', sortOrder: 11 },
+  { fieldKey: 'options.BETRÆK.Farve', headerLabel: 'Cover Color', sortOrder: 12 }, // Used to be Betræk farve
+  { fieldKey: 'options.BRODERI.Top broderi', headerLabel: 'Top embroidery', sortOrder: 13 },
+  { fieldKey: 'options.BETRÆK.Topkant', headerLabel: 'Top Edging', sortOrder: 14 },
+  { fieldKey: 'options.BETRÆK.Kantbånd', headerLabel: 'Edge Ribbon', sortOrder: 15 },
+  { fieldKey: 'options.BETRÆK.Stjerner', headerLabel: 'Stars', sortOrder: 16 },
+  { fieldKey: 'options.BETRÆK.Stjerne farve', headerLabel: 'Stars Color', sortOrder: 17 },
+  { fieldKey: 'options.BETRÆK.Flagbånd', headerLabel: 'Flag Ribbon', sortOrder: 18 },
+  { fieldKey: 'options.FOER.Svedbånds materiale', headerLabel: 'Sweatband Material', sortOrder: 19 },
+  { fieldKey: 'options.FOER.Svedbånd farve', headerLabel: 'Sweatband Color', sortOrder: 20 },
+  { fieldKey: 'options.KOKARDE.Sløjfe farve', headerLabel: 'Bow Color', sortOrder: 21 },
+  { fieldKey: 'options.FOER.Indvendigt bånd materiale', headerLabel: 'Inner Band Material', sortOrder: 22 },
+  { fieldKey: 'options.FOER.Indvendigt bånd farve', headerLabel: 'Inner Band Color', sortOrder: 23 },
+  { fieldKey: 'options.HAGEREM.Hagerem type', headerLabel: 'Chinstrap', sortOrder: 24 },
+  { fieldKey: 'options.HAGEREM.Knap farve', headerLabel: 'Button Color', sortOrder: 25 },
+  { fieldKey: 'options.KOKARDE.Årstal', headerLabel: 'Year', sortOrder: 26 },
+  { fieldKey: 'options.SKYGGE.Type', headerLabel: 'Brim Type', sortOrder: 27 }, // Used to be Skygge type
+  { fieldKey: 'options.SKYGGE.Materiale', headerLabel: 'Brim edge', sortOrder: 28 }, // Used to be Med kant/Uden kant
+  { fieldKey: 'options.SKYGGE.Skyggebånd', headerLabel: 'Shadow Band', sortOrder: 29 },
+  { fieldKey: 'options.SKYGGE.Skyggegravering', headerLabel: 'Laser engraving in shadow', sortOrder: 30 },
+  { fieldKey: 'options.SKYGGE.Skyggegravering Line 1', headerLabel: 'Line 1', sortOrder: 31 },
+  { fieldKey: 'options.SKYGGE.Skyggegravering Line 2', headerLabel: 'Line 2', sortOrder: 32 },
+  { fieldKey: 'options.SKYGGE.Skyggegravering Line 3', headerLabel: 'Line 3', sortOrder: 33 },
+  { fieldKey: 'options.TILBEHØR.Silkepude', headerLabel: 'Silk Cushion', sortOrder: 34 },
 ];
 
 const DEFAULT_EMAIL_TEMPLATES = [
@@ -70,12 +89,14 @@ const seedDefaults = async () => {
     });
   }
 
-  for (const col of DEFAULT_EXCEL_COLUMNS) {
-    await prisma.excelColumnConfig.upsert({
-      where: { fieldKey: col.fieldKey },
-      update: col,
-      create: { ...col, isVisible: true },
-    });
+  const existingColumnsCount = await prisma.excelColumnConfig.count();
+  if (existingColumnsCount === 0 || existingColumnsCount === 15) {
+    await prisma.excelColumnConfig.deleteMany({});
+    for (const col of DEFAULT_EXCEL_COLUMNS) {
+      await prisma.excelColumnConfig.create({
+        data: { ...col, isVisible: true },
+      });
+    }
   }
 
   for (const tpl of DEFAULT_EMAIL_TEMPLATES) {
