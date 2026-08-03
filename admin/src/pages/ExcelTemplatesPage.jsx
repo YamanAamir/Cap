@@ -56,7 +56,22 @@ const ExcelTemplatesPage = () => {
            });
         });
       });
-      setConfigOptions(opts);
+      
+      // Add extra fields that are part of the order but not in the pricing config
+      const extraFields = [
+        { label: 'UDDANNELSESBÅND - år (Year)', value: 'options.UDDANNELSESBÅND.år' },
+        { label: 'TILBEHØR - Flag 1', value: 'options.TILBEHØR.Flag 1' },
+        { label: 'TILBEHØR - Flag 2', value: 'options.TILBEHØR.Flag 2' },
+        { label: 'TILBEHØR - Flag 3', value: 'options.TILBEHØR.Flag 3' },
+        { label: 'TILBEHØR - Flag 4', value: 'options.TILBEHØR.Flag 4' },
+        { label: 'TILBEHØR - Ekstra korkarde Text', value: 'options.TILBEHØR.Ekstra korkarde Text' },
+        { label: 'TILBEHØR - Store kuglepen', value: 'options.TILBEHØR.Store kuglepen' },
+        { label: 'TILBEHØR - Trompet', value: 'options.TILBEHØR.Trompet' },
+        { label: 'FOER - Silk Type', value: 'options.FOER.Silk Type' },
+        { label: 'FOER - Satin Type', value: 'options.FOER.Satin Type' },
+      ];
+      
+      setConfigOptions([...opts, ...extraFields]);
     } catch (err) {
       console.error(err);
       toast.error('Failed to load data');
