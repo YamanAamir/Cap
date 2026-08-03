@@ -3,9 +3,10 @@ const router = express.Router();
 const adminController = require('../controllers/admin.controller');
 const userController = require('../controllers/user.controller');
 const settingsController = require('../controllers/settings.controller');
-const { verifyToken, isAdmin } = require('../middleware/auth.middleware');
+const { verifyToken, isAdmin, isAdminOrProduction } = require('../middleware/auth.middleware');
 
 const admin = [verifyToken, isAdmin];
+const adminOrProduction = [verifyToken, isAdminOrProduction];
 
 router.get('/dashboard/stats', admin, adminController.getStats);
 router.post('/seed', admin, adminController.seedSystem);
@@ -20,7 +21,7 @@ router.get('/customers/:id', admin, adminController.getCustomerById);
 router.put('/customers/:id', admin, adminController.updateCustomer);
 router.delete('/customers/:id', admin, adminController.deleteCustomer);
 
-router.get('/order-statuses', admin, adminController.getOrderStatuses);
+router.get('/order-statuses', adminOrProduction, adminController.getOrderStatuses);
 router.post('/order-statuses', admin, adminController.createOrderStatus);
 router.patch('/order-statuses/:id', admin, adminController.updateOrderStatus);
 router.delete('/order-statuses/:id', admin, adminController.deleteOrderStatus);

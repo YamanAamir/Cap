@@ -27,7 +27,16 @@ const isAdmin = (req, res, next) => {
   }
 };
 
+const isAdminOrProduction = (req, res, next) => {
+  if (req.user && (req.user.role === 'superadmin' || req.user.role === 'production')) {
+    next();
+  } else {
+    res.status(403).json({ message: 'Forbidden: Admin or Production access required' });
+  }
+};
+
 module.exports = {
   verifyToken,
   isAdmin,
+  isAdminOrProduction,
 };
