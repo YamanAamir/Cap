@@ -17,6 +17,7 @@ const ProductionPage = () => {
   const [emailForm, setEmailForm] = useState({ recipientEmail: '', emailSubject: '', emailBody: '' });
   const [sending, setSending] = useState(false);
   const [manufacturerEmail, setManufacturerEmail] = useState('');
+  const [autoExportDays, setAutoExportDays] = useState('0');
   const [savingSettings, setSavingSettings] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
@@ -28,6 +29,8 @@ const ProductionPage = () => {
       setLogs(l);
       const mfg = settings.find(s => s.key === 'manufacturer_email');
       if (mfg?.value?.email) setManufacturerEmail(mfg.value.email);
+      const autoExport = settings.find(s => s.key === 'auto_export_days');
+      if (autoExport?.value?.days !== undefined) setAutoExportDays(autoExport.value.days.toString());
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
@@ -86,7 +89,8 @@ const ProductionPage = () => {
     setSavingSettings(true);
     try {
       await updateSetting('manufacturer_email', { email: manufacturerEmail });
-      toast.success('Default manufacturer email saved');
+      await updateSetting('auto_export_days', { days: parseInt(autoExportDays) || 0 });
+      toast.success('Production settings saved');
     } catch (e) {
       toast.error('Failed to save settings');
     } finally {
@@ -124,11 +128,13 @@ const ProductionPage = () => {
         <div className="xl:w-[400px] shrink-0 space-y-6">
           
           {/* Settings */}
-          <div className="bg-white p-5 rounded border border-slate-200">
-            <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center">
-              <Settings className="h-4 w-4 mr-2 text-slate-400" /> Default Factory Email
+          <div className="bg-white p-5 rounded border border-slate-200 space-y-4">
+            <h3 className="text-sm font-bold text-slate-700 flex items-center border-b border-slate-100 pb-2">
+              <Settings className="h-4 w-4 mr-2 text-slate-400" /> Export & Dispatch Settings
             </h3>
-            <div className="flex gap-2">
+            
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Default Factory Email</label>
               <input
                 type="email"
                 value={manufacturerEmail}
@@ -136,12 +142,27 @@ const ProductionPage = () => {
                 placeholder="factory@manufacturer.com"
                 className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
+            </div>
+            
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Auto-Export Frequency (Days)</label>
+              <input
+                type="number"
+                min="0"
+                value={autoExportDays}
+                onChange={e => setAutoExportDays(e.target.value)}
+                placeholder="e.g. 14 (0 to disable)"
+                className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="pt-2">
               <button 
                 onClick={handleSaveManufacturerEmail} 
-                disabled={savingSettings || !manufacturerEmail}
-                className="bg-[#1e3a8a] text-white text-xs font-bold px-4 py-2 rounded shadow-sm hover:bg-blue-800 transition-colors flex items-center justify-center shrink-0"
+                disabled={savingSettings}
+                className="w-full bg-[#1e3a8a] text-white text-xs font-bold px-4 py-2.5 rounded shadow-sm hover:bg-blue-800 transition-colors flex items-center justify-center shrink-0"
               >
-                {savingSettings ? <Loader2 className="h-4 w-4 animate-spin" /> : 'SAVE'}
+                {savingSettings ? <Loader2 className="h-4 w-4 animate-spin" /> : 'SAVE SETTINGS'}
               </button>
             </div>
           </div>

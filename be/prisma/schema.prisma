@@ -47,17 +47,20 @@ model Customer {
 }
 
 model OrderStatus {
-  id                 Int      @id @default(autoincrement())
-  name               String   @unique
-  slug               String   @unique
-  sortOrder          Int      @default(0)
-  isInternal         Boolean  @default(false)
-  triggersProduction Boolean  @default(false)
-  isActive           Boolean  @default(true)
-  color              String   @default("#6366f1")
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  orders             Order[]
+  id                    Int            @id @default(autoincrement())
+  name                  String         @unique
+  slug                  String         @unique
+  sortOrder             Int            @default(0)
+  isInternal            Boolean        @default(false)
+  isVisibleToProduction Boolean        @default(true)
+  triggersProduction    Boolean        @default(false)
+  isActive              Boolean        @default(true)
+  color                 String         @default("#6366f1")
+  customerEmailTemplateId Int?
+  emailTemplate         EmailTemplate? @relation(fields: [customerEmailTemplateId], references: [id])
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  orders                Order[]
 }
 
 model Order {
@@ -193,11 +196,13 @@ model ProductionDispatchLog {
 }
 
 model EmailTemplate {
-  id        Int      @id @default(autoincrement())
-  key       String   @unique
+  id        Int           @id @default(autoincrement())
+  key       String        @unique
+  name      String?
   subject   String
-  body      String   @db.Text
-  updatedAt DateTime @updatedAt
+  body      String        @db.Text
+  updatedAt DateTime      @updatedAt
+  statuses  OrderStatus[]
 }
 
 model SystemSetting {

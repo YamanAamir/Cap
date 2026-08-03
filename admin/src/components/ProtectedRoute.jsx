@@ -20,6 +20,9 @@ export const PublicRoute = ({ children }) => {
   if (loading) return <div>Loading...</div>;
 
   if (user) {
+    if (user.role === 'production') {
+      return <Navigate to="/dashboard/factory" replace />;
+    }
     return <Navigate to="/dashboard/orders" replace />;
   }
 

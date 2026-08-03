@@ -1,4 +1,5 @@
 const prisma = require('../utils/prisma');
+const { sendCustomerStatusEmail } = require('../services/core.service');
 
 const getOrders = async (req, res) => {
   try {
@@ -10,6 +11,7 @@ const getOrders = async (req, res) => {
       order = 'desc',
       status = 'all',
       statusId = 'all',
+      isVisibleToProduction = null,
     } = req.query;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -27,6 +29,9 @@ const getOrders = async (req, res) => {
     }
     if (statusId !== 'all') {
       where.statusId = parseInt(statusId);
+    }
+    if (isVisibleToProduction === 'true') {
+      where.orderStatus = { isVisibleToProduction: true };
     }
 
     const orderBy = {};
@@ -91,18 +96,24 @@ const updateOrderStatus = async (req, res) => {
     const { status, statusId } = req.body;
 
     const data = {};
+    let newOrderStatus = null;
+    
     if (statusId) {
       const orderStatus = await prisma.orderStatus.findUnique({ where: { id: parseInt(statusId) } });
       if (orderStatus) {
         data.statusId = orderStatus.id;
         data.status = orderStatus.name.toUpperCase().replace(/\s+/g, '_');
+        newOrderStatus = orderStatus;
       }
     } else if (status) {
       data.status = status;
       const orderStatus = await prisma.orderStatus.findFirst({
         where: { name: { equals: status.replace(/_/g, ' ') } },
       });
-      if (orderStatus) data.statusId = orderStatus.id;
+      if (orderStatus) {
+        data.statusId = orderStatus.id;
+        newOrderStatus = orderStatus;
+      }
     }
 
     const updatedOrder = await prisma.order.update({
@@ -110,6 +121,13 @@ const updateOrderStatus = async (req, res) => {
       data,
       include: { orderStatus: true },
     });
+
+    if (newOrderStatus && newOrderStatus.customerEmailTemplateId) {
+      // Send email asynchronously without blocking the response
+      sendCustomerStatusEmail(updatedOrder.id, newOrderStatus.customerEmailTemplateId).catch(err => {
+        console.error('Failed to send customer status email in background:', err);
+      });
+    }
 
     res.status(200).json(updatedOrder);
   } catch (error) {

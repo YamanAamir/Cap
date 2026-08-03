@@ -40,7 +40,9 @@ export const createExcelColumn = (data) => api.post('/admin/excel/columns', data
 
 // Email Templates
 export const getEmailTemplates = () => api.get('/admin/email-templates').then(r => r.data);
+export const createEmailTemplate = (data) => api.post('/admin/email-templates', data).then(r => r.data);
 export const updateEmailTemplate = (key, data) => api.patch(`/admin/email-templates/${key}`, data).then(r => r.data);
+export const deleteEmailTemplate = (id) => api.delete(`/admin/email-templates/${id}`).then(r => r.data);
 
 // Settings
 export const getSettings = () => api.get('/admin/settings').then(r => r.data);

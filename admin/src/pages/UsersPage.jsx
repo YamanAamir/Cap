@@ -149,6 +149,7 @@ const UsersPage = () => {
                 <option value="superadmin">Super Admin (All Access)</option>
                 <option value="manager">Manager (Manage Orders & Production)</option>
                 <option value="viewer">Viewer (Read Only Analytics)</option>
+                <option value="production">Production (Limited Factory Access)</option>
               </select>
             </div>
             

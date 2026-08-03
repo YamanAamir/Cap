@@ -7,25 +7,27 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import logo from '../../assets/logo.png';
-const navSections = [
-  {
-    label: '',
-    items: [
-      { title: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-      { title: 'Orders', icon: ShoppingCart, path: '/dashboard/orders' },
-      { title: 'Customers', icon: Users, path: '/dashboard/customers' },
-      { title: 'Production Export', icon: Factory, path: '/dashboard/production' },
-      { title: 'Order Statuses', icon: ListOrdered, path: '/dashboard/statuses' },
-      { title: 'Excel Template', icon: FileSpreadsheet, path: '/dashboard/excel' },
-      { title: 'Email Templates', icon: Mail, path: '/dashboard/emails' },
-      { title: 'SMS Campaigns', icon: MessageSquare, path: '/dashboard/sms' },
-      { title: 'Discount Codes', icon: Tag, path: '/dashboard/discounts' },
-      { title: 'Flags & Pricing', icon: Flag, path: '/dashboard/flags' },
-      { title: 'Configurator', icon: Settings, path: '/dashboard/settings/configurator' },
-      { title: 'Users & Roles', icon: Users, path: '/dashboard/users' },
-    ],
+const getNavItems = (role) => {
+  if (role === 'production') {
+    return [
+      { title: 'Production Tasks', icon: Factory, path: '/dashboard/factory' }
+    ];
   }
-];
+  return [
+    { title: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { title: 'Orders', icon: ShoppingCart, path: '/dashboard/orders' },
+    { title: 'Customers', icon: Users, path: '/dashboard/customers' },
+    { title: 'Production Export', icon: Factory, path: '/dashboard/production' },
+    { title: 'Order Statuses', icon: ListOrdered, path: '/dashboard/statuses' },
+    { title: 'Excel Template', icon: FileSpreadsheet, path: '/dashboard/excel' },
+    { title: 'Email Templates', icon: Mail, path: '/dashboard/emails' },
+    { title: 'SMS Campaigns', icon: MessageSquare, path: '/dashboard/sms' },
+    { title: 'Discount Codes', icon: Tag, path: '/dashboard/discounts' },
+    { title: 'Flags & Pricing', icon: Flag, path: '/dashboard/flags' },
+    { title: 'Configurator', icon: Settings, path: '/dashboard/settings/configurator' },
+    { title: 'Users & Roles', icon: Users, path: '/dashboard/users' },
+  ];
+};
 
 const pageTitles = {
   '/dashboard': 'Dashboard',
@@ -40,6 +42,7 @@ const pageTitles = {
   '/dashboard/flags': 'Flags & Pricing',
   '/dashboard/settings/configurator': 'Configurator Settings',
   '/dashboard/users': 'Users & Roles',
+  '/dashboard/factory': 'Factory Tasks',
 };
 
 const pageSubtitles = {
@@ -55,6 +58,7 @@ const pageSubtitles = {
   '/dashboard/flags': 'Flags & Pricing Listing',
   '/dashboard/settings/configurator': 'Manage prices and availability',
   '/dashboard/users': 'Manage Admin Permissions',
+  '/dashboard/factory': 'Manage Production Queue',
 };
 
 const DashboardLayout = () => {
@@ -158,7 +162,7 @@ const DashboardLayout = () => {
         </div>
 
         <nav className="flex-1 py-4 overflow-y-auto custom-scrollbar space-y-1">
-          {navSections[0].items.map((item) => {
+          {getNavItems(user?.role).map((item) => {
             const active = isActive(item.path);
             return (
               <Link

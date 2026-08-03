@@ -18,6 +18,7 @@ import ExcelConfigPage from './pages/ExcelConfigPage';
 import EmailTemplatesPage from './pages/EmailTemplatesPage';
 import UsersPage from './pages/UsersPage';
 import ConfiguratorSettingsPage from './pages/ConfiguratorSettingsPage';
+import ProductionFactoryPage from './pages/ProductionFactoryPage';
 
 function App() {
   return (
@@ -55,6 +56,7 @@ function App() {
             <Route path="flags" element={<FlagsPage />} />
             <Route path="settings/configurator" element={<ConfiguratorSettingsPage />} />
             <Route path="users" element={<UsersPage />} />
+            <Route path="factory" element={<ProductionFactoryPage />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />

@@ -305,6 +305,51 @@ const sendProductionBatch = async (batchId, adminUserId, overrides = {}) => {
   return prisma.productionBatch.findUnique({ where: { id: batchId } });
 };
 
+const sendCustomerStatusEmail = async (orderId, emailTemplateId) => {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { customer: true, orderStatus: true }
+  });
+  if (!order || !order.customerEmail) return;
+
+  const template = await prisma.emailTemplate.findUnique({
+    where: { id: emailTemplateId }
+  });
+  if (!template) return;
+
+  const nodemailer = require('nodemailer');
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.simply.com',
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  const replacements = {
+    orderNumber: order.orderNumber,
+    customerName: order.customer?.name || order.customerEmail.split('@')[0],
+    totalPrice: order.totalPrice.toString(),
+    currency: order.currency,
+  };
+
+  const subject = interpolateTemplate(template.subject, replacements);
+  const body = interpolateTemplate(template.body, replacements);
+
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: order.customerEmail,
+      subject,
+      text: body,
+    });
+  } catch (error) {
+    console.error('Failed to send customer status email:', error);
+  }
+};
+
 const getDashboardStats = async () => {
   const productionSetting = await prisma.systemSetting.findUnique({ where: { key: 'production_status_slug' } });
   const slug = productionSetting?.value?.slug || 'ready-for-production';
@@ -393,4 +438,5 @@ module.exports = {
   getDashboardStats,
   generateDiscountCode,
   slugify,
+  sendCustomerStatusEmail,
 };

@@ -93,7 +93,10 @@ exports.deleteCustomer = async (req, res) => {
 // Order Statuses
 exports.getOrderStatuses = async (req, res) => {
   try {
-    const statuses = await prisma.orderStatus.findMany({ orderBy: { sortOrder: 'asc' } });
+    const statuses = await prisma.orderStatus.findMany({ 
+      orderBy: { sortOrder: 'asc' },
+      include: { emailTemplate: true }
+    });
     res.json(statuses);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -102,10 +105,20 @@ exports.getOrderStatuses = async (req, res) => {
 
 exports.createOrderStatus = async (req, res) => {
   try {
-    const { name, sortOrder, isInternal, triggersProduction, color } = req.body;
+    const { name, sortOrder, isInternal, isVisibleToProduction, triggersProduction, color, customerEmailTemplateId } = req.body;
     const slug = slugify(name);
     const status = await prisma.orderStatus.create({
-      data: { name, slug, sortOrder: sortOrder ?? 0, isInternal: !!isInternal, triggersProduction: !!triggersProduction, color: color || '#6366f1' },
+      data: { 
+        name, 
+        slug, 
+        sortOrder: sortOrder ?? 0, 
+        isInternal: !!isInternal, 
+        isVisibleToProduction: isVisibleToProduction !== undefined ? !!isVisibleToProduction : true,
+        triggersProduction: !!triggersProduction, 
+        color: color || '#6366f1',
+        customerEmailTemplateId: customerEmailTemplateId ? parseInt(customerEmailTemplateId) : null
+      },
+      include: { emailTemplate: true }
     });
     res.status(201).json(status);
   } catch (err) {
@@ -115,13 +128,19 @@ exports.createOrderStatus = async (req, res) => {
 
 exports.updateOrderStatus = async (req, res) => {
   try {
-    const { name, sortOrder, isInternal, triggersProduction, isActive, color } = req.body;
+    const { name, sortOrder, isInternal, isVisibleToProduction, triggersProduction, isActive, color, customerEmailTemplateId } = req.body;
     const data = { sortOrder, isInternal, triggersProduction, isActive, color };
+    if (isVisibleToProduction !== undefined) data.isVisibleToProduction = !!isVisibleToProduction;
+    if (customerEmailTemplateId !== undefined) data.customerEmailTemplateId = customerEmailTemplateId ? parseInt(customerEmailTemplateId) : null;
     if (name) {
       data.name = name;
       data.slug = slugify(name);
     }
-    const status = await prisma.orderStatus.update({ where: { id: parseInt(req.params.id) }, data });
+    const status = await prisma.orderStatus.update({ 
+      where: { id: parseInt(req.params.id) }, 
+      data,
+      include: { emailTemplate: true }
+    });
     res.json(status);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -368,12 +387,44 @@ exports.getEmailTemplates = async (req, res) => {
 
 exports.updateEmailTemplate = async (req, res) => {
   try {
-    const { subject, body } = req.body;
+    const { subject, body, name } = req.body;
     const template = await prisma.emailTemplate.update({
       where: { key: req.params.key },
-      data: { subject, body },
+      data: { subject, body, name },
     });
     res.json(template);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.createEmailTemplate = async (req, res) => {
+  try {
+    const { key, name, subject, body } = req.body;
+    const template = await prisma.emailTemplate.create({
+      data: { 
+        key: key || slugify(name || 'Custom Template'), 
+        name: name || 'Custom Template',
+        subject, 
+        body 
+      },
+    });
+    res.status(201).json(template);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.deleteEmailTemplate = async (req, res) => {
+  try {
+    await prisma.orderStatus.updateMany({
+      where: { customerEmailTemplateId: parseInt(req.params.id) },
+      data: { customerEmailTemplateId: null }
+    });
+    await prisma.emailTemplate.delete({
+      where: { id: parseInt(req.params.id) },
+    });
+    res.json({ message: 'Template deleted' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

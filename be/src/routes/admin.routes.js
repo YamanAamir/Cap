@@ -44,7 +44,9 @@ router.post('/excel/columns', admin, adminController.createExcelColumn);
 router.put('/excel/columns', admin, adminController.updateExcelColumns);
 
 router.get('/email-templates', admin, adminController.getEmailTemplates);
+router.post('/email-templates', admin, adminController.createEmailTemplate);
 router.patch('/email-templates/:key', admin, adminController.updateEmailTemplate);
+router.delete('/email-templates/:id', admin, adminController.deleteEmailTemplate);
 
 router.get('/settings', admin, adminController.getSettings);
 router.put('/settings', admin, adminController.updateSetting);
