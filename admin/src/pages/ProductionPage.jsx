@@ -38,6 +38,7 @@ const ProductionPage = () => {
   useEffect(() => { load(); }, []);
 
   const handleGenerate = async () => {
+    if (generating) return;
     setGenerating(true);
     try {
       const result = await generateProductionBatch();

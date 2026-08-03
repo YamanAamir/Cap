@@ -24,9 +24,7 @@ const BASE_FIELDS = [
   { label: 'Status', value: 'status' },
   { label: 'Discount Code', value: 'discountCode' },
   { label: 'Discount Amount', value: 'discountAmount' },
-  { label: 'Static Value "1"', value: 'static:1' },
-  { label: 'Static Value "x"', value: 'static:x' },
-  { label: 'Static Value "NO"', value: 'static:NO' }
+  { label: 'Static Value "1"', value: 'static:1' }
 ];
 
 const ExcelTemplatesPage = () => {

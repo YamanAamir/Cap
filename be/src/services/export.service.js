@@ -75,7 +75,12 @@ const generateOrderPdf = async (order) => {
       if (index > 0 && index % 2 === 0) {
         doc.addPage();
       } else if (index === 1 || index === 3) {
-        doc.moveDown(4); // Add spacing before the second image on the same page
+        // Place the second image on the bottom half of the page
+        doc.y = Math.max(doc.y + 40, doc.page.height / 2);
+      }
+
+      if (index % 2 === 0 && index > 0) {
+         doc.y = 60; // reset y for top of new page
       }
 
       doc.fontSize(16).fillColor('#1e293b').text(view.label, { align: 'center' });
@@ -91,21 +96,22 @@ const generateOrderPdf = async (order) => {
           const base64 = imageData.replace(/^data:image\/\w+;base64,/, '');
           const buffer = Buffer.from(base64, 'base64');
           
-          doc.image(buffer, {
+          doc.image(buffer, centerX, doc.y, {
             fit: [imgWidth, imgHeight],
             align: 'center'
           });
+          doc.y += imgHeight + 20; // Move down after image
         } catch {
           const startY = doc.y;
           doc.rect(centerX, startY, imgWidth, imgHeight).stroke('#e2e8f0');
           doc.fontSize(12).fillColor('#94a3b8').text('Image pending', { align: 'center' });
-          doc.y = startY + imgHeight;
+          doc.y = startY + imgHeight + 20;
         }
       } else {
         const startY = doc.y;
         doc.rect(centerX, startY, imgWidth, imgHeight).stroke('#e2e8f0');
         doc.fontSize(12).fillColor('#94a3b8').text('No image available', { align: 'center' });
-        doc.y = startY + imgHeight;
+        doc.y = startY + imgHeight + 20;
       }
     });
 
