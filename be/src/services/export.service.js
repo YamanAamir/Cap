@@ -72,28 +72,41 @@ const generateOrderPdf = async (order) => {
     doc.moveDown(1.5);
 
     views.forEach((view, index) => {
-      if (index > 0 && index % 2 === 0) doc.addPage();
-      const x = index % 2 === 0 ? 40 : 310;
-      const y = index % 2 === 0 ? doc.y : doc.y - 200;
+      if (index > 0 && index % 2 === 0) {
+        doc.addPage();
+      } else if (index === 1 || index === 3) {
+        doc.moveDown(4); // Add spacing before the second image on the same page
+      }
 
-      doc.fontSize(13).fillColor('#1e293b').text(view.label, x, y);
+      doc.fontSize(16).fillColor('#1e293b').text(view.label, { align: 'center' });
+      doc.moveDown(0.5);
+
       const imageData = capImages[view.key];
+      const imgWidth = 450;
+      const imgHeight = 280;
+      const centerX = (doc.page.width - imgWidth) / 2;
 
       if (imageData && typeof imageData === 'string' && imageData.startsWith('data:image')) {
         try {
           const base64 = imageData.replace(/^data:image\/\w+;base64,/, '');
           const buffer = Buffer.from(base64, 'base64');
-          doc.image(buffer, x, y + 20, { width: 220, height: 180, fit: [220, 180] });
+          
+          doc.image(buffer, {
+            fit: [imgWidth, imgHeight],
+            align: 'center'
+          });
         } catch {
-          doc.rect(x, y + 20, 220, 180).stroke('#e2e8f0');
-          doc.fontSize(10).fillColor('#94a3b8').text('Image pending', x + 70, y + 100);
+          const startY = doc.y;
+          doc.rect(centerX, startY, imgWidth, imgHeight).stroke('#e2e8f0');
+          doc.fontSize(12).fillColor('#94a3b8').text('Image pending', { align: 'center' });
+          doc.y = startY + imgHeight;
         }
       } else {
-        doc.rect(x, y + 20, 220, 180).stroke('#e2e8f0');
-        doc.fontSize(10).fillColor('#94a3b8').text('No image available', x + 55, y + 100);
+        const startY = doc.y;
+        doc.rect(centerX, startY, imgWidth, imgHeight).stroke('#e2e8f0');
+        doc.fontSize(12).fillColor('#94a3b8').text('No image available', { align: 'center' });
+        doc.y = startY + imgHeight;
       }
-
-      if (index % 2 === 0) doc.moveDown(12);
     });
 
     doc.end();
