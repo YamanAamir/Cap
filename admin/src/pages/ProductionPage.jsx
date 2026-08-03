@@ -41,15 +41,16 @@ const ProductionPage = () => {
     setGenerating(true);
     try {
       const result = await generateProductionBatch();
-      if (result.batch) {
-        setSelectedBatch(result.batch);
+      if (result && result.id) {
+        setSelectedBatch(result);
         setEmailForm({
-          recipientEmail: result.batch.recipientEmail || manufacturerEmail || '',
-          emailSubject: result.batch.emailSubject || '',
-          emailBody: result.batch.emailBody || '',
+          recipientEmail: result.recipientEmail || manufacturerEmail || '',
+          emailSubject: result.emailSubject || '',
+          emailBody: result.emailBody || '',
         });
+        toast.success(`Successfully generated batch with ${result.orderCount} order(s)`);
       } else {
-        toast.error(result.message || 'No orders ready for production');
+        toast.error(result?.message || 'No orders ready for production');
       }
       load();
     } catch (e) { toast.error(e.response?.data?.message || 'Failed to generate batch'); }
