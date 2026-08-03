@@ -55,9 +55,61 @@ const extractOrderField = (order, fieldKey) => {
       if (current == null) return 'x';
       current = current[part];
     }
-    if (typeof current === 'object') return JSON.stringify(current);
+    
+    // If it's an object like { name: 'Rød', color: '#fff' } or similar, extract the meaningful string
+    if (typeof current === 'object' && current !== null) {
+      if (current.name) current = current.name;
+      else if (current.value) current = current.value;
+      else if (current.label) current = current.label;
+      else current = JSON.stringify(current);
+    }
+
     if (current === '' || current == null) return 'x';
-    return current;
+
+    // Translate common Danish terms to English
+    const valStr = String(current).trim();
+    const translations = {
+      'Sort': 'Black',
+      'Hvid': 'White',
+      'Guld': 'Gold',
+      'Sølv': 'Silver',
+      'Rød': 'Red',
+      'Blå': 'Blue',
+      'Grøn': 'Green',
+      'Gul': 'Yellow',
+      'Lilla': 'Purple',
+      'Rosa': 'Pink',
+      'Mat': 'Matte',
+      'Hvid med glimmer': 'White with glitter',
+      'Sort med glimmer': 'Black with glitter',
+      'Ingen': 'None',
+      'Ja': 'Yes',
+      'Nej': 'No',
+      'Uden kant': 'Without edge',
+      'Med kant': 'With edge',
+      'Glimmer': 'Glitter',
+      'Kunstlæder': 'Faux Leather',
+      'Læder': 'Leather',
+      'Ruskin': 'Suede',
+      'Alcantra': 'Alcantara',
+      'Polyester': 'Polyester',
+      'Silke': 'Silk',
+      'BOMULD': 'Cotton',
+      'SATIN': 'Satin',
+      'VELOUR': 'Velvet',
+      'Sort med sorteknuder': 'Black with black knots',
+      'Guld hagerem med guld knuder': 'Gold chinstrap with gold knots',
+      'Sort hagerem med guld knuder': 'Black chinstrap with gold knots',
+      'Guld hagerem med sort knuder': 'Gold chinstrap with black knots',
+      'Sølv hagerem med sølvknuder': 'Silver chinstrap with silver knots',
+      'Sølv hagerem med sort knuder': 'Silver chinstrap with black knots',
+      'Sort hagerem med sølv knuder': 'Black chinstrap with silver knots',
+      'Sølv hagerem med sølv knuder': 'Silver chinstrap with silver knots',
+    };
+
+    // Case insensitive lookup
+    const found = Object.keys(translations).find(k => k.toLowerCase() === valStr.toLowerCase());
+    return found ? translations[found] : valStr;
   }
 
   if (fieldKey.startsWith('static:')) {
