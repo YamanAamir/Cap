@@ -1,28 +1,15 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+const PROGRAM_LIST = [
+  "STX", "HHX", "HTX", "HF", "EUD", "EUX",
+  "sosuassistent", "sosuhjælper", "frisør", "kosmetolog", "pædagog", "pau", "ernæringsassisten"
+];
+
 const DEFAULT_CONFIG = {
-  "programsVisibility": {
-    "STX": true,
-    "HHX": true,
-    "HTX": true,
-    "HF": true,
-    "EUD": true,
-    "EUX": true,
-    "sosuassistent": true,
-    "sosuhjælper": true,
-    "frisør": true,
-    "kosmetolog": true,
-    "pædagog": true,
-    "pau": true,
-    "ernæringsassisten": true
-  },
-  expressDelivery: { active: true, price: 250 },
-  
-  "deliveryCharges": {
-    "Denmark": 79,
-    "Grønland": 348
-  },
+  "programsVisibility": PROGRAM_LIST.reduce((acc, p) => ({ ...acc, [p]: true }), {}),
+  expressDelivery: PROGRAM_LIST.reduce((acc, p) => ({ ...acc, [p]: { active: true, price: 250 } }), {}),
+  "deliveryCharges": PROGRAM_LIST.reduce((acc, p) => ({ ...acc, [p]: { "Denmark": 79, "Grønland": 348 } }), {}),
   "priceConfig": {
     "standard": {
       "KOKARDE": {
@@ -1491,7 +1478,21 @@ exports.getConfiguratorSettings = async (req, res) => {
       });
     }
 
-    res.json({ ...DEFAULT_CONFIG, ...(setting.value || {}) });
+    let finalValue = { ...DEFAULT_CONFIG, ...(setting.value || {}) };
+    
+    // Migration for legacy global deliveryCharges
+    if (finalValue.deliveryCharges && typeof finalValue.deliveryCharges["Denmark"] === "number") {
+       const legacyCharges = finalValue.deliveryCharges;
+       finalValue.deliveryCharges = PROGRAM_LIST.reduce((acc, p) => ({ ...acc, [p]: legacyCharges }), {});
+    }
+    
+    // Migration for legacy global expressDelivery
+    if (finalValue.expressDelivery && finalValue.expressDelivery.active !== undefined) {
+       const legacyExpress = finalValue.expressDelivery;
+       finalValue.expressDelivery = PROGRAM_LIST.reduce((acc, p) => ({ ...acc, [p]: legacyExpress }), {});
+    }
+
+    res.json(finalValue);
   } catch (error) {
     console.error('Error fetching configurator settings:', error);
     res.status(500).json({ message: 'Failed to fetch settings' });

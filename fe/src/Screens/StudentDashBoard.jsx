@@ -351,7 +351,8 @@ const StudentDashboard = () => {
     ////////////////////////////////////zee///////////////////////////////////////
 
     ///zee///
-    return total + iniialPrice + 79;
+    const deliveryFee = dynamicConfig?.deliveryCharges?.[program]?.Denmark || dynamicConfig?.deliveryCharges?.STX?.Denmark || 79;
+    return total + iniialPrice + deliveryFee;
     ///zee///
   };
 
@@ -1076,7 +1077,7 @@ const StudentDashboard = () => {
               <div className="text-xs text-slate-500">
                 {" "}
 
-                Servicegebyr på {dynamicConfig?.deliveryCharges?.Denmark || 79},00 kr. inkl.
+                Servicegebyr på {dynamicConfig?.deliveryCharges?.[program]?.Denmark || dynamicConfig?.deliveryCharges?.STX?.Denmark || 79},00 kr. inkl.
 
               </div>
             </div>
@@ -1362,7 +1363,7 @@ const StudentDashboard = () => {
                 </div>
                 <div className="text-xs text-slate-500">
 
-                  Servicegebyr på {dynamicConfig?.deliveryCharges?.Denmark || 79},00 kr. inkl.
+                  Servicegebyr på {dynamicConfig?.deliveryCharges?.[program]?.Denmark || dynamicConfig?.deliveryCharges?.STX?.Denmark || 79},00 kr. inkl.
 
                 </div>
               </div>

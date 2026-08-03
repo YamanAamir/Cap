@@ -47,8 +47,20 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
         if (res.ok) {
           const data = await res.json();
           if (data.priceConfig) setPriceConfig(data.priceConfig);
-          if (data.deliveryCharges) setDeliverySettings(data.deliveryCharges);
-          if (data.expressDelivery) setExpressConfig(data.expressDelivery);
+          
+          const progKey = Object.keys(data.deliveryCharges || {}).find(k => k.toLowerCase() === (program || '').toLowerCase()) || program;
+          
+          if (data.deliveryCharges && data.deliveryCharges[progKey]) {
+            setDeliverySettings(data.deliveryCharges[progKey]);
+          } else if (data.deliveryCharges && data.deliveryCharges['STX']) {
+            setDeliverySettings(data.deliveryCharges['STX']);
+          }
+          
+          if (data.expressDelivery && data.expressDelivery[progKey]) {
+            setExpressConfig(data.expressDelivery[progKey]);
+          } else if (data.expressDelivery && data.expressDelivery['STX']) {
+            setExpressConfig(data.expressDelivery['STX']);
+          }
         }
       } catch (err) {
         console.error('Failed to fetch dynamic prices:', err);
@@ -288,7 +300,9 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
   const country = customerDetails.country || "Denmark";
   // zee express price logic
   const deliverySurcharge = customerDetails.deliveryType === 'express' ? expressConfig.price : 0;
-  const basePrice = parseFloat(price) - 79 + (deliverySettings[country] || 79) + deliverySurcharge;
+  // The price from StudentDashBoard already includes Denmark standard shipping fee. We subtract it back out to recalculate for the selected country.
+  const baselineDeliveryFee = deliverySettings['Denmark'] || 79;
+  const basePrice = parseFloat(price) - baselineDeliveryFee + (deliverySettings[country] || 79) + deliverySurcharge;
   const discountAmount = appliedDiscount?.discountAmount || 0;
   const finalPrice = Math.max(0, basePrice - discountAmount).toFixed(2);
 
