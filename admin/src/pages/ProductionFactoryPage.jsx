@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getOrders, updateOrderStatus } from '../services/auth.service';
 import { getOrderStatuses } from '../services/admin.service';
-import { Loader2, Search, Filter, RefreshCw, ImageIcon, X, MapPin, Phone, Mail, User, School, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, Search, Filter, RefreshCw, ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
@@ -19,10 +20,7 @@ const ProductionFactoryPage = () => {
   const [debounceSearch, setDebounceSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [statuses, setStatuses] = useState([]);
-  
-  // Modal states
-  const [viewModal, setViewModal] = useState({ isOpen: false, order: null });
-  const [galleryIndex, setGalleryIndex] = useState(0);
+  const navigate = useNavigate();
 
   useEffect(() => {
     getOrderStatuses().then(res => {
@@ -63,12 +61,6 @@ const ProductionFactoryPage = () => {
       await updateOrderStatus(orderId, { statusId: parseInt(newStatusId) });
       toast.success('Status updated');
       fetchOrders();
-      if (viewModal.isOpen && viewModal.order.id === orderId) {
-        setViewModal(prev => ({
-          ...prev, 
-          order: { ...prev.order, statusId: parseInt(newStatusId), orderStatus: statuses.find(s => s.id === parseInt(newStatusId)) }
-        }));
-      }
     } catch (error) {
       toast.error('Failed to update status');
     }
@@ -168,7 +160,7 @@ const ProductionFactoryPage = () => {
                     <td className="px-6 py-4 text-center">
                       <button 
                         className="px-3 py-1.5 bg-[#1e3a8a] text-white text-xs font-bold rounded shadow-sm hover:bg-blue-800 transition-colors flex items-center gap-1.5 mx-auto"
-                        onClick={() => { setViewModal({ isOpen: true, order }); setGalleryIndex(0); }}
+                        onClick={() => navigate(`/dashboard/factory/orders/${order.id}`)}
                       >
                         <ImageIcon className="h-3 w-3" /> View Specs
                       </button>
@@ -198,136 +190,6 @@ const ProductionFactoryPage = () => {
            >Next</button>
         </div>
       </div>
-
-      {/* Production Details Modal */}
-      {viewModal.isOpen && viewModal.order && (() => {
-        const order = viewModal.order;
-        const customerDetails = safeParseJSON(order.customerDetails);
-        const capImagesObj = safeParseJSON(order.capImages);
-        const selectedOptions = safeParseJSON(order.selectedOptions);
-        
-        const capViews = [
-          { key: 'front', label: 'Front' },
-          { key: 'back', label: 'Back' },
-          { key: 'top', label: 'Top' },
-          { key: 'bottom', label: 'Bottom' },
-        ].filter(v => capImagesObj?.[v.key]?.startsWith('data:image'));
-
-        const liningImageBase64 = order?.selectedOptions?.FOER?.['Indvendigt foer billede']?.[0]?.url || selectedOptions?.FOER?.['Indvendigt foer billede'];
-
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col animate-in zoom-in-95">
-              
-              {/* Header */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-[#fafafa] shrink-0">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-800">Order #{order.orderNumber}</h3>
-                  <p className="text-xs text-slate-500 font-medium">Production Specifications</p>
-                </div>
-                <div className="flex items-center gap-4">
-                   <select
-                      value={order.statusId || ''}
-                      onChange={(e) => handleStatusUpdate(order.id, e.target.value)}
-                      className="px-3 py-2 border border-slate-200 rounded text-xs font-bold text-slate-700 bg-white shadow-sm focus:outline-none focus:border-blue-500"
-                    >
-                      {statuses.map(s => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                      ))}
-                   </select>
-                   <button onClick={() => setViewModal({ isOpen: false, order: null })} className="text-slate-400 hover:text-slate-600 p-2 bg-slate-100 rounded-full hover:bg-slate-200 transition-colors">
-                     <X className="w-5 h-5" />
-                   </button>
-                </div>
-              </div>
-              
-              {/* Body */}
-              <div className="flex-1 overflow-y-auto p-6 flex flex-col lg:flex-row gap-6">
-                
-                {/* Visuals Column */}
-                <div className="lg:w-[400px] shrink-0 space-y-6">
-                  {capViews.length > 0 ? (
-                    <div className="bg-white border border-slate-200 rounded p-4">
-                      <div className="aspect-square w-full bg-[#fafafa] rounded border border-slate-100 mb-4 overflow-hidden relative group">
-                        <img src={capImagesObj[capViews[galleryIndex].key]} alt="Cap View" className="w-full h-full object-contain" />
-                        <div className="absolute top-2 left-2 bg-slate-900/70 text-white px-2 py-1 rounded text-[10px] font-bold uppercase">
-                          {capViews[galleryIndex].label} View
-                        </div>
-                        <button onClick={() => setGalleryIndex((i) => (i === 0 ? capViews.length - 1 : i - 1))} className="absolute left-2 top-1/2 -translate-y-1/2 p-2 bg-white/50 hover:bg-white text-slate-800 rounded opacity-0 group-hover:opacity-100 transition-all"><ChevronLeft className="w-4 h-4" /></button>
-                        <button onClick={() => setGalleryIndex((i) => (i === capViews.length - 1 ? 0 : i + 1))} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white/50 hover:bg-white text-slate-800 rounded opacity-0 group-hover:opacity-100 transition-all"><ChevronRight className="w-4 h-4" /></button>
-                      </div>
-                      <div className="flex gap-2 overflow-x-auto pb-1">
-                         {capViews.map((view, idx) => (
-                           <button key={view.key} onClick={() => setGalleryIndex(idx)} className={cn("w-16 h-16 shrink-0 rounded border-2 overflow-hidden", galleryIndex === idx ? "border-blue-500" : "border-transparent opacity-60 hover:opacity-100")}>
-                             <img src={capImagesObj[view.key]} className="w-full h-full object-cover bg-slate-50" />
-                           </button>
-                         ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="aspect-square w-full bg-slate-50 rounded border border-dashed border-slate-300 flex items-center justify-center flex-col text-slate-400">
-                      <ImageIcon className="w-12 h-12 mb-2 opacity-50" />
-                      <span className="text-xs font-bold">No Render Images</span>
-                    </div>
-                  )}
-
-                  {liningImageBase64 && (
-                    <div className="bg-white border border-slate-200 rounded p-4">
-                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Custom Lining Image</h4>
-                      <img src={liningImageBase64} alt="Lining" className="w-full rounded border border-slate-100 object-cover" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Data Column */}
-                <div className="flex-1 space-y-6">
-                  
-                  {/* Delivery Info */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-[#fafafa] border border-slate-200 rounded p-4">
-                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1.5"><User className="w-3 h-3" /> Customer</h4>
-                      <p className="font-bold text-sm text-slate-800">{customerDetails?.firstName} {customerDetails?.lastName}</p>
-                      <p className="text-xs text-slate-600 flex items-center gap-1 mt-1"><Mail className="w-3 h-3 text-slate-400"/> {order.customerEmail}</p>
-                      {customerDetails?.phone && <p className="text-xs text-slate-600 flex items-center gap-1 mt-0.5"><Phone className="w-3 h-3 text-slate-400"/> {customerDetails.phone}</p>}
-                    </div>
-                    <div className="bg-[#fafafa] border border-slate-200 rounded p-4">
-                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1.5"><MapPin className="w-3 h-3" /> Delivery Address</h4>
-                      <p className="font-bold text-sm text-slate-800">{customerDetails?.address}</p>
-                      <p className="text-xs text-slate-600 mt-1">{customerDetails?.postalCode} {customerDetails?.city}</p>
-                      <p className="text-xs text-slate-600 mt-0.5 font-medium text-amber-700">{customerDetails?.deliveryType === 'express' ? 'Priority Express' : 'Standard Delivery'}</p>
-                    </div>
-                  </div>
-
-                  <div className="bg-white border border-slate-200 rounded p-4">
-                     <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2 flex items-center gap-1.5"><School className="w-3 h-3" /> Academic Info</h4>
-                     <div className="grid grid-cols-2 gap-4">
-                       <div>
-                         <p className="text-[10px] text-slate-400 font-bold uppercase">School</p>
-                         <p className="text-sm font-bold text-slate-800">{customerDetails?.Skolenavn || 'N/A'}</p>
-                       </div>
-                       <div>
-                         <p className="text-[10px] text-slate-400 font-bold uppercase">Program</p>
-                         <p className="text-sm font-bold text-slate-800">{order.program || 'N/A'}</p>
-                       </div>
-                     </div>
-                  </div>
-
-                  {/* Complete Options Dump */}
-                  <div className="bg-white border border-slate-200 rounded p-4 flex-1 flex flex-col min-h-[250px]">
-                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">Full Specifications</h4>
-                    <div className="bg-slate-900 rounded p-4 flex-1 overflow-auto custom-scrollbar">
-                      <pre className="text-[11px] font-mono text-green-400">
-                        {JSON.stringify(selectedOptions, null, 2)}
-                      </pre>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 };

@@ -8,6 +8,7 @@ import {
   AlertCircle, Code, CheckCircle2, Tag, ImageIcon, ChevronRight, X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import ConfigBlueprintCards from '../components/orders/ConfigBlueprintCards';
 
 const OrderDetailPage = () => {
   const { id } = useParams();
@@ -257,17 +258,12 @@ const OrderDetailPage = () => {
           </div>
 
           {/* Blueprint Registry (Configuration JSON) */}
-          <div className="bg-white border border-slate-200 rounded p-6">
+          <div className="mt-6">
             <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-4">
               <Settings2 className="h-4 w-4 text-slate-400" />
               Configuration Blueprint
             </h3>
-            
-            <div className="bg-[#fafafa] rounded border border-slate-200 p-4 relative overflow-hidden">
-              <pre className="text-xs font-mono text-slate-700 leading-relaxed overflow-x-auto custom-scrollbar whitespace-pre-wrap max-h-[300px]">
-                {JSON.stringify(selectedOptions, null, 2)}
-              </pre>
-            </div>
+            <ConfigBlueprintCards selectedOptions={selectedOptions} />
           </div>
         </div>
 
