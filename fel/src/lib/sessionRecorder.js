@@ -13,6 +13,8 @@ const flushEvents = async () => {
   isFlushing = true;
 
   const eventsToSend = [...events];
+  events = []; // Clear immediately to prevent infinite growth on failure
+
   const visitorId = getOrCreateVisitorId();
   const duration = Date.now() - sessionStartTime;
   
@@ -34,8 +36,6 @@ const flushEvents = async () => {
     if (response.ok) {
       const data = await response.json();
       if (data.id) recordingId = data.id;
-      // Remove successfully sent events from the buffer
-      events = events.slice(eventsToSend.length);
     } else {
       console.error('Failed to save session recording', await response.text());
     }
