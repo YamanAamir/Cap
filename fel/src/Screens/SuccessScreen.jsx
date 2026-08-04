@@ -14,7 +14,7 @@ const SuccessScreen = ({ onContinueConfiguring, handleResetModal, onClose }) => 
       if (!sessionId) return;
 
       const res = await fetch(
-        `${import.meta.env.VITE_API_BASE}/api/sendEmail/checkout-session?session_id=${sessionId}`
+        `https://cap-stripe-webhook-backend.vercel.app/api/sendEmail/checkout-session?session_id=${sessionId}`
       );
       const data = await res.json();
       setSession(data);
