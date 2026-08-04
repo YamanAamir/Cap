@@ -53,6 +53,7 @@ export const startRecording = () => {
     emit(event) {
       events.push(event);
     },
+    inlineStylesheet: true,
   });
 
   // Flush events periodically
