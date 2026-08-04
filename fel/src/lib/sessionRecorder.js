@@ -3,19 +3,18 @@ import { getOrCreateVisitorId, getApiBaseUrl } from './tracking';
 
 let events = [];
 let stopRecording = null;
-let lastFlushTime = Date.now();
+let sessionStartTime = Date.now();
+let recordingId = null;
 const FLUSH_INTERVAL = 10000; // 10 seconds
-const FLUSH_LIMIT = 50; // Max events before flush
+let isFlushing = false;
 
 const flushEvents = async () => {
-  if (events.length === 0) return;
+  if (events.length === 0 || isFlushing) return;
+  isFlushing = true;
 
   const eventsToSend = [...events];
-  events = []; // Clear current buffer
-  
   const visitorId = getOrCreateVisitorId();
-  const duration = Date.now() - lastFlushTime;
-  lastFlushTime = Date.now();
+  const duration = Date.now() - sessionStartTime;
   
   try {
     const response = await fetch(`${getApiBaseUrl()}/api/recordings`, {
@@ -24,19 +23,24 @@ const flushEvents = async () => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        recordingId,
         visitorId,
         events: eventsToSend,
         duration,
         pageUrl: window.location.href,
-      }),
-      keepalive: true, // Important for page unloads
+      })
     });
 
-    if (!response.ok) {
+    if (response.ok) {
+      const data = await response.json();
+      if (data.id) recordingId = data.id;
+    } else {
       console.error('Failed to save session recording', await response.text());
     }
   } catch (error) {
     console.error('Recording API error:', error);
+  } finally {
+    isFlushing = false;
   }
 };
 
@@ -46,9 +50,6 @@ export const startRecording = () => {
   stopRecording = rrweb.record({
     emit(event) {
       events.push(event);
-      if (events.length >= FLUSH_LIMIT) {
-        flushEvents();
-      }
     },
   });
 

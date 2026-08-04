@@ -44,8 +44,9 @@ export const getApiBaseUrl = () => {
   return 'http://localhost:3000'; // Default backend dev port
 };
 
-export const identifyVisitor = async (productInterest, sourceApp) => {
+export const identifyVisitor = async (productInterest, sourceApp, options = {}) => {
   const visitorId = getOrCreateVisitorId();
+  const { school, educationType, graduationYear } = options;
   
   // Check session storage to avoid double counting visits on page reloads
   let newSession = false;
@@ -64,7 +65,10 @@ export const identifyVisitor = async (productInterest, sourceApp) => {
         visitorId,
         productInterest,
         sourceApp,
-        newSession
+        newSession,
+        school,
+        educationType,
+        graduationYear
       })
     });
     
@@ -106,8 +110,7 @@ export const pushEvent = (eventName, params = {}, sourceApp = '') => {
         eventName,
         eventParams: params,
         sourceApp
-      }),
-      keepalive: true
+      })
     }).catch(err => console.error('Tracking API keepalive error:', err));
   } catch (e) {
     console.error('Tracking API error:', e);
