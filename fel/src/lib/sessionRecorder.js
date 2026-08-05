@@ -54,7 +54,6 @@ export const startRecording = () => {
       events.push(event);
     },
     inlineStylesheet: true,
-    recordCanvas: true, // Crucial for capturing local canvas elements
     keepIframeSrcFn: (src) => {
       // Keep PlayCanvas iframe src so the 3D model loads in the replay
       if (src.includes('playcanv.as')) {
