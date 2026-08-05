@@ -54,6 +54,7 @@ export const startRecording = () => {
       events.push(event);
     },
     inlineStylesheet: true,
+    recordCanvas: true, // Crucial for capturing the 3D WebGL model
   });
 
   // Flush events periodically
