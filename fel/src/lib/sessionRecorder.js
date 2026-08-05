@@ -56,7 +56,7 @@ export const startRecording = () => {
     inlineStylesheet: true,
     keepIframeSrcFn: (src) => {
       // Keep PlayCanvas iframe src so the 3D model loads in the replay
-      if (src.includes('playcanv.as')) {
+      if (typeof src === 'string' && src.includes('playcanv.as')) {
         return true;
       }
       return false;
