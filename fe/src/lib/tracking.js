@@ -30,22 +30,25 @@ export const getOrCreateVisitorId = () => {
   const domainString = window.location.hostname.includes('studentlife.dk') 
     ? '; domain=.studentlife.dk' 
     : '';
+    
+  const isSecure = window.location.protocol === 'https:' ? '; Secure' : '';
 
-  document.cookie = `${cookieName}=${newVisitorId}; expires=${expires.toUTCString()}${domainString}; path=/; SameSite=Lax; Secure`;
+  document.cookie = `${cookieName}=${newVisitorId}; expires=${expires.toUTCString()}${domainString}; path=/; SameSite=Lax${isSecure}`;
   
   return newVisitorId;
 };
 
 // This needs to be configured based on the environment
 export const getApiBaseUrl = () => {
-  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL) {
-    return import.meta.env.VITE_API_BASE_URL;
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_TRACKING_API_BASE) {
+    return import.meta.env.VITE_TRACKING_API_BASE;
   }
-  return 'http://localhost:5000'; // Default backend dev port
+  return 'http://localhost:3000'; // Default backend dev port
 };
 
-export const identifyVisitor = async (productInterest, sourceApp) => {
+export const identifyVisitor = async (productInterest, sourceApp, options = {}) => {
   const visitorId = getOrCreateVisitorId();
+  const { school, educationType, graduationYear } = options;
   
   // Check session storage to avoid double counting visits on page reloads
   let newSession = false;
@@ -64,7 +67,10 @@ export const identifyVisitor = async (productInterest, sourceApp) => {
         visitorId,
         productInterest,
         sourceApp,
-        newSession
+        newSession,
+        school,
+        educationType,
+        graduationYear
       })
     });
     
@@ -106,8 +112,7 @@ export const pushEvent = (eventName, params = {}, sourceApp = '') => {
         eventName,
         eventParams: params,
         sourceApp
-      }),
-      keepalive: true
+      })
     }).catch(err => console.error('Tracking API keepalive error:', err));
   } catch (e) {
     console.error('Tracking API error:', e);
