@@ -12,7 +12,15 @@ import { startRecording } from './lib/sessionRecorder';
 function App() {
   useEffect(() => {
     initPixel();
-    identifyVisitor('graduation_cap', 'gradcap_configurator');
+    
+    const searchParams = new URLSearchParams(window.location.search);
+    const program = searchParams.get("program") || undefined;
+    const school = searchParams.get("school") || undefined;
+
+    identifyVisitor('graduation_cap', 'gradcap_configurator', { 
+      educationType: program, 
+      school: school 
+    });
     pushEvent('configurator_started', {}, 'gradcap_configurator');
     startRecording();
   }, []);

@@ -30,8 +30,10 @@ export const getOrCreateVisitorId = () => {
   const domainString = window.location.hostname.includes('studentlife.dk') 
     ? '; domain=.studentlife.dk' 
     : '';
+    
+  const isSecure = window.location.protocol === 'https:' ? '; Secure' : '';
 
-  document.cookie = `${cookieName}=${newVisitorId}; expires=${expires.toUTCString()}${domainString}; path=/; SameSite=Lax; Secure`;
+  document.cookie = `${cookieName}=${newVisitorId}; expires=${expires.toUTCString()}${domainString}; path=/; SameSite=Lax${isSecure}`;
   
   return newVisitorId;
 };
