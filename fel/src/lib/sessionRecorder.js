@@ -54,7 +54,14 @@ export const startRecording = () => {
       events.push(event);
     },
     inlineStylesheet: true,
-    recordCanvas: true, // Crucial for capturing the 3D WebGL model
+    recordCanvas: true, // Crucial for capturing local canvas elements
+    keepIframeSrcFn: (src) => {
+      // Keep PlayCanvas iframe src so the 3D model loads in the replay
+      if (src.includes('playcanv.as')) {
+        return true;
+      }
+      return false;
+    }
   });
 
   // Flush events periodically
