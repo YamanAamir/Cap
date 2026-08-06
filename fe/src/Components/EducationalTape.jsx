@@ -14,6 +14,7 @@ import silverblack from '../assets/button images/silverblack.webp';
 import blacksilver from '../assets/button images/blacksilver.webp';
 import silver from '../assets/button images/silver.webp';
 import gold from '../assets/button images/gold.webp';
+import stuBandImg from '../assets/button images/stu_band.jpg';
 const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke, currentEmblem }) => {
     // State variables with descriptive names
     const cameraTriggers = useRef({});
@@ -451,7 +452,7 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
                 ];
             case 'stu':
                 return [
-                    { name: 'STU', value: '#5585b7' },
+                    { name: 'STU', value: 'STU', background: '#5585b7', img: stuBandImg },
                 ];
             default:
                 return [
@@ -595,14 +596,14 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
                                 ? 'border-slate-800 ring-2 ring-slate-800 ring-offset-2'
                                 : 'border-slate-200 hover:border-slate-400'
                                 }`}
-                            style={{ backgroundColor: colorOption.color || colorOption.value }}
+                            style={{ background: colorOption.background || colorOption.color || colorOption.value }}
                             title={colorOption.name}
                         >
                             {colorOption.img && (
                                 <img
                                     src={colorOption.img}
                                     alt={colorOption.name}
-                                    className="w-12 h-12 flex flex-justify object-contain"
+                                    className={colorOption.name === 'STU' ? "w-full h-full object-cover" : "w-12 h-12 object-contain"}
                                 />
                             )}
                         </button>
