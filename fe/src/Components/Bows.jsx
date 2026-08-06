@@ -91,6 +91,10 @@ import pauGold from '../assets/images/pau gold.webp';
 import pauSilver from '../assets/images/pau silver.webp';
 import ernæringsassistenGold from '../assets/images/ernaringsassisten gold.webp';
 import ernæringsassistenSilver from '../assets/images/ernaringsassisten silver.webp';
+import stuGold from '../assets/images/stu gold.jpg';
+import stuSilver from '../assets/images/stu silver.jpg';
+import stuGoldDiamant from '../assets/images/stu gold diamant.jpg';
+import stuSilverDiamant from '../assets/images/stu silver diamant.jpg';
 
 // prestige
 import JupiterGold from '../assets/images/Jupiter gold.webp';
@@ -522,8 +526,8 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
                 ];
             case 'stu':
                 return [
-                    { name: 'STU Guld Simli', icon: StxGoldDiamant },
-                    { name: 'STU Guld', icon: StxGold }
+                    { name: 'STU Guld Simli', icon: stuGoldDiamant },
+                    { name: 'STU Guld', icon: stuGold }
                 ];
             default:
                 return null;
@@ -599,8 +603,8 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
                 ];
             case 'stu':
                 return [
-                    { name: 'STU Sølv Simli', icon: StxSilverDiamant },
-                    { name: 'STU Sølv', icon: StxSilver }
+                    { name: 'STU Sølv Simli', icon: stuSilverDiamant },
+                    { name: 'STU Sølv', icon: stuSilver }
                 ];
             default:
                 return null;
