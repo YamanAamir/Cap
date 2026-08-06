@@ -350,8 +350,13 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
                 ];
 
 
+            case 'stu':
+                return [
+                    { name: 'Sort', value: 'PSort', img: kaalagold },
+                    { name: 'Rød', value: '#DC2626', img: laalgold },
+                ];
             default:
-                return { name: 'Rød', value: '#DC2626', img: laalgold }
+                return [{ name: 'Rød', value: '#DC2626', img: laalgold }];
         }
     };
 
@@ -425,8 +430,13 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
                     { name: 'Sort', value: 'SosuSort', img: kaalasilver },
                     { name: 'Rød', value: '#DC2626', img: laalsilver },
                 ];
+            case 'stu':
+                return [
+                    { name: 'Sort', value: 'PSort', img: kaalasilver },
+                    { name: 'Rød', value: '#DC2626', img: laalsilver },
+                ];
             default:
-                return { name: 'Rød', value: '#DC2626', img: laalgold }
+                return [{ name: 'Rød', value: '#DC2626', img: laalgold }];
 
         }
     };
@@ -510,6 +520,11 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
                 return [
                     { name: 'ernæringsassisten Guld', icon: ernæringsassistenGold }
                 ];
+            case 'stu':
+                return [
+                    { name: 'STU Guld Simli', icon: StxGoldDiamant },
+                    { name: 'STU Guld', icon: StxGold }
+                ];
             default:
                 return null;
         }
@@ -581,6 +596,11 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
             case 'ernæringsassisten':
                 return [
                     { name: 'ernæringsassisten Sølv', icon: ernæringsassistenSilver }
+                ];
+            case 'stu':
+                return [
+                    { name: 'STU Sølv Simli', icon: StxSilverDiamant },
+                    { name: 'STU Sølv', icon: StxSilver }
                 ];
             default:
                 return null;

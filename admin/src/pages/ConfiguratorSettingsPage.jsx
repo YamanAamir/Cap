@@ -27,7 +27,8 @@ const PROGRAM_KEYWORDS = {
   'kosmetolog': ['kosmetolog'],
   'pædagog': ['pædagog'],
   'pau': ['pau'],
-  'ernæringsassisten': ['ernæring']
+  'ernæringsassisten': ['ernæring'],
+  'STU': ['stu']
 };
 
 function isRelevantForProgram(item, activeProgram) {
@@ -57,6 +58,12 @@ function isRelevantForProgram(item, activeProgram) {
       }
     }
   }
+
+  // Specific restrictions for STU
+  if (activeProgram === 'STU') {
+    if (['satin', 'velour', 'shimmer'].includes(itemLower)) return false;
+  }
+
   return true;
 }
 

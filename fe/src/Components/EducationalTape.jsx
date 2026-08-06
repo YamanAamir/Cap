@@ -34,6 +34,7 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
             case 'pædagog': return 'Pædagog';
             case 'pau': return 'PAU';
             case 'ernæringsassisten': return 'Ernæringsassisten';
+            case 'stu': return 'STU';
             default: return 'Sort';
         }
     };
@@ -156,6 +157,7 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
             'pædagog': 'Hueband:Pædagog',
             'pau': 'Hueband:PAU',
             'ernæringsassisten': 'Hueband:Ernæringsassisten',
+            'stu': 'Hueband:STU',
             'sort': 'Hueband:Sort',
         };
         if (!selectedHatbandColor) return;
@@ -199,7 +201,8 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
             kosmetolog: 'kosmetolog',
             pædagog: 'pædagog',
             pau: 'pau',
-            ernæringsassisten: 'ernæringsassisten'
+            ernæringsassisten: 'ernæringsassisten',
+            stu: 'stu'
         };
         const key = program.toLowerCase();
         if (selectedHatbandColor.toLowerCase() === key) {
@@ -446,6 +449,10 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
                 return [
                     { name: 'Ernæringsassisten', value: '#FFFF00' },
                 ];
+            case 'stu':
+                return [
+                    { name: 'STU', value: '#5585b7' },
+                ];
             default:
                 return [
                     { name: '', value: '' },
@@ -496,7 +503,8 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
     const materialEUXTypes = ['BOMULD', 'SATIN', 'VELOUR', 'GLIMMER', 'SHIMMER',];
     const materialEUXAndEUDTypes = ['BOMULD', 'SATIN', 'VELOUR', 'GLIMMER'];
     const materialSORTTypes = ['VELOUR', 'SATIN', 'GLIMMER'];
-    const materialColorTypes = ['BOMULD', 'SATIN']
+    const materialColorTypes = ['BOMULD', 'SATIN'];
+    const materialSTUTypes = ['BOMULD', 'GLIMMER'];
     const buttonMaterialMATTypes = ['Mat hagerem'];
     const buttonMaterialBLANKTypes = ['Blank hagerem', 'Blank kunstlæder hagerem'];
     const buttonMaterialSortSortTypes = ['Sort hagerem med sorte knuder'];
@@ -524,6 +532,8 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
                 return materialColorTypes;
             case 'Sort':
                 return materialSORTTypes;
+            case 'STU':
+                return materialSTUTypes;
             default:
                 return [];
         }
@@ -656,7 +666,7 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
                     ['EUX', 'EUD'].includes(selectedHatbandColor)
                         ? materialEUXAndEUDTypes :
                         ['Sosuassistent', 'Sosuhjælper', 'Frisør',
-                            'Kosmetolog', 'Pædagog', 'PAU', 'Ernæringsassisten'].includes(selectedHatbandColor) ? materialColorTypes : selectedHatbandColor == 'Sort' ? materialSORTTypes : []}
+                            'Kosmetolog', 'Pædagog', 'PAU', 'Ernæringsassisten'].includes(selectedHatbandColor) ? materialColorTypes : selectedHatbandColor == 'Sort' ? materialSORTTypes : selectedHatbandColor == 'STU' ? materialSTUTypes : []}
             />
             {/* Chin Strap Color Selection */}
             <ColorSelector

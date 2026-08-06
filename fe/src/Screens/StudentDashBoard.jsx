@@ -29,6 +29,7 @@ import { GraduationCap, ChevronUp, ChevronDown, Box, Loader2 } from "lucide-reac
 import HHX from "../Default/HHX";
 import HTX from "../Default/HTX";
 import STX from "../Default/STX";
+import STU from "../Default/STU";
 import HF from "../Default/HF";
 import EUX from "../Default/EUX";
 import EUD from "../Default/EUD";
@@ -150,6 +151,8 @@ const StudentDashboard = () => {
         return HTX;
       case "stx":
         return STX;
+      case "stu":
+        return STU;
       case "hf":
         return HF;
       case "eux":

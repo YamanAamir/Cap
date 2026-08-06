@@ -3,7 +3,7 @@ const prisma = new PrismaClient();
 
 const PROGRAM_LIST = [
   "STX", "HHX", "HTX", "HF", "EUD", "EUX",
-  "sosuassistent", "sosuhjælper", "frisør", "kosmetolog", "pædagog", "pau", "ernæringsassisten"
+  "sosuassistent", "sosuhjælper", "frisør", "kosmetolog", "pædagog", "pau", "ernæringsassisten", "STU"
 ];
 
 const DEFAULT_CONFIG = {
@@ -19,7 +19,8 @@ const DEFAULT_CONFIG = {
           "#DC2626": 39,
           "PSort": 0,
           "SosuSort": 0,
-          "EuxRed": 0
+          "EuxRed": 0,
+          "Rød": 39
         },
         "Kokarde": {
           "Signature": 0,
@@ -77,6 +78,8 @@ const DEFAULT_CONFIG = {
           "EUX Guld": 0,
           "HF Guld Simli": 69,
           "HF Guld": 0,
+          "STU Guld Simli": 69,
+          "STU Guld": 0,
           "Ahornblad Sølv": 0,
           "Anker Sølv": 0,
           "Atom Sølv": 0,
@@ -106,6 +109,8 @@ const DEFAULT_CONFIG = {
           "EUX Sølv": 0,
           "HF Sølv Simli": 69,
           "HF Sølv": 0,
+          "STU Sølv Simli": 69,
+          "STU Sølv": 0,
           "Diamant": 89,
           "Onyx": 89,
           "Perle": 89,
@@ -145,6 +150,7 @@ const DEFAULT_CONFIG = {
       "UDDANNELSESBÅND": {
         "Huebånd": {
           "EUX": 0,
+          "STU": 0,
           "Sort": 0
         },
         "Materiale": {
@@ -506,7 +512,8 @@ const DEFAULT_CONFIG = {
           "#DC2626": 39,
           "PSort": 0,
           "SosuSort": 0,
-          "EuxRed": 0
+          "EuxRed": 0,
+          "Rød": 39
         },
         "Kokarde": {
           "Signature": 0,
@@ -564,6 +571,8 @@ const DEFAULT_CONFIG = {
           "EUX Guld": 0,
           "HF Guld Simli": 69,
           "HF Guld": 0,
+          "STU Guld Simli": 69,
+          "STU Guld": 0,
           "Ahornblad Sølv": 0,
           "Anker Sølv": 0,
           "Atom Sølv": 0,
@@ -593,6 +602,8 @@ const DEFAULT_CONFIG = {
           "EUX Sølv": 0,
           "HF Sølv Simli": 69,
           "HF Sølv": 0,
+          "STU Sølv Simli": 69,
+          "STU Sølv": 0,
           "Diamant": 89,
           "Onyx": 89,
           "Perle": 89,
@@ -631,6 +642,7 @@ const DEFAULT_CONFIG = {
       "UDDANNELSESBÅND": {
         "Huebånd": {
           "EUX": 0,
+          "STU": 0,
           "Sort": 0
         },
         "Materiale": {
@@ -1479,6 +1491,46 @@ exports.getConfiguratorSettings = async (req, res) => {
     }
 
     let finalValue = { ...DEFAULT_CONFIG, ...(setting.value || {}) };
+    
+    // Deep merge for priceConfig to ensure new keys in DEFAULT_CONFIG (like STU options) are preserved
+    if (finalValue.priceConfig && DEFAULT_CONFIG.priceConfig) {
+      for (const tier of Object.keys(DEFAULT_CONFIG.priceConfig)) {
+        if (!finalValue.priceConfig[tier]) {
+          finalValue.priceConfig[tier] = DEFAULT_CONFIG.priceConfig[tier];
+        } else {
+          for (const category of Object.keys(DEFAULT_CONFIG.priceConfig[tier])) {
+            if (!finalValue.priceConfig[tier][category]) {
+              finalValue.priceConfig[tier][category] = DEFAULT_CONFIG.priceConfig[tier][category];
+            } else {
+              for (const itemGroup of Object.keys(DEFAULT_CONFIG.priceConfig[tier][category])) {
+                if (!finalValue.priceConfig[tier][category][itemGroup]) {
+                  finalValue.priceConfig[tier][category][itemGroup] = DEFAULT_CONFIG.priceConfig[tier][category][itemGroup];
+                } else {
+                  for (const option of Object.keys(DEFAULT_CONFIG.priceConfig[tier][category][itemGroup])) {
+                    if (finalValue.priceConfig[tier][category][itemGroup][option] === undefined) {
+                      finalValue.priceConfig[tier][category][itemGroup][option] = DEFAULT_CONFIG.priceConfig[tier][category][itemGroup][option];
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Ensure new programs in PROGRAM_LIST are present in visibility and delivery
+    PROGRAM_LIST.forEach(p => {
+      if (finalValue.programsVisibility[p] === undefined) {
+        finalValue.programsVisibility[p] = true;
+      }
+      if (finalValue.expressDelivery && finalValue.expressDelivery[p] === undefined) {
+        finalValue.expressDelivery[p] = { active: true, price: 250 };
+      }
+      if (finalValue.deliveryCharges && finalValue.deliveryCharges[p] === undefined) {
+        finalValue.deliveryCharges[p] = { "Denmark": 79, "Grønland": 348 };
+      }
+    });
     
     // Migration for legacy global deliveryCharges
     if (finalValue.deliveryCharges && typeof finalValue.deliveryCharges["Denmark"] === "number") {
