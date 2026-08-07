@@ -28,10 +28,11 @@ const PROGRAM_KEYWORDS = {
   'pædagog': ['pædagog'],
   'pau': ['pau'],
   'ernæringsassisten': ['ernæring'],
-  'STU': ['stu']
+  'STU': ['stu'],
+  'Landmand': ['landmand']
 };
 
-function isRelevantForProgram(item, activeProgram) {
+function isRelevantForProgram(item, activeProgram, groupName) {
   if (!activeProgram) return true;
   const itemLower = item.toLowerCase();
   
@@ -62,6 +63,11 @@ function isRelevantForProgram(item, activeProgram) {
   // Specific restrictions for STU
   if (activeProgram === 'STU') {
     if (['satin', 'velour', 'shimmer'].includes(itemLower)) return false;
+  }
+  
+  if (activeProgram === 'Landmand') {
+    if (['satin', 'velour', 'glimmer', 'shimmer'].includes(itemLower)) return false;
+    if (groupName === 'Huebånd' && itemLower === 'sort') return false; // Hide Sort Huebånd
   }
 
   return true;
@@ -353,7 +359,7 @@ const ConfiguratorSettingsPage = () => {
                 let hasVisibleItems = false;
                 const filteredGroups = Object.entries(optionsGroups || {}).map(([groupName, items]) => {
                   const filteredItems = Object.entries(items || {}).filter(([itemName]) => {
-                    if (!isRelevantForProgram(itemName, activeProgram)) return false;
+                    if (!isRelevantForProgram(itemName, activeProgram, groupName)) return false;
                     const displayLabel = LABEL_MAP[itemName] || itemName;
                     if (searchTerm && !displayLabel.toLowerCase().includes(searchTerm.toLowerCase())) return false;
                     return true;

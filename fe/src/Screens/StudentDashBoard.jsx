@@ -30,6 +30,7 @@ import HHX from "../Default/HHX";
 import HTX from "../Default/HTX";
 import STX from "../Default/STX";
 import STU from "../Default/STU";
+import Landmand from "../Default/Landmand";
 import HF from "../Default/HF";
 import EUX from "../Default/EUX";
 import EUD from "../Default/EUD";
@@ -153,6 +154,8 @@ const StudentDashboard = () => {
         return STX;
       case "stu":
         return STU;
+      case "landmand":
+        return Landmand;
       case "hf":
         return HF;
       case "eux":
@@ -534,6 +537,7 @@ const StudentDashboard = () => {
           pædagog: "program:pædagog",
           pau: "Hueband:PAU",
           ernæringsassisten: "Hueband:Ernæringsassisten",
+          grøn: "Hueband:Landmand",
           sort: "Hueband:Sort",
         };
         send(huebandMap[hb] || "Hueband:Sort");
@@ -578,6 +582,7 @@ const StudentDashboard = () => {
           hf: "broderiForanfarve:HF",
           eux: "broderiForanfarve:EUX",
           eud: "broderiForanfarve:EUD",
+          landmand: "broderiForanfarve:Landmand",
           guld: "broderiForanfarve:Guld",
           sølv: "broderiForanfarve:Sølv",
           hvid: "broderiForanfarve:Hvid",

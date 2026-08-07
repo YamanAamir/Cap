@@ -3,7 +3,7 @@ const prisma = new PrismaClient();
 
 const PROGRAM_LIST = [
   "STX", "HHX", "HTX", "HF", "EUD", "EUX",
-  "sosuassistent", "sosuhjælper", "frisør", "kosmetolog", "pædagog", "pau", "ernæringsassisten", "STU"
+  "sosuassistent", "sosuhjælper", "frisør", "kosmetolog", "pædagog", "pau", "ernæringsassisten", "STU", "Landmand"
 ];
 
 const DEFAULT_CONFIG = {
@@ -111,6 +111,8 @@ const DEFAULT_CONFIG = {
           "HF Sølv": 0,
           "STU Sølv Simli": 69,
           "STU Sølv": 0,
+          "traktor Guld": 0,
+          "traktor Sølv": 0,
           "Diamant": 89,
           "Onyx": 89,
           "Perle": 89,
@@ -151,6 +153,7 @@ const DEFAULT_CONFIG = {
         "Huebånd": {
           "EUX": 0,
           "STU": 0,
+          "Grøn": 0,
           "Sort": 0
         },
         "Materiale": {
@@ -604,6 +607,8 @@ const DEFAULT_CONFIG = {
           "HF Sølv": 0,
           "STU Sølv Simli": 69,
           "STU Sølv": 0,
+          "traktor Guld": 0,
+          "traktor Sølv": 0,
           "Diamant": 89,
           "Onyx": 89,
           "Perle": 89,
@@ -643,6 +648,7 @@ const DEFAULT_CONFIG = {
         "Huebånd": {
           "EUX": 0,
           "STU": 0,
+          "Grøn": 0,
           "Sort": 0
         },
         "Materiale": {

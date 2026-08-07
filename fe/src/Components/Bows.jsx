@@ -115,6 +115,8 @@ import IbSilver from '../assets/images/ib silver.webp';
 import IbGold from '../assets/images/Ib gold.webp';
 import IbGuldSimli from '../assets/images/IB Guld Simli.webp';
 import IbSølvSimli from '../assets/images/IB Sølv Simli.webp';
+import traktorGuld from '../assets/images/traktorGuld.jpg';
+import traktorSolv from '../assets/images/traktorSolv.jpg';
 import FKeyGold from '../assets/images/f key gold.webp';
 import FKeySilver from '../assets/images/f key silver.webp';
 import FiskenGold from '../assets/images/fisken gold.webp';
@@ -183,6 +185,8 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
                 return { name: 'Sort', value: 'SosuSort', img: kaalagold };
             case 'pædagog':
                 return { name: 'Sort', value: 'PSort', img: kaalagold };
+            case 'landmand':
+                return { name: 'Sort', value: 'PSort', img: kaalagold };
             default:
                 return { name: 'Rød', value: '#DC2626', img: laalgold };
         }
@@ -247,6 +251,9 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
 
             case 'frisør':
                 return 'Hjerte Guld';
+
+            case 'landmand':
+                return 'traktor Guld';
 
             case 'pædagog':
                 return 'Hjerte Guld';
@@ -359,6 +366,11 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
                     { name: 'Sort', value: 'PSort', img: kaalagold },
                     { name: 'Rød', value: '#DC2626', img: laalgold },
                 ];
+            case 'landmand':
+                return [
+                    { name: 'Sort', value: 'PSort', img: kaalagold },
+                    { name: 'Rød', value: '#DC2626', img: laalgold },
+                ];
             default:
                 return [{ name: 'Rød', value: '#DC2626', img: laalgold }];
         }
@@ -435,6 +447,11 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
                     { name: 'Rød', value: '#DC2626', img: laalsilver },
                 ];
             case 'stu':
+                return [
+                    { name: 'Sort', value: 'PSort', img: kaalasilver },
+                    { name: 'Rød', value: '#DC2626', img: laalsilver },
+                ];
+            case 'landmand':
                 return [
                     { name: 'Sort', value: 'PSort', img: kaalasilver },
                     { name: 'Rød', value: '#DC2626', img: laalsilver },
@@ -529,6 +546,10 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
                     { name: 'STU Guld Simli', icon: stuGoldDiamant },
                     { name: 'STU Guld', icon: stuGold }
                 ];
+            case 'landmand':
+                return [
+                    { name: 'traktor Guld', icon: traktorGuld }
+                ];
             default:
                 return null;
         }
@@ -605,6 +626,10 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
                 return [
                     { name: 'STU Sølv Simli', icon: stuSilverDiamant },
                     { name: 'STU Sølv', icon: stuSilver }
+                ];
+            case 'landmand':
+                return [
+                    { name: 'traktor Sølv', icon: traktorSolv }
                 ];
             default:
                 return null;

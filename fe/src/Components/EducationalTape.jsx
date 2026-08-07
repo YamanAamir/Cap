@@ -15,6 +15,7 @@ import blacksilver from '../assets/button images/blacksilver.webp';
 import silver from '../assets/button images/silver.webp';
 import gold from '../assets/button images/gold.webp';
 import stuBandImg from '../assets/button images/stu_band.jpg';
+import landmandBandImg from '../assets/images/landmandBandImg.png';
 const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke, currentEmblem }) => {
     // State variables with descriptive names
     const cameraTriggers = useRef({});
@@ -159,6 +160,7 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
             'pau': 'Hueband:PAU',
             'ernæringsassisten': 'Hueband:Ernæringsassisten',
             'stu': 'Hueband:STU',
+            'grøn': 'Hueband:Landmand',
             'sort': 'Hueband:Sort',
         };
         if (!selectedHatbandColor) return;
@@ -203,10 +205,11 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
             pædagog: 'pædagog',
             pau: 'pau',
             ernæringsassisten: 'ernæringsassisten',
-            stu: 'stu'
+            stu: 'stu',
+            landmand: 'landmand'
         };
         const key = program.toLowerCase();
-        if (selectedHatbandColor.toLowerCase() === key) {
+        if (selectedHatbandColor.toLowerCase() === key || (key === 'landmand' && selectedHatbandColor.toLowerCase() === 'grøn')) {
             message = `UDDANNELSESBÅNDMateriale:${programMap[key] || 'unknown'}:${selectedMaterialType.toLowerCase()}`;
         } else {
             message = `UDDANNELSESBÅNDMateriale:black:${selectedMaterialType.toLowerCase()}`;
@@ -454,6 +457,10 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
                 return [
                     { name: 'STU', value: 'STU', background: '#5585b7', img: stuBandImg },
                 ];
+            case 'landmand':
+                return [
+                    { name: 'Grøn', value: 'Grøn', background: '#4CAF50', img: landmandBandImg },
+                ];
             default:
                 return [
                     { name: '', value: '' },
@@ -506,6 +513,7 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
     const materialSORTTypes = ['VELOUR', 'SATIN', 'GLIMMER'];
     const materialColorTypes = ['BOMULD', 'SATIN'];
     const materialSTUTypes = ['BOMULD', 'GLIMMER'];
+    const materialLandmandTypes = ['BOMULD'];
     const buttonMaterialMATTypes = ['Mat hagerem'];
     const buttonMaterialBLANKTypes = ['Blank hagerem', 'Blank kunstlæder hagerem'];
     const buttonMaterialSortSortTypes = ['Sort hagerem med sorte knuder'];
@@ -535,6 +543,8 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
                 return materialSORTTypes;
             case 'STU':
                 return materialSTUTypes;
+            case 'Grøn':
+                return materialLandmandTypes;
             default:
                 return [];
         }
@@ -603,7 +613,7 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
                                 <img
                                     src={colorOption.img}
                                     alt={colorOption.name}
-                                    className={colorOption.name === 'STU' ? "w-full h-full object-cover" : "w-12 h-12 object-contain"}
+                                    className={colorOption.name === 'STU' || colorOption.name === 'Grøn' ? "w-full h-full object-cover" : "w-12 h-12 object-contain"}
                                 />
                             )}
                         </button>
@@ -667,7 +677,7 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
                     ['EUX', 'EUD'].includes(selectedHatbandColor)
                         ? materialEUXAndEUDTypes :
                         ['Sosuassistent', 'Sosuhjælper', 'Frisør',
-                            'Kosmetolog', 'Pædagog', 'PAU', 'Ernæringsassisten'].includes(selectedHatbandColor) ? materialColorTypes : selectedHatbandColor == 'Sort' ? materialSORTTypes : selectedHatbandColor == 'STU' ? materialSTUTypes : []}
+                            'Kosmetolog', 'Pædagog', 'PAU', 'Ernæringsassisten'].includes(selectedHatbandColor) ? materialColorTypes : selectedHatbandColor == 'Sort' ? materialSORTTypes : selectedHatbandColor == 'STU' ? materialSTUTypes : selectedHatbandColor == 'Grøn' ? materialLandmandTypes : []}
             />
             {/* Chin Strap Color Selection */}
             <ColorSelector
