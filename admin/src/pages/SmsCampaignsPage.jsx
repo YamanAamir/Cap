@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { getSmsCampaigns, createSmsCampaign, updateSmsCampaign, getSmsMessages } from '../services/admin.service';
-import { Plus, Loader2, MessageSquare, Clock, Smartphone, ChevronDown, ChevronUp, Link as LinkIcon, Send } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { toast } from 'react-hot-toast';
+import { getSmsCampaigns, createSmsCampaign, updateSmsCampaign, getSmsMessages, exportCampaignNonPurchasers } from '../services/admin.service';
+import { Plus, Loader2, MessageSquare, Clock, Smartphone, ChevronDown, ChevronUp, Link as LinkIcon, Send, Download, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const DEFAULT_STEPS = [
@@ -18,6 +20,7 @@ const SmsCampaignsPage = () => {
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -34,6 +37,22 @@ const SmsCampaignsPage = () => {
   const toggleCampaign = async (id, isActive) => {
     await updateSmsCampaign(id, { isActive: !isActive });
     load();
+  };
+
+  const handleExport = async (e, campaignId) => {
+    e.stopPropagation();
+    try {
+      const blob = await exportCampaignNonPurchasers(campaignId);
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `campaign_${campaignId}_non_purchasers.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+    } catch (err) {
+      alert('Failed to export non-purchasers');
+    }
   };
 
   const handleCreate = async () => {
@@ -157,6 +176,12 @@ const SmsCampaignsPage = () => {
                 </div>
                 
                 <div className="flex items-center gap-3 mt-3 sm:mt-0" onClick={(e) => e.stopPropagation()}>
+                  <button 
+                    onClick={(e) => handleExport(e, campaign.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50 transition-colors"
+                  >
+                    <Download className="h-3 w-3" /> Export
+                  </button>
                   <label className="flex items-center cursor-pointer relative">
                      <input 
                        type="checkbox" 
@@ -178,12 +203,29 @@ const SmsCampaignsPage = () => {
               {/* Timeline UI for expanded state */}
               {expanded === campaign.id && (
                 <div className="p-6 bg-[#fafafa] border-t border-slate-200">
-                  <div className="mb-6 p-3 bg-white border border-slate-200 rounded flex items-start gap-2">
-                    <CodeIcon className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Available Variables</p>
-                      <p className="font-mono text-slate-700 text-xs">{'{{name}} {{discountCode}} {{expiryDate}}'}</p>
+                  <div className="mb-6 flex flex-col md:flex-row gap-4">
+                    <div className="flex-1 p-3 bg-white border border-slate-200 rounded flex items-start gap-2">
+                      <CodeIcon className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Available Variables</p>
+                        <p className="font-mono text-slate-700 text-xs">{'{{name}} {{discountCode}} {{expiryDate}}'}</p>
+                      </div>
                     </div>
+                      <div className="p-3 bg-white border border-slate-200 rounded flex items-center gap-4 hover:border-blue-300 transition-colors cursor-pointer" onClick={() => setShowQrModal(campaign.id)}>
+                        <div className="bg-white p-1 border border-slate-200 rounded shrink-0">
+                          <QRCodeSVG 
+                            value={`${import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'}/sms-signup?campaignId=${campaign.id}`}
+                            size={64}
+                            level="M"
+                          />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-slate-500 tracking-wider uppercase flex items-center gap-1.5">
+                            Campaign QR Code
+                          </p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">Click to view or download specific campaign QR code.</p>
+                        </div>
+                      </div>
                   </div>
 
                   <div className="relative pl-6 space-y-6 before:absolute before:inset-0 before:ml-[11px] before:w-0.5 before:bg-slate-200">
@@ -252,12 +294,12 @@ const SmsCampaignsPage = () => {
                 Deploy this URL across marketing channels.
               </p>
               <div className="bg-black/20 p-3 rounded border border-white/10 cursor-pointer hover:bg-black/30 transition-colors" onClick={() => {
-                const url = typeof window !== 'undefined' ? `${window.location.origin.replace('admin', 'shop')}/sms-signup` : '/sms-signup';
+                const url = `${import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'}/sms-signup${expanded ? `?campaignId=${expanded}` : ''}`;
                 navigator.clipboard.writeText(url);
-                alert("URL copied to clipboard!");
+                toast.success("URL copied to clipboard!", { style: { background: '#333', color: '#fff', fontSize: '12px' } });
               }}>
                 <code className="block text-xs font-mono text-green-300 break-all">
-                  {typeof window !== 'undefined' ? `${window.location.origin.replace('admin', 'shop')}/sms-signup` : '/sms-signup'}
+                  {`${import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'}/sms-signup${expanded ? `?campaignId=${expanded}` : ''}`}
                 </code>
                 <p className="text-[10px] font-bold uppercase text-white/50 mt-1 flex justify-end">
                   Click to Copy
@@ -282,15 +324,25 @@ const SmsCampaignsPage = () => {
               ) : (
                 <div className="space-y-1">
                   {messages.slice(0, 30).map(msg => (
-                    <div key={msg.id} className="p-3 rounded hover:bg-slate-50 transition-colors flex items-start gap-2 border-b border-slate-100 last:border-0">
-                      <div className={cn(
-                        "mt-1 h-2 w-2 rounded-full shrink-0",
-                        msg.status === 'SENT' ? 'bg-green-500' :
-                        msg.status === 'SCHEDULED' ? 'bg-blue-500' : 'bg-slate-300'
-                      )} />
-                      <div className="flex-1 min-w-0">
+                    <div key={msg.id} className="p-3 rounded hover:bg-slate-50 transition-colors flex flex-col gap-1.5 border-b border-slate-100 last:border-0">
+                      <div className="flex items-center justify-between">
                         <p className="text-xs font-bold text-slate-800 truncate">{msg.customer?.name || 'Unknown'} <span className="text-slate-400 font-medium ml-1">{msg.phone}</span></p>
-                        <p className="text-xs text-slate-500 truncate mt-0.5">{msg.message}</p>
+                        <span className={cn(
+                          "text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0",
+                          msg.status === 'SENT' ? 'bg-green-100 text-green-700' :
+                          msg.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-700' :
+                          msg.status === 'CANCELLED' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700'
+                        )}>
+                          {msg.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{msg.message}</p>
+                      <div className="flex items-center gap-1 text-[10px] text-slate-400 font-medium mt-1">
+                        <Clock className="w-3 h-3" />
+                        {msg.status === 'SENT' && msg.sentAt ? 
+                          `Sent on ${new Date(msg.sentAt).toLocaleString('da-DK', { dateStyle: 'medium', timeStyle: 'short' })}` : 
+                          `Scheduled for ${new Date(msg.scheduledFor).toLocaleString('da-DK', { dateStyle: 'medium', timeStyle: 'short' })}`
+                        }
                       </div>
                     </div>
                   ))}
@@ -301,6 +353,36 @@ const SmsCampaignsPage = () => {
           
         </div>
       </div>
+
+      {showQrModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowQrModal(null)}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-8 relative flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
+            <button 
+              onClick={() => setShowQrModal(null)}
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-500 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h3 className="text-lg font-black text-slate-800 mb-2 tracking-tight">Campaign QR Code</h3>
+            <p className="text-sm text-slate-500 mb-6 text-center">Scan this code with a camera to join the campaign.</p>
+            
+            <div className="p-4 bg-white border-2 border-slate-200 rounded-xl">
+              <QRCodeSVG 
+                value={`${import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'}/sms-signup?campaignId=${showQrModal}`}
+                size={220}
+                level="M"
+              />
+            </div>
+            
+            <button 
+              className="mt-8 w-full bg-[#1e3a8a] text-white py-3 rounded-lg font-bold text-sm tracking-wide hover:bg-blue-900 transition-colors"
+              onClick={() => setShowQrModal(null)}
+            >
+              DONE
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

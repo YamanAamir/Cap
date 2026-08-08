@@ -7,7 +7,6 @@ const webhookController = require("./controllers/sendEmail.controller");
 const sendEmailRoutes = require('./routes/sendEmail.routes');
 const authRoutes = require('./routes/auth.routes');
 const orderRoutes = require('./routes/order.routes');
-const flagRoutes = require('./routes/flag.routes');
 const adminRoutes = require('./routes/admin.routes');
 const marketingRoutes = require('./routes/marketing.routes');
 const cookieParser = require('cookie-parser');
@@ -40,7 +39,6 @@ app.use('/exports', express.static(path.join(__dirname, '../public/exports')));
 app.use('/api/sendEmail', sendEmailRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
-app.use('/api/flags', flagRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/marketing', marketingRoutes);
 

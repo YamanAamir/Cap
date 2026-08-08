@@ -83,6 +83,8 @@ const ConfiguratorSettingsPage = () => {
   const [activeTier, setActiveTier] = useState('standard');
   const [activeProgram, setActiveProgram] = useState('STX');
   const [searchTerm, setSearchTerm] = useState('');
+  const [addFlagModal, setAddFlagModal] = useState({ isOpen: false, program: '', name: '' });
+  const [deleteFlagModal, setDeleteFlagModal] = useState({ isOpen: false, program: '', id: '' });
 
   useEffect(() => {
     fetchSettings();
@@ -141,16 +143,78 @@ const ConfiguratorSettingsPage = () => {
   };
 
   const handleExpressChange = (program, field, value) => {
-    setConfig({
-      ...config,
-      expressDelivery: {
-        ...config.expressDelivery,
-        [program]: {
-          ...config.expressDelivery?.[program],
-          [field]: field === 'price' ? parseFloat(value) || 0 : value
+    setConfig(prevConfig => {
+      const newConfig = { ...prevConfig };
+      
+      if (!newConfig.expressDelivery) newConfig.expressDelivery = {};
+      if (!newConfig.expressDelivery[program]) newConfig.expressDelivery[program] = { active: false, price: 0 };
+      
+      newConfig.expressDelivery[program][field] = field === 'price' ? parseFloat(value) || 0 : value;
+      return newConfig;
+    });
+  };
+
+  const handleAddFlag = (program) => {
+    setAddFlagModal({ isOpen: true, program, name: '' });
+  };
+
+  const confirmAddFlag = () => {
+    const { program, name } = addFlagModal;
+    if (!name.trim()) return;
+    
+    setConfig(prev => {
+      const newConfig = { ...prev };
+      const newProgramFlags = { ...(newConfig.programFlags || {}) };
+      const currentProgramFlags = [...(newProgramFlags[program] || [])];
+      
+      currentProgramFlags.push({
+        id: Date.now().toString() + Math.random().toString(36).substring(7),
+        name: name.trim(),
+        price: 0
+      });
+      
+      newProgramFlags[program] = currentProgramFlags;
+      newConfig.programFlags = newProgramFlags;
+      
+      return newConfig;
+    });
+    setAddFlagModal({ isOpen: false, program: '', name: '' });
+  };
+
+  const handleUpdateFlagPrice = (program, id, newPrice) => {
+    setConfig(prev => {
+      const newConfig = { ...prev };
+      if (newConfig.programFlags && newConfig.programFlags[program]) {
+        const newProgramFlags = { ...newConfig.programFlags };
+        const currentFlags = [...newProgramFlags[program]];
+        const flagIndex = currentFlags.findIndex(f => f.id === id);
+        
+        if (flagIndex > -1) {
+          currentFlags[flagIndex] = { ...currentFlags[flagIndex], price: parseFloat(newPrice) || 0 };
+          newProgramFlags[program] = currentFlags;
+          newConfig.programFlags = newProgramFlags;
         }
       }
+      return newConfig;
     });
+  };
+
+  const handleDeleteFlag = (program, id) => {
+    setDeleteFlagModal({ isOpen: true, program, id });
+  };
+
+  const confirmDeleteFlag = () => {
+    const { program, id } = deleteFlagModal;
+    setConfig(prev => {
+      const newConfig = { ...prev };
+      if (newConfig.programFlags && newConfig.programFlags[program]) {
+        const newProgramFlags = { ...newConfig.programFlags };
+        newProgramFlags[program] = newProgramFlags[program].filter(f => f.id !== id);
+        newConfig.programFlags = newProgramFlags;
+      }
+      return newConfig;
+    });
+    setDeleteFlagModal({ isOpen: false, program: '', id: '' });
   };
 
   const handlePriceConfigChange = (tier, category, optionGroup, item, value) => {
@@ -235,8 +299,6 @@ const ConfiguratorSettingsPage = () => {
             ))}
           </div>
         </div>
-
-        {/* Global settings removed from here */}
 
         {/* Dynamic Pricing Tabs */}
         <div className="flex flex-col md:flex-row gap-6">
@@ -352,6 +414,69 @@ const ConfiguratorSettingsPage = () => {
                     )}
                   </div>
                 </div>
+
+                {/* Program Specific Flags */}
+                <div className="mb-8 p-5 bg-indigo-50 rounded-lg border border-indigo-100">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-bold text-gray-800 capitalize">
+                      {activeProgram} Custom Flags
+                    </h3>
+                    <button
+                      onClick={() => handleAddFlag(activeProgram)}
+                      className="px-3 py-1.5 bg-indigo-600 text-white rounded font-medium text-sm hover:bg-indigo-700 transition"
+                    >
+                      + Add Flag
+                    </button>
+                  </div>
+                  
+                  <div className="bg-white rounded border border-gray-200 overflow-hidden">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Flag Name</th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Price (DKK)</th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {(config.programFlags?.[activeProgram] || []).length === 0 ? (
+                          <tr>
+                            <td colSpan="3" className="px-6 py-4 text-center text-sm text-gray-500">
+                              No custom flags defined for {activeProgram}.
+                            </td>
+                          </tr>
+                        ) : (
+                          config.programFlags[activeProgram].map(flag => (
+                            <tr key={flag.id}>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {flag.name}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-right">
+                                <div className="flex items-center justify-end">
+                                  <input
+                                    type="number"
+                                    value={flag.price}
+                                    onChange={(e) => handleUpdateFlagPrice(activeProgram, flag.id, e.target.value)}
+                                    className="w-24 p-1.5 text-sm border border-gray-300 rounded-md text-right focus:ring-2 focus:ring-blue-500"
+                                  />
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <button
+                                  onClick={() => handleDeleteFlag(activeProgram, flag.id)}
+                                  className="text-red-600 hover:text-red-900"
+                                >
+                                  Delete
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
               </div>
 
               {config.priceConfig && config.priceConfig[activeTier] && Object.entries(config.priceConfig[activeTier]).map(([category, optionsGroups]) => {
@@ -445,6 +570,70 @@ const ConfiguratorSettingsPage = () => {
           </div>
         </div>
       )}
+
+      {addFlagModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 overflow-hidden">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Add Flag</h3>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Flag (Country) Name</label>
+              <input
+                type="text"
+                autoFocus
+                value={addFlagModal.name}
+                onChange={(e) => setAddFlagModal({ ...addFlagModal, name: e.target.value })}
+                onKeyDown={(e) => { if (e.key === 'Enter') confirmAddFlag(); }}
+                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="e.g. Denmark"
+              />
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setAddFlagModal({ isOpen: false, program: '', name: '' })}
+                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmAddFlag}
+                disabled={!addFlagModal.name.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+              >
+                Add Flag
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteFlagModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 overflow-hidden">
+            <div className="flex items-center mb-4 text-red-500">
+              <AlertCircle className="w-8 h-8 mr-3" />
+              <h3 className="text-xl font-bold text-gray-900">Delete Flag</h3>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to remove this flag? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setDeleteFlagModal({ isOpen: false, program: '', id: '' })}
+                className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteFlag}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

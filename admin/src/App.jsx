@@ -8,7 +8,6 @@ import DashboardLayout from './components/layout/DashboardLayout';
 import DashboardPage from './pages/DashboardPage';
 import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
-import FlagsPage from './pages/FlagsPage';
 import CustomersPage from './pages/CustomersPage';
 import ProductionPage from './pages/ProductionPage';
 import OrderStatusesPage from './pages/OrderStatusesPage';
@@ -56,7 +55,6 @@ function App() {
             <Route path="sms" element={<SmsCampaignsPage />} />
             <Route path="excel" element={<ExcelConfigPage />} />
             <Route path="emails" element={<EmailTemplatesPage />} />
-            <Route path="flags" element={<FlagsPage />} />
             <Route path="settings/configurator" element={<ConfiguratorSettingsPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="factory" element={<ProductionFactoryPage />} />

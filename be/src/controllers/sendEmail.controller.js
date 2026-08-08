@@ -3548,8 +3548,14 @@ const stripePayment = async (req, res) => {
 
   try {
     const { upsertCustomerFromOrder, applyDiscountCode, getStatusBySlug } = require('../services/core.service');
+    const { cancelPendingCampaignMessages } = require('../services/sms.service');
 
     const customer = await upsertCustomerFromOrder(customerDetails, email);
+    
+    if (customer && customer.id) {
+      await cancelPendingCampaignMessages(customer.id);
+    }
+    
     let finalPrice = parseFloat(totalPrice);
     let discountRecord = null;
     let discountAmount = null;

@@ -23,7 +23,6 @@ const getNavItems = (role) => {
     { title: 'Email Templates', icon: Mail, path: '/dashboard/emails' },
     { title: 'SMS Campaigns', icon: MessageSquare, path: '/dashboard/sms' },
     { title: 'Discount Codes', icon: Tag, path: '/dashboard/discounts' },
-    { title: 'Flags & Pricing', icon: Flag, path: '/dashboard/flags' },
     { title: 'Configurator', icon: Settings, path: '/dashboard/settings/configurator' },
     { title: 'Users & Roles', icon: Users, path: '/dashboard/users' },
   ];
@@ -39,7 +38,6 @@ const pageTitles = {
   '/dashboard/emails': 'Email Templates',
   '/dashboard/sms': 'SMS Campaigns',
   '/dashboard/discounts': 'Discount Codes',
-  '/dashboard/flags': 'Flags & Pricing',
   '/dashboard/settings/configurator': 'Configurator Settings',
   '/dashboard/users': 'Users & Roles',
   '/dashboard/factory': 'Factory Tasks',
@@ -55,7 +53,6 @@ const pageSubtitles = {
   '/dashboard/emails': 'Email Templates Listing',
   '/dashboard/sms': 'SMS Marketing Listing',
   '/dashboard/discounts': 'StudentLife Coupon Listing',
-  '/dashboard/flags': 'Flags & Pricing Listing',
   '/dashboard/settings/configurator': 'Manage prices and availability',
   '/dashboard/users': 'Manage Admin Permissions',
   '/dashboard/factory': 'Manage Production Queue',

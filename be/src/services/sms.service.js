@@ -38,17 +38,38 @@ const scheduleCampaignMessages = async (enrollmentId, customer, discountCode) =>
 };
 
 const sendSms = async (phone, message) => {
-  if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+  console.log(`\n[SMS] Attempting to send to ${phone}...`);
+  if (process.env.GATEWAYAPI_TOKEN) {
     try {
-      const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-      await twilio.messages.create({
-        body: message,
-        from: process.env.TWILIO_PHONE_NUMBER,
-        to: phone,
+      const fetch = (await import('node-fetch')).default;
+      const recipientNumber = parseInt(phone.replace(/\D/g, ''), 10);
+      
+      const payload = {
+        sender: 'StudentLife',
+        message: message,
+        recipient: recipientNumber
+      };
+      
+      console.log(`[SMS] Payload to GatewayAPI:`, payload);
+
+      const response = await fetch('https://messaging.gatewayapi.com/mobile/single', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Token ' + process.env.GATEWAYAPI_TOKEN,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
       });
-      return { sent: true, provider: 'twilio' };
+      
+      const data = await response.json();
+      console.log(`[SMS] GatewayAPI Response HTTP ${response.status}:`, data);
+      
+      if (!response.ok) {
+        throw new Error(data.message || data.detail || 'GatewayAPI error');
+      }
+      return { sent: true, provider: 'gatewayapi' };
     } catch (err) {
-      console.error('Twilio SMS error:', err.message);
+      console.error('[SMS] GatewayAPI SMS error:', err.message);
       return { sent: false, error: err.message };
     }
   }
@@ -59,6 +80,7 @@ const sendSms = async (phone, message) => {
 
 const processPendingSms = async () => {
   const now = new Date();
+  console.log(`\n[SMS] processPendingSms triggered at ${now.toISOString()}`);
   const pending = await prisma.smsMessage.findMany({
     where: {
       status: { in: ['SCHEDULED', 'PENDING'] },
@@ -68,8 +90,11 @@ const processPendingSms = async () => {
     take: 50,
   });
 
+  console.log(`[SMS] Found ${pending.length} pending messages to send.`);
+
   for (const msg of pending) {
     if (!msg.customer.smsMarketingConsent || msg.customer.smsOptOut) {
+      console.log(`[SMS] Skipping msg ID ${msg.id} due to opt-out or missing consent`);
       await prisma.smsMessage.update({
         where: { id: msg.id },
         data: { status: 'CANCELLED' },
@@ -78,6 +103,7 @@ const processPendingSms = async () => {
     }
 
     const result = await sendSms(msg.phone, msg.message);
+    console.log(`[SMS] DB Update for msg ID ${msg.id}: status=${result.sent ? 'SENT' : 'FAILED'}`);
     await prisma.smsMessage.update({
       where: { id: msg.id },
       data: {
@@ -86,6 +112,13 @@ const processPendingSms = async () => {
       },
     });
   }
+};
+
+const cancelPendingCampaignMessages = async (customerId) => {
+  await prisma.smsMessage.updateMany({
+    where: { customerId: customerId, status: { in: ['SCHEDULED', 'PENDING'] } },
+    data: { status: 'CANCELLED' },
+  });
 };
 
 const handleSmsOptOut = async (phone) => {
@@ -106,7 +139,9 @@ const handleSmsOptOut = async (phone) => {
 };
 
 const registerSmsSignup = async ({ name, phone, email, gdprConsent, campaignId }) => {
+  console.log(`\n[SMS] registerSmsSignup called for: ${name} (${phone}) - Campaign: ${campaignId}`);
   if (!gdprConsent) {
+    console.error('[SMS] GDPR consent missing');
     throw new Error('GDPR consent is required');
   }
 
@@ -152,7 +187,7 @@ const registerSmsSignup = async ({ name, phone, email, gdprConsent, campaignId }
 
   const discountCode = await prisma.discountCode.create({
     data: {
-      code: generateDiscountCode('SAVE'),
+      code: phone,
       type: 'PERCENTAGE',
       value: 10,
       expiresAt,
@@ -179,6 +214,9 @@ const registerSmsSignup = async ({ name, phone, email, gdprConsent, campaignId }
       },
     });
     await scheduleCampaignMessages(enrollment.id, customer, discountCode);
+    
+    // Process immediate (Day 0) messages instantly without waiting for the 15m cron job
+    processPendingSms().catch(err => console.error("Failed to send instant SMS:", err.message));
   }
 
   return { customer, discountCode, alreadyRegistered: false };
@@ -188,6 +226,7 @@ module.exports = {
   scheduleCampaignMessages,
   sendSms,
   processPendingSms,
+  cancelPendingCampaignMessages,
   handleSmsOptOut,
   registerSmsSignup,
 };

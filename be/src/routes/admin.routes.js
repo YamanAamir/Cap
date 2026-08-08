@@ -38,6 +38,7 @@ router.get('/production/logs', admin, adminController.getDispatchLogs);
 router.get('/sms/campaigns', admin, adminController.getSmsCampaigns);
 router.post('/sms/campaigns', admin, adminController.createSmsCampaign);
 router.patch('/sms/campaigns/:id', admin, adminController.updateSmsCampaign);
+router.get('/sms/campaigns/:id/export', admin, adminController.exportCampaignNonPurchasers);
 router.get('/sms/messages', admin, adminController.getSmsMessages);
 
 router.get('/excel/columns', admin, adminController.getExcelColumns);

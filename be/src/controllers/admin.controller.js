@@ -324,6 +324,30 @@ exports.updateSmsCampaign = async (req, res) => {
   }
 };
 
+exports.exportCampaignNonPurchasers = async (req, res) => {
+  const campaignId = parseInt(req.params.id);
+  try {
+    const enrollments = await prisma.smsCampaignEnrollment.findMany({
+      where: {
+        campaignId,
+        customer: { orders: { none: {} } }
+      },
+      include: { customer: true, discountCode: true }
+    });
+    
+    let csv = "Name,Phone,Email,DiscountCode\n";
+    enrollments.forEach(e => {
+      csv += `"${e.customer.name}","${e.customer.phone}","${e.customer.email}","${e.discountCode?.code || ''}"\n`;
+    });
+    
+    res.header('Content-Type', 'text/csv');
+    res.attachment(`campaign_${campaignId}_non_purchasers.csv`);
+    return res.send(csv);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 exports.getSmsMessages = async (req, res) => {
   try {
     const messages = await prisma.smsMessage.findMany({

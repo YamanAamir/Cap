@@ -934,6 +934,7 @@ const StudentDashboard = () => {
                   errors={errors}
                   setErrors={setErrors}
                   pakke={packageName}
+                  programFlags={dynamicConfig?.programFlags?.[(program || '').toUpperCase()] || []}
                 />
               )}
               {activeMenu === "STØRRELSE" && (
@@ -1347,6 +1348,7 @@ const StudentDashboard = () => {
                       errors={errors}
                       setErrors={setErrors}
                       pakke={packageName}
+                      programFlags={dynamicConfig?.programFlags?.[(program || '').toUpperCase()] || []}
                     />
                   )}
                   {activeMenu === "STØRRELSE" && (

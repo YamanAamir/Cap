@@ -24,11 +24,10 @@ const AccessorySelector = ({ label, currentSelection, onSelectionChange, accesso
     </div>
 );
 
-const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, pakke }) => {
+const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, pakke, programFlags = [] }) => {
     const cameraTriggers = useRef({});
     const tilbehor = selectedOptions?.TILBEHØR || {};
 
-    const [availableFlags, setAvailableFlags] = useState([]);
     const korkardeCanvasRef = useRef(document.createElement('canvas'));
 
     const accessoryOptions = [
@@ -54,23 +53,6 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
     const trumpetSelection = tilbehor.Trompet || 'No';
     const bucketpinsSelection = tilbehor.Bucketpins || 'No';
     const extraKokardeText = tilbehor['Ekstra korkarde Text'] || '';
-
-    useEffect(() => {
-        const fetchFlags = async () => {
-            try {
-                const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-                const response = await fetch(`${baseUrl}/api/flags`);
-                if (response.ok) {
-                    const data = await response.json();
-                    const filteredFlags = data.filter(f => !f.name.toLowerCase().includes('express'));
-                    setAvailableFlags(filteredFlags);
-                }
-            } catch (error) {
-                console.error('Error fetching flags:', error);
-            }
-        };
-        fetchFlags();
-    }, []);
 
     const sendMessageToIframes = (msg) => {
         ['preview-iframe', 'preview-iframe2'].forEach((id) => {
@@ -141,7 +123,7 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
         if (flagId === '') {
             newSelected.splice(index);
         } else {
-            const flag = availableFlags.find(f => f.id === parseInt(flagId, 10));
+            const flag = programFlags.find(f => String(f.id) === String(flagId));
             if (flag) {
                 newSelected[index] = flag;
             }
@@ -351,7 +333,7 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
                                 className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 bg-white text-slate-700"
                             >
                                 <option value="">Vælg flag...</option>
-                                {availableFlags.map((flag) => (
+                                {programFlags.map((flag) => (
                                     <option key={flag.id} value={flag.id}>
                                         {flag.name} {flag.price > 0 ? `(+${flag.price} DKK)` : '(Inkluderet)'}
                                     </option>

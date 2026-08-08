@@ -1632,7 +1632,8 @@ const StudentDashboard = () => {
     const hasSurcharge = programsWithSurcharge.includes(program?.toLowerCase());
 
     if (packageName === "standard") iniialPrice = 449;
-    else if (packageName === "luksus") iniialPrice = hasSurcharge ? 1595 : 995;
+    // else if (packageName === "luksus") iniialPrice = hasSurcharge ? 1595 : 995;
+    else if (packageName === "luxus") iniialPrice = 1595;
     else if (packageName === "premium") iniialPrice = hasSurcharge ? 2450 : 1850;
 
     ///zee///

@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { submitSmsSignup } from '../services/marketing.api';
 import { Loader2, Smartphone, Gift, ShieldCheck, CheckCircle2, ArrowRight } from 'lucide-react';
 
 const SmsSignupScreen = () => {
+  const [searchParams] = useSearchParams();
+  const campaignId = searchParams.get('campaignId');
   const [form, setForm] = useState({ name: '', email: '', phone: '', gdprConsent: false });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -18,6 +21,7 @@ const SmsSignupScreen = () => {
         email: form.email,
         phone: form.phone,
         gdprConsent: form.gdprConsent,
+        campaignId: campaignId ? parseInt(campaignId) : undefined,
       });
       setResult(data);
     } catch (err) {
@@ -45,6 +49,7 @@ const SmsSignupScreen = () => {
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center justify-center gap-2 mb-2">
                 <Gift className="h-4 w-4" /> DIN EKSKLUSIVE RABATKODE
               </p>
+              <p className="text-sm text-slate-600 mb-4">Dit telefonnummer er nu din rabatkode!</p>
               <div className="bg-white px-6 py-4 rounded border border-slate-200 inline-block shadow-sm">
                 <p className="text-3xl font-black text-[#1e3a8a] tracking-widest">{result.discountCode.code}</p>
               </div>
@@ -112,14 +117,14 @@ const SmsSignupScreen = () => {
           <div>
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Telefon</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">+45</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">+</span>
               <input
                 required
                 type="tel"
                 value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="w-full pl-12 pr-4 py-3 rounded border border-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-bold text-slate-800 transition-shadow bg-[#fafafa] focus:bg-white"
-                placeholder="12 34 56 78"
+                onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/[^0-9]/g, '') })}
+                className="w-full pl-8 pr-4 py-3 rounded border border-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-bold text-slate-800 transition-shadow bg-[#fafafa] focus:bg-white"
+                placeholder="45 12 34 56 78"
                 disabled={loading}
               />
             </div>
