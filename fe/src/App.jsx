@@ -32,7 +32,7 @@ function App() {
       <Route path="/" element={<StudentDashboard />} />
       <Route path="/success" element={<SuccessScreen />} />
       <Route path="/cancel" element={<CancelScreen />} />
-      <Route path="/sms-signup" element={<SmsSignupScreen />} />
+      <Route path="/sms-signup/:slug" element={<SmsSignupScreen />} />
       <Route path="/admin/flags" element={<AdminFlags />} />
     </Routes>
   )

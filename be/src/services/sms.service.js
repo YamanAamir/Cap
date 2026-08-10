@@ -45,7 +45,7 @@ const sendSms = async (phone, message) => {
       const recipientNumber = parseInt(phone.replace(/\D/g, ''), 10);
       
       const payload = {
-        sender: 'StudentLife',
+        sender: process.env.GATEWAYAPI_SENDER,
         message: message,
         recipient: recipientNumber
       };
@@ -67,7 +67,11 @@ const sendSms = async (phone, message) => {
       if (!response.ok) {
         throw new Error(data.message || data.detail || 'GatewayAPI error');
       }
-      return { sent: true, provider: 'gatewayapi' };
+      return { 
+        sent: true, 
+        provider: 'gatewayapi', 
+        gatewayId: data.ids ? String(data.ids[0]) : (data.msg_id ? String(data.msg_id) : null) 
+      };
     } catch (err) {
       console.error('[SMS] GatewayAPI SMS error:', err.message);
       return { sent: false, error: err.message };
@@ -75,7 +79,7 @@ const sendSms = async (phone, message) => {
   }
 
   console.log(`[SMS STUB] To: ${phone} | Message: ${message}`);
-  return { sent: true, provider: 'stub' };
+  return { sent: true, provider: 'stub', gatewayId: 'stub_' + Date.now() };
 };
 
 const processPendingSms = async () => {
@@ -103,12 +107,13 @@ const processPendingSms = async () => {
     }
 
     const result = await sendSms(msg.phone, msg.message);
-    console.log(`[SMS] DB Update for msg ID ${msg.id}: status=${result.sent ? 'SENT' : 'FAILED'}`);
+    console.log(`[SMS] DB Update for msg ID ${msg.id}: status=${result.sent ? 'SENT' : 'FAILED'} gatewayId=${result.gatewayId || 'N/A'}`);
     await prisma.smsMessage.update({
       where: { id: msg.id },
       data: {
         status: result.sent ? 'SENT' : 'FAILED',
         sentAt: result.sent ? new Date() : null,
+        gatewayId: result.gatewayId || null,
       },
     });
   }
@@ -138,7 +143,7 @@ const handleSmsOptOut = async (phone) => {
   return true;
 };
 
-const registerSmsSignup = async ({ name, phone, email, gdprConsent, campaignId }) => {
+const registerSmsSignup = async ({ name, phone, email, school, gdprConsent, campaignId }) => {
   console.log(`\n[SMS] registerSmsSignup called for: ${name} (${phone}) - Campaign: ${campaignId}`);
   if (!gdprConsent) {
     console.error('[SMS] GDPR consent missing');
@@ -162,6 +167,7 @@ const registerSmsSignup = async ({ name, phone, email, gdprConsent, campaignId }
       data: {
         name,
         phone,
+        school: school || customer.school,
         smsMarketingConsent: true,
         smsConsentAt: new Date(),
         gdprConsentAt: new Date(),
@@ -175,6 +181,7 @@ const registerSmsSignup = async ({ name, phone, email, gdprConsent, campaignId }
         name,
         email,
         phone,
+        school,
         smsMarketingConsent: true,
         smsConsentAt: new Date(),
         gdprConsentAt: new Date(),

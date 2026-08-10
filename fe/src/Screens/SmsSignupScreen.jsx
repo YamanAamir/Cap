@@ -1,15 +1,36 @@
-import React, { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { submitSmsSignup } from '../services/marketing.api';
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { submitSmsSignup, getSmsCampaignBySlug } from '../services/marketing.api';
 import { Loader2, Smartphone, Gift, ShieldCheck, CheckCircle2, ArrowRight } from 'lucide-react';
 
 const SmsSignupScreen = () => {
-  const [searchParams] = useSearchParams();
-  const campaignId = searchParams.get('campaignId');
-  const [form, setForm] = useState({ name: '', email: '', phone: '', gdprConsent: false });
+  const { slug } = useParams();
+  const [campaign, setCampaign] = useState(null);
+  const [loadingCampaign, setLoadingCampaign] = useState(true);
+  const [campaignError, setCampaignError] = useState(false);
+  
+  const [form, setForm] = useState({ name: '', email: '', phone: '', school: '', gdprConsent: false });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchCampaign = async () => {
+      try {
+        const data = await getSmsCampaignBySlug(slug);
+        setCampaign(data);
+      } catch (err) {
+        setCampaignError(true);
+      } finally {
+        setLoadingCampaign(false);
+      }
+    };
+    if (slug) fetchCampaign();
+    else {
+      setCampaignError(true);
+      setLoadingCampaign(false);
+    }
+  }, [slug]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,8 +41,9 @@ const SmsSignupScreen = () => {
         name: form.name,
         email: form.email,
         phone: form.phone,
+        school: form.school,
         gdprConsent: form.gdprConsent,
-        campaignId: campaignId ? parseInt(campaignId) : undefined,
+        campaignId: campaign.id,
       });
       setResult(data);
     } catch (err) {
@@ -69,6 +91,36 @@ const SmsSignupScreen = () => {
     );
   }
 
+  if (loadingCampaign) {
+    return (
+      <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center p-6 font-sans">
+        <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+      </div>
+    );
+  }
+
+  if (campaignError || !campaign) {
+    return (
+      <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center p-6 font-sans">
+        <div className="max-w-md w-full bg-white rounded shadow-sm border border-slate-200 p-8 text-center">
+          <div className="w-16 h-16 bg-red-50 rounded flex items-center justify-center mx-auto mb-6 border border-red-100">
+            <ShieldCheck className="h-8 w-8 text-red-500" />
+          </div>
+          <h1 className="text-xl font-black text-slate-900 tracking-tight">Campaign Not Found</h1>
+          <p className="text-slate-500 mt-2 text-sm font-medium">
+            This signup link is invalid or the campaign has expired.
+          </p>
+          <a
+            href="/"
+            className="mt-8 flex items-center justify-center gap-2 w-full py-4 bg-slate-100 text-slate-700 font-bold rounded shadow-sm hover:bg-slate-200 transition-colors"
+          >
+            RETURN TO HOME
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center p-6 font-sans">
       <div className="max-w-md w-full bg-white rounded shadow-sm border border-slate-200 overflow-hidden animate-in fade-in duration-500">
@@ -78,7 +130,7 @@ const SmsSignupScreen = () => {
           <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded flex items-center justify-center mx-auto mb-4 border border-blue-100">
             <Smartphone className="h-6 w-6" />
           </div>
-          <h1 className="text-xl font-black text-slate-900 tracking-tight">Få SMS-tilbud & rabat</h1>
+          <h1 className="text-xl font-black text-slate-900 tracking-tight">Få SMS-tilbud for {campaign.name}</h1>
           <p className="text-slate-500 mt-2 text-sm font-medium">Tilmeld dig og modtag en eksklusiv rabatkode til din studenterhue.</p>
         </div>
 
@@ -110,6 +162,19 @@ const SmsSignupScreen = () => {
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               className="w-full px-4 py-3 rounded border border-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-bold text-slate-800 transition-shadow bg-[#fafafa] focus:bg-white"
               placeholder="din@email.dk"
+              disabled={loading}
+            />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Skole / Gymnasium</label>
+            <input
+              required
+              type="text"
+              value={form.school}
+              onChange={(e) => setForm({ ...form, school: e.target.value })}
+              className="w-full px-4 py-3 rounded border border-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-bold text-slate-800 transition-shadow bg-[#fafafa] focus:bg-white"
+              placeholder="F.eks. H.C. Ørsted Gymnasiet"
               disabled={loading}
             />
           </div>

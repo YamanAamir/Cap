@@ -7,21 +7,28 @@ import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 const BASE_FIELDS = [
+  { label: 'Order ID (Internal)', value: 'orderId' },
   { label: 'Order Number', value: 'orderNumber' },
-  { label: 'Order Date', value: 'orderDate' },
+  { label: 'Order Date (YYYY-MM-DD)', value: 'orderDate' },
+  { label: 'Created At (Full Time)', value: 'createdAt' },
+  { label: 'Updated At (Full Time)', value: 'updatedAt' },
+  { label: 'Customer ID', value: 'customerId' },
   { label: 'Customer Name', value: 'customerName' },
   { label: 'Customer Email', value: 'customerEmail' },
   { label: 'Customer Phone', value: 'customerPhone' },
   { label: 'Customer Address', value: 'customerAddress' },
   { label: 'Customer City', value: 'customerCity' },
   { label: 'Customer Zip', value: 'customerPostalCode' },
+  { label: 'Customer Country', value: 'customerDeliveryCountry' },
   { label: 'School Name', value: 'schoolName' },
   { label: 'Delivery Type', value: 'deliveryType' },
   { label: 'Total Price', value: 'totalPrice' },
   { label: 'Currency', value: 'currency' },
   { label: 'Package Name', value: 'packageName' },
   { label: 'Program', value: 'program' },
-  { label: 'Status', value: 'status' },
+  { label: 'Order Status', value: 'status' },
+  { label: 'Payment Status', value: 'paymentStatus' },
+  { label: 'Payment ID (Stripe)', value: 'paymentIntentId' },
   { label: 'Discount Code', value: 'discountCode' },
   { label: 'Discount Amount', value: 'discountAmount' },
   { label: 'Static Value "1"', value: 'static:1' }
@@ -57,19 +64,37 @@ const ExcelTemplatesPage = () => {
         });
       });
       
-      // Add extra fields that are part of the order but not in the pricing config
       const extraFields = [
-        { label: 'UDDANNELSESBÅND - år (Year)', value: 'options.UDDANNELSESBÅND.år' },
-        { label: 'TILBEHØR - Flag 1', value: 'options.TILBEHØR.Flag 1' },
-        { label: 'TILBEHØR - Flag 2', value: 'options.TILBEHØR.Flag 2' },
-        { label: 'TILBEHØR - Flag 3', value: 'options.TILBEHØR.Flag 3' },
-        { label: 'TILBEHØR - Flag 4', value: 'options.TILBEHØR.Flag 4' },
-        { label: 'TILBEHØR - Ekstra korkarde Text', value: 'options.TILBEHØR.Ekstra korkarde Text' },
-        { label: 'TILBEHØR - Store kuglepen', value: 'options.TILBEHØR.Store kuglepen' },
-        { label: 'TILBEHØR - Trompet', value: 'options.TILBEHØR.Trompet' },
-        { label: 'FOER - Silk Type', value: 'options.FOER.Silk Type' },
-        { label: 'FOER - Satin Type', value: 'options.FOER.Satin Type' },
-      ];
+          { label: 'STØRRELSE - Vælg størrelse (Size)', value: 'options.STA~RRELSE.VAlg stA,rrelse' },
+          { label: 'KOKARDE - Roset farve (Rosette Color)', value: 'options.KOKARDE.Roset farve' },
+          { label: 'KOKARDE - Type (Cockade Insignia)', value: 'options.KOKARDE.Type' },
+          { label: 'KOKARDE - Emblem (Emblem Color)', value: 'options.KOKARDE.Emblem' },
+          { label: 'KOKARDE - Kokarde (Cockade Style)', value: 'options.KOKARDE.Kokarde' },
+          { label: 'BRODERI - Navne broderi (Back Embroidery Name)', value: 'options.BRODERI.Navne broderi' },
+          { label: 'BRODERI - Broderifarve (Back Embroidery Color)', value: 'options.BRODERI.Broderifarve' },
+          { label: 'UDDANNELSESBÅND - Broderi foran (Front Embroidery Name)', value: 'options.UDDANNELSESBA.ND.Broderi foran' },
+          { label: 'UDDANNELSESBÅND - Broderi farve (Front Embroidery Color)', value: 'options.UDDANNELSESBA.ND.Broderi farve' },
+          { label: 'BRODERI - Skolebroderi (School Embroidery Text)', value: 'options.BRODERI.Skolebroderi' },
+          { label: 'BRODERI - Skolebroderi farve (School Embroidery Color)', value: 'options.BRODERI.Skolebroderi farve' },
+          { label: 'BRODERI - Top broderi (Top Embroidery)', value: 'options.BRODERI.Top broderi' },
+          { label: 'BRODERI - Top broderi design (Top Embroidery Design)', value: 'options.BRODERI.Top broderi design' },
+          { label: 'BETRÆK - Farve (Cover Color)', value: 'options.BETRA+K.Farve' },
+          { label: 'BETRÆK - Topkant (Top Edging)', value: 'options.BETRA+K.Topkant' },
+          { label: 'BETRÆK - Kantbånd (Edge Ribbon)', value: 'options.BETRA+K.KantbAnd' },
+          { label: 'BETRÆK - Stjerner (Stars)', value: 'options.BETRA+K.Stjerner' },
+          { label: 'BETRÆK - Flagbånd (Flag Ribbon)', value: 'options.BETRA+K.FlagbAnd' },
+          { label: 'FOER - Svederem (Sweatband)', value: 'options.FOER.Svederem' },
+          { label: 'UDDANNELSESBA.ND - Ar (Year)', value: 'options.UDDANNELSESBA.ND.Ar' },
+          { label: 'TILBEHA~R - Flag 1', value: 'options.TILBEHA~R.Flag 1' },
+          { label: 'TILBEHA~R - Flag 2', value: 'options.TILBEHA~R.Flag 2' },
+          { label: 'TILBEHA~R - Flag 3', value: 'options.TILBEHA~R.Flag 3' },
+          { label: 'TILBEHA~R - Flag 4', value: 'options.TILBEHA~R.Flag 4' },
+          { label: 'TILBEHA~R - Ekstra korkarde Text', value: 'options.TILBEHA~R.Ekstra korkarde Text' },
+          { label: 'TILBEHA~R - Store kuglepen', value: 'options.TILBEHA~R.Store kuglepen' },
+          { label: 'TILBEHA~R - Trompet', value: 'options.TILBEHA~R.Trompet' },
+          { label: 'FOER - Silk Type', value: 'options.FOER.Silk Type' },
+          { label: 'FOER - Satin Type', value: 'options.FOER.Satin Type' },
+        ];
       
       setConfigOptions([...opts, ...extraFields]);
     } catch (err) {

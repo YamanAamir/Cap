@@ -62,7 +62,13 @@ function isRelevantForProgram(item, activeProgram, groupName) {
 
   // Specific restrictions for STU
   if (activeProgram === 'STU') {
-    if (['satin', 'velour', 'shimmer'].includes(itemLower)) return false;
+    if (['velour', 'shimmer', 'ruskin', 'alcantra'].includes(itemLower)) return false;
+    if (groupName === 'Materiale' && itemLower === 'satin') return false;
+    if (groupName && (groupName.includes('Kant') || groupName.includes('Stjerner') || groupName.includes('Flag'))) return false;
+    if (groupName === 'Kokarde' && itemLower === 'flag') return false;
+    if (groupName && groupName.includes('Hueb') && itemLower !== 'stu') return false;
+    if (groupName === 'Type' && !itemLower.includes('stu') && itemLower !== 'champagne') return false;
+    if (groupName && groupName.includes('Roset') && !['psort', '#dc2626'].includes(itemLower)) return false;
   }
   
   if (activeProgram === 'Landmand') {

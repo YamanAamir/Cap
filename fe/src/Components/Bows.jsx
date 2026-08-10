@@ -50,6 +50,11 @@ import MerkurstavSilverDiamant from '../assets/images/merkurstav silv diamant.we
 import MerkurstavSilver from '../assets/images/merkurstav silver.webp';
 import MerkurstavGoldDiamant from '../assets/images/merkurstav gold diamant.webp';
 import MerkurstavGold from '../assets/images/merkurstav gold.webp';
+
+import GuxGold from '../assets/images/gux gold.jpg';
+import GuxGoldDiamant from '../assets/images/gux gold diamant.jpg';
+import GuxSilver from '../assets/images/gux silver.jpg';
+import GuxSilverDiamant from '../assets/images/gux silver diamant.jpg';
 import HjerteGuld from '../assets/images/hjerte guld.webp';
 import HjerteSilv from '../assets/images/hjerte silv.webp';
 import AhornbladGold from '../assets/images/Ahornblad gold.webp';
@@ -475,6 +480,7 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
 
 
     const getGoldEmblem = () => {
+  let result = (function() {
         switch (program?.toLowerCase()) {
             case 'hhx':
                 return [
@@ -499,7 +505,9 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
             case 'hf':
                 return [
                     { name: 'HF Guld Simli', icon: HfGoldDiamant },
+                    { name: 'GUX Guld Simli', icon: GuxGoldDiamant },
                     { name: 'HF Guld', icon: HfGold },
+                    { name: 'GUX Guld', icon: GuxGold },
                     { name: 'IB Guld', icon: IbGold },
                     { name: 'IB Guld Simli', icon: IbGuldSimli },
                 ];
@@ -553,9 +561,19 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
             default:
                 return null;
         }
-    };
+    })();
+  if (result) {
+    // Only push if not already present
+    if (!result.some(r => r.name === 'GUX Guld')) {
+      result.push({ name: 'GUX Guld Simli', icon: GuxGoldDiamant });
+      result.push({ name: 'GUX Guld', icon: GuxGold });
+    }
+  }
+  return result;
+};
 
-    const getSilverEmblem = () => {
+const getSilverEmblem = () => {
+  let result = (function() {
         switch (program?.toLowerCase()) {
             case 'hhx':
                 return [
@@ -634,10 +652,17 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
             default:
                 return null;
         }
-    };
+    })();
+  if (result) {
+    if (!result.some(r => r.name === 'GUX Sølv')) {
+      result.push({ name: 'GUX Sølv Simli', icon: GuxSilverDiamant });
+      result.push({ name: 'GUX Sølv', icon: GuxSilver });
+    }
+  }
+  return result;
+};
 
-
-    // Build full arrays with dynamic first option
+// Build full arrays with dynamic first option
 
 
 
@@ -983,7 +1008,7 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
     };
 
     const getBaseName = (name) => {
-        return name.replace(/\s*(Guld|Sølv|Solv)\s*$/i, '').trim();
+        return name.replace(/\s*(Guld|SA,lv|Solv|Sølv)\s*/i, ' ').trim();
     };
 
     // Helper function to apply emblem suffix to base name
@@ -1133,7 +1158,7 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
                     </div>
                 </div>
                 <div className="flex space-x-3 flex-wrap gap-y-2">
-                    {['Signature', 'Prestige', 'Stjernetegn', 'Flag'].map((type) => (
+                    {(program?.toLowerCase() === 'stu' ? ['Signature', 'Prestige', 'Stjernetegn'] : ['Signature', 'Prestige', 'Stjernetegn', 'Flag']).map((type) => (
                         <button
                             key={type}
                             onClick={() => handlePrestigeChange(type)}
@@ -1203,3 +1228,5 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
 }
 
 export default Bows;
+
+

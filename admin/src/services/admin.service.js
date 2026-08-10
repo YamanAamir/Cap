@@ -30,8 +30,8 @@ export const getDispatchLogs = () => api.get('/admin/production/logs').then(r =>
 // SMS
 export const getSmsCampaigns = () => api.get('/admin/sms/campaigns').then(r => r.data);
 export const createSmsCampaign = (data) => api.post('/admin/sms/campaigns', data).then(r => r.data);
-export const updateSmsCampaign = (id, data) => api.patch(`/admin/sms/campaigns/${id}`, data).then(r => r.data);
-export const getSmsMessages = () => api.get('/admin/sms/messages').then(r => r.data);
+export const updateSmsCampaign = (id, data, applyToExisting = false) => api.patch(`/admin/sms/campaigns/${id}`, { ...data, applyToExisting }).then(r => r.data);
+export const getSmsMessages = (params = {}) => api.get('/admin/sms/messages', { params }).then(r => r.data);
 export const exportCampaignNonPurchasers = (id) => api.get(`/admin/sms/campaigns/${id}/export`, { responseType: 'blob' }).then(r => r.data);
 
 // Excel

@@ -68,10 +68,10 @@ exports.getCustomerById = async (req, res) => {
 
 exports.updateCustomer = async (req, res) => {
   try {
-    const { name, email, phone, orderEmailConsent, smsMarketingConsent, emailMarketingConsent } = req.body;
+    const { name, email, phone, school, orderEmailConsent, smsMarketingConsent, emailMarketingConsent } = req.body;
     const customer = await prisma.customer.update({
       where: { id: parseInt(req.params.id) },
-      data: { name, email, phone, orderEmailConsent, smsMarketingConsent, emailMarketingConsent }
+      data: { name, email, phone, school, orderEmailConsent, smsMarketingConsent, emailMarketingConsent }
     });
     res.json(customer);
   } catch (err) {
@@ -269,9 +269,11 @@ exports.getSmsCampaigns = async (req, res) => {
 exports.createSmsCampaign = async (req, res) => {
   try {
     const { name, steps = [] } = req.body;
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') + '-' + Math.floor(Math.random() * 1000);
     const campaign = await prisma.smsCampaign.create({
       data: {
         name,
+        slug,
         steps: {
           create: steps.map((s, i) => ({
             dayOffset: s.dayOffset,
@@ -289,15 +291,35 @@ exports.createSmsCampaign = async (req, res) => {
   }
 };
 
+exports.getSmsCampaignBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const campaign = await prisma.smsCampaign.findUnique({
+      where: { slug },
+      select: { id: true, name: true, isActive: true },
+    });
+    if (!campaign || !campaign.isActive) {
+      return res.status(404).json({ message: 'Campaign not found' });
+    }
+    res.json(campaign);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 exports.updateSmsCampaign = async (req, res) => {
   try {
-    const { name, isActive, steps } = req.body;
+    const { name, slug, isActive, steps, applyToExisting } = req.body;
     const id = parseInt(req.params.id);
 
-    if (name !== undefined || isActive !== undefined) {
+    if (name !== undefined || isActive !== undefined || slug !== undefined) {
       await prisma.smsCampaign.update({
         where: { id },
-        data: { ...(name !== undefined && { name }), ...(isActive !== undefined && { isActive }) },
+        data: { 
+          ...(name !== undefined && { name }), 
+          ...(isActive !== undefined && { isActive }),
+          ...(slug !== undefined && { slug })
+        },
       });
     }
 
@@ -312,6 +334,50 @@ exports.updateSmsCampaign = async (req, res) => {
           isActive: s.isActive !== false,
         })),
       });
+
+      if (applyToExisting) {
+        // Fetch all enrollments for this campaign
+        const enrollments = await prisma.smsCampaignEnrollment.findMany({
+          where: { campaignId: id },
+          include: { customer: true }
+        });
+
+        // Delete all currently pending or scheduled messages for these enrollments
+        const enrollmentIds = enrollments.map(e => e.id);
+        if (enrollmentIds.length > 0) {
+          await prisma.smsMessage.deleteMany({
+            where: {
+              enrollmentId: { in: enrollmentIds },
+              status: { in: ['PENDING', 'SCHEDULED'] }
+            }
+          });
+
+          // Re-generate future messages based on new steps
+          const newMessages = [];
+          for (const enrollment of enrollments) {
+            for (const step of steps) {
+              const scheduledFor = new Date(enrollment.enrolledAt);
+              scheduledFor.setDate(scheduledFor.getDate() + step.dayOffset);
+
+              // Only queue messages that are in the future to avoid spamming old steps
+              if (scheduledFor > new Date()) {
+                newMessages.push({
+                  customerId: enrollment.customerId,
+                  enrollmentId: enrollment.id,
+                  phone: enrollment.customer.phone,
+                  message: step.message,
+                  scheduledFor,
+                  status: 'SCHEDULED'
+                });
+              }
+            }
+          }
+
+          if (newMessages.length > 0) {
+            await prisma.smsMessage.createMany({ data: newMessages });
+          }
+        }
+      }
     }
 
     const campaign = await prisma.smsCampaign.findUnique({
@@ -350,10 +416,58 @@ exports.exportCampaignNonPurchasers = async (req, res) => {
 
 exports.getSmsMessages = async (req, res) => {
   try {
+    const { campaignId, status, dateFrom, dateTo, search, orderStatus } = req.query;
+
+    const where = {};
+    if (campaignId) {
+      where.enrollment = { campaignId: parseInt(campaignId) };
+    }
+    if (status) {
+      where.status = status;
+    }
+    if (dateFrom || dateTo) {
+      where.scheduledFor = {};
+      if (dateFrom) where.scheduledFor.gte = new Date(dateFrom);
+      if (dateTo) where.scheduledFor.lte = new Date(dateTo);
+    }
+    if (search) {
+      where.OR = [
+        { phone: { contains: search } },
+        { customer: { name: { contains: search } } }
+      ];
+    }
+    
+    if (orderStatus) {
+      if (orderStatus === 'CANCELLED') {
+        where.customer = {
+          ...where.customer,
+          orders: { some: { status: 'CANCELLED' } }
+        };
+      } else if (orderStatus === 'NOT_CANCELLED') {
+        where.customer = {
+          ...where.customer,
+          orders: { none: { status: 'CANCELLED' } }
+        };
+      } else if (orderStatus === 'NO_ORDER') {
+        where.customer = {
+          ...where.customer,
+          orders: { none: {} }
+        };
+      }
+    }
+
     const messages = await prisma.smsMessage.findMany({
+      where,
       orderBy: { scheduledFor: 'desc' },
-      take: 100,
-      include: { customer: { select: { name: true, phone: true } } },
+      take: 500, // Increased limit for better filtration visibility
+      include: { 
+        customer: { 
+          select: { name: true, phone: true, school: true, orders: { select: { status: true } } } 
+        },
+        enrollment: {
+          select: { campaignId: true, campaign: { select: { name: true } } }
+        }
+      },
     });
     res.json(messages);
   } catch (err) {
@@ -503,6 +617,36 @@ exports.smsSignup = async (req, res) => {
 exports.smsWebhook = async (req, res) => {
   try {
     const { handleSmsOptOut } = require('../services/sms.service');
+    console.log(`\n[SMS WEBHOOK] Received payload:`, JSON.stringify(req.body, null, 2));
+    
+    // Check if it's a Delivery Report (DLR)
+    let webhookId = req.body.msg_id || req.body.id;
+    let status = req.body.status;
+
+    if (req.body.event_type === 'message.status.sms' && req.body.event) {
+      webhookId = req.body.event.msg_id;
+      status = req.body.event.status;
+    }
+
+    if (status && webhookId) {
+      const gatewayId = String(webhookId);
+      console.log(`[SMS WEBHOOK] Delivery report received: ID=${gatewayId}, Status=${status}`);
+      
+      const message = await prisma.smsMessage.findUnique({
+        where: { gatewayId }
+      });
+      
+      if (message) {
+        await prisma.smsMessage.update({
+          where: { gatewayId },
+          data: { status }
+        });
+        console.log(`[SMS WEBHOOK] Updated message ${message.id} to ${status}`);
+      }
+      return res.json({ received: true });
+    }
+
+    // Otherwise, assume it might be an inbound MO SMS (e.g. STOP)
     const body = req.body.Body || req.body.message || '';
     const from = req.body.From || req.body.phone || '';
 
@@ -512,6 +656,7 @@ exports.smsWebhook = async (req, res) => {
     }
     res.json({ received: true });
   } catch (err) {
+    console.error('[SMS WEBHOOK] Error:', err.message);
     res.status(500).json({ message: err.message });
   }
 };

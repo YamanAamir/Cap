@@ -63,6 +63,11 @@ import MerkurstavSilverDiamant from '../assets/images/merkurstav silv diamant.we
 import MerkurstavSilver from '../assets/images/merkurstav silver.webp';
 import MerkurstavGoldDiamant from '../assets/images/merkurstav gold diamant.webp';
 import MerkurstavGold from '../assets/images/merkurstav gold.webp';
+
+import GuxGold from '../assets/images/gux gold.jpg';
+import GuxGoldDiamant from '../assets/images/gux gold diamant.jpg';
+import GuxSilver from '../assets/images/gux silver.jpg';
+import GuxSilverDiamant from '../assets/images/gux silver diamant.jpg';
 import HjerteGuld from '../assets/images/hjerte guld.webp';
 import HjerteSilv from '../assets/images/hjerte silv.webp';
 import AhornbladGold from '../assets/images/Ahornblad gold.webp';
@@ -298,7 +303,9 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
             { name: 'STX Guld Simli', icon: StxGoldDiamant },
             { name: 'STX Guld', icon: StxGold },
             { name: 'HF Guld Simli', icon: HfGoldDiamant },
+              { name: 'GUX Guld Simli', icon: GuxGoldDiamant },
             { name: 'HF Guld', icon: HfGold },
+              { name: 'GUX Guld', icon: GuxGold },
             { name: 'EUD Guld', icon: EudGold },
             { name: 'EUX Guld Simli', icon: EuxGoldDiamant },
             { name: 'EUX Guld', icon: EuxGold },
@@ -493,7 +500,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
     };
 
 
-    const coverColorOptions = [
+    let coverColorOptions = [
         { name: 'Hvid', value: 'Hvid', color: '#ffffff' },
         { name: 'Sort', value: 'Sort', color: '#000000' },
         { name: 'Hvid med glimmer', value: 'Hvid med glimmer', img: whiteGlitter, color: '#ffffff' },
@@ -507,6 +514,8 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
         "kosmetolog",
         "pau",
         "ernæringsassistent"
+    ,
+        "stu"
     ];
 
     const isRestricted = restrictedPrograms.includes(programNew?.toLowerCase());
@@ -541,11 +550,20 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
         ] : []),
         getCoverColor()
     ].filter(Boolean);
+    const isSTU = programNew?.toLowerCase() === 'stu';
+    if (isSTU) {
+        const allowedSTUCover = ['Hvid', 'Sort', 'Hvid med glimmer', 'Sort med glimmer'];
+        coverColorOptions = coverColorOptions.filter(opt => allowedSTUCover.includes(opt.name));
+    }
 
-    const topKantColorOptions = [
+    let topKantColorOptions = [
         { name: 'NONE', value: 'NONE', img: coverColorOptionsimg2 },
         getCurrentEmblem()
     ].filter(Boolean);
+    if (isSTU) {
+        const allowedSTUTopkant = ['NONE', 'Guld', 'Sølv'];
+        topKantColorOptions = topKantColorOptions.filter(opt => allowedSTUTopkant.includes(opt.name) || allowedSTUTopkant.includes(opt.value));
+    }
 
     const starsOptions = [
         { name: 'NONE', value: 'NONE', img: coverColorOptionsimg2 },
@@ -1165,3 +1183,4 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
 };
 
 export default ForExtraCover;
+

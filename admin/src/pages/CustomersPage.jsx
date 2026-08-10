@@ -62,6 +62,7 @@ const CustomersPage = () => {
         name: editModal.customer.name,
         email: editModal.customer.email,
         phone: editModal.customer.phone,
+        school: editModal.customer.school,
         orderEmailConsent: editModal.customer.orderEmailConsent,
         smsMarketingConsent: editModal.customer.smsMarketingConsent,
         emailMarketingConsent: editModal.customer.emailMarketingConsent,
@@ -139,7 +140,10 @@ const CustomersPage = () => {
                        <div className="h-8 w-8 rounded bg-blue-50 text-blue-600 font-bold flex items-center justify-center shrink-0 uppercase border border-blue-100 text-xs">
                          {c.name.charAt(0)}
                        </div>
-                       <span className="font-bold text-slate-700">{c.name}</span>
+                       <div className="flex flex-col">
+                         <span className="font-bold text-slate-700">{c.name}</span>
+                         {c.school && <span className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">{c.school}</span>}
+                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -257,6 +261,15 @@ const CustomersPage = () => {
                   type="text" 
                   value={editModal.customer.phone || ''}
                   onChange={(e) => setEditModal({ ...editModal, customer: { ...editModal.customer, phone: e.target.value }})}
+                  className="w-full p-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500" 
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">School</label>
+                <input 
+                  type="text" 
+                  value={editModal.customer.school || ''}
+                  onChange={(e) => setEditModal({ ...editModal, customer: { ...editModal.customer, school: e.target.value }})}
                   className="w-full p-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500" 
                 />
               </div>

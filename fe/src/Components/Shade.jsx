@@ -3,7 +3,7 @@ import img1 from '../assets/shadeimages/glimmer.webp';
 import img2 from '../assets/shadeimages/none.webp';
 import img3 from '../assets/shadeimages/shade.webp';
 
-const Shade = ({ selectedOptions = {}, onOptionChange }) => {
+const Shade = ({ selectedOptions = {}, onOptionChange, program }) => {
     const getDefaultShadeType = () => 'Mat';
     const getDefaultMaterialType = () => 'Uden kant';
     const getDefaultShadowTapeColor = () => 'INGEN';
@@ -306,12 +306,17 @@ const Shade = ({ selectedOptions = {}, onOptionChange }) => {
 
     }, [selectedShadeType]);
 
-    const shadeTypeOptions = [
+    let shadeTypeOptions = [
         { name: 'Mat', value: 'Mat', color: '#2d2d2e' },
         { name: 'Shiny', value: 'Shiny', img: img3 },
         { name: 'Glimmer', value: 'Glimmer', color: '#5d5d5e' },
         { name: 'Shimmer', value: 'Shimmer', img: img1 },
     ];
+    const isSTU = program?.toLowerCase() === 'stu';
+    if (isSTU) {
+        const allowedSTUShade = ['Mat', 'Shiny', 'Glimmer', 'Blank']; // Including 'Mat' and 'Blank' for safety
+        shadeTypeOptions = shadeTypeOptions.filter(opt => allowedSTUShade.includes(opt.name));
+    }
 
 
     const shadowTapeColorOptions = [

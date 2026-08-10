@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'react-hot-toast';
-import { getSmsCampaigns, createSmsCampaign, updateSmsCampaign, getSmsMessages, exportCampaignNonPurchasers } from '../services/admin.service';
-import { Plus, Loader2, MessageSquare, Clock, Smartphone, ChevronDown, ChevronUp, Link as LinkIcon, Send, Download, X } from 'lucide-react';
+import { getSmsCampaigns, createSmsCampaign, updateSmsCampaign, exportCampaignNonPurchasers } from '../services/admin.service';
+import { Plus, Loader2, MessageSquare, Clock, ChevronDown, ChevronUp, Link as LinkIcon, Send, Download, X, Save, QrCode } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import SmsDispatchLog from '../components/sms/SmsDispatchLog';
 
 const DEFAULT_STEPS = [
   { dayOffset: 0, message: 'Hej {{name}}! Velkommen til StudentLife. Din rabatkode er {{discountCode}} - gyldig til {{expiryDate}}.' },
@@ -14,20 +15,26 @@ const DEFAULT_STEPS = [
 
 const SmsCampaignsPage = () => {
   const [campaigns, setCampaigns] = useState([]);
-  const [messages, setMessages] = useState([]);
+  const [draftCampaigns, setDraftCampaigns] = useState({});
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [creating, setCreating] = useState(false);
   const [showQrModal, setShowQrModal] = useState(null);
+  
+  // Save Modal state
+  const [saveModal, setSaveModal] = useState({ isOpen: false, campaignId: null, applyToExisting: false, isSaving: false });
 
   const load = async () => {
     setLoading(true);
     try {
-      const [c, m] = await Promise.all([getSmsCampaigns(), getSmsMessages()]);
+      const c = await getSmsCampaigns();
       setCampaigns(c);
-      setMessages(m);
+      // Initialize drafts
+      const drafts = {};
+      c.forEach(camp => { drafts[camp.id] = JSON.parse(JSON.stringify(camp)); });
+      setDraftCampaigns(drafts);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
   };
@@ -46,7 +53,7 @@ const SmsCampaignsPage = () => {
       const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `campaign_${campaignId}_non_purchasers.csv`);
+      link.setAttribute('download', "campaign_ + campaignId + _non_purchasers.csv");
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
@@ -70,10 +77,51 @@ const SmsCampaignsPage = () => {
     }
   };
 
-  const updateStep = async (campaign, stepIndex, field, value) => {
-    const steps = campaign.steps.map((s, i) => i === stepIndex ? { ...s, [field]: value } : s);
-    await updateSmsCampaign(campaign.id, { steps });
-    load(); // Refresh data to reflect changes
+  const updateDraftStep = (campaignId, stepIndex, field, value) => {
+    setDraftCampaigns(prev => {
+      const updated = { ...prev };
+      const steps = [...updated[campaignId].steps];
+      steps[stepIndex] = { ...steps[stepIndex], [field]: value };
+      updated[campaignId].steps = steps;
+      return updated;
+    });
+  };
+
+  const addDraftStep = (campaignId) => {
+    setDraftCampaigns(prev => {
+      const updated = { ...prev };
+      const steps = [...updated[campaignId].steps];
+      const maxDay = steps.length > 0 ? Math.max(...steps.map(s => s.dayOffset)) : 0;
+      steps.push({ dayOffset: maxDay + 5, message: '' });
+      updated[campaignId].steps = steps;
+      return updated;
+    });
+  };
+
+  const hasDraftChanges = (campaignId) => {
+    const original = campaigns.find(c => c.id === campaignId);
+    const draft = draftCampaigns[campaignId];
+    if (!original || !draft) return false;
+    return JSON.stringify(original.steps) !== JSON.stringify(draft.steps) || original.slug !== draft.slug;
+  };
+
+  const handleSaveClick = (campaignId) => {
+    setSaveModal({ isOpen: true, campaignId, applyToExisting: false, isSaving: false });
+  };
+
+  const confirmSave = async () => {
+    const { campaignId, applyToExisting } = saveModal;
+    setSaveModal(prev => ({ ...prev, isSaving: true }));
+    try {
+      const draft = draftCampaigns[campaignId];
+      await updateSmsCampaign(campaignId, { steps: draft.steps, slug: draft.slug }, applyToExisting);
+      toast.success('Campaign updated successfully');
+      setSaveModal({ isOpen: false, campaignId: null, applyToExisting: false, isSaving: false });
+      load(); // Reload to sync state
+    } catch (err) {
+      toast.error('Failed to update campaign');
+      setSaveModal(prev => ({ ...prev, isSaving: false }));
+    }
   };
 
   if (loading && !campaigns.length) {
@@ -85,10 +133,10 @@ const SmsCampaignsPage = () => {
   }
 
   return (
-    <div className="animate-in fade-in duration-500 max-w-[1400px] mx-auto pb-12">
+    <div className="animate-in fade-in duration-500 max-w-[1400px] mx-auto pb-12 space-y-6">
       
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-800">SMS Operations</h2>
           <p className="text-sm text-slate-500">Design and automate SMS marketing pipelines</p>
@@ -106,7 +154,7 @@ const SmsCampaignsPage = () => {
       </div>
 
       {showCreate && (
-        <div className="mb-6 p-6 bg-white border border-slate-200 rounded animate-in slide-in-from-top-2 fade-in duration-300">
+        <div className="p-6 bg-white border border-slate-200 rounded animate-in slide-in-from-top-2 fade-in duration-300">
           <h3 className="text-sm font-bold text-slate-700 mb-4">Initialize Campaign Workflow</h3>
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
@@ -131,10 +179,10 @@ const SmsCampaignsPage = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         
         {/* Left Column: Campaigns List */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="lg:col-span-3 space-y-4">
           {campaigns.length === 0 && !loading && (
             <div className="p-12 text-center border border-dashed border-slate-300 rounded bg-[#fafafa]">
               <MessageSquare className="h-8 w-8 text-slate-300 mx-auto mb-3" />
@@ -201,36 +249,41 @@ const SmsCampaignsPage = () => {
               </div>
 
               {/* Timeline UI for expanded state */}
-              {expanded === campaign.id && (
+              {expanded === campaign.id && draftCampaigns[campaign.id] && (
                 <div className="p-6 bg-[#fafafa] border-t border-slate-200">
-                  <div className="mb-6 flex flex-col md:flex-row gap-4">
-                    <div className="flex-1 p-3 bg-white border border-slate-200 rounded flex items-start gap-2">
+                  <div className="mb-6 flex flex-col md:flex-row justify-between gap-4">
+                    <div className="p-3 bg-white border border-slate-200 rounded flex items-start gap-2 max-w-sm">
                       <CodeIcon className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
                       <div>
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Available Variables</p>
                         <p className="font-mono text-slate-700 text-xs">{'{{name}} {{discountCode}} {{expiryDate}}'}</p>
                       </div>
                     </div>
-                      <div className="p-3 bg-white border border-slate-200 rounded flex items-center gap-4 hover:border-blue-300 transition-colors cursor-pointer" onClick={() => setShowQrModal(campaign.id)}>
-                        <div className="bg-white p-1 border border-slate-200 rounded shrink-0">
-                          <QRCodeSVG 
-                            value={`${import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'}/sms-signup?campaignId=${campaign.id}`}
-                            size={64}
-                            level="M"
-                          />
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-slate-500 tracking-wider uppercase flex items-center gap-1.5">
-                            Campaign QR Code
-                          </p>
-                          <p className="text-[11px] text-slate-400 mt-0.5">Click to view or download specific campaign QR code.</p>
-                        </div>
+                    <div className="flex-1 max-w-xs">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">URL Slug</label>
+                      <input 
+                        type="text"
+                        value={draftCampaigns[campaign.id].slug || ''}
+                        onChange={(e) => setDraftCampaigns(prev => ({ ...prev, [campaign.id]: { ...prev[campaign.id], slug: e.target.value.replace(/[^a-z0-9-]/g, '').toLowerCase() } }))}
+                        className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 bg-white"
+                        placeholder="e.g. summer-sale"
+                      />
+                    </div>
+                    {hasDraftChanges(campaign.id) && (
+                      <div className="flex items-center">
+                        <button 
+                          onClick={() => handleSaveClick(campaign.id)}
+                          className="bg-blue-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
+                        >
+                          <Save className="w-4 h-4" /> Save Changes
+                        </button>
                       </div>
+                    )}
                   </div>
 
                   <div className="relative pl-6 space-y-6 before:absolute before:inset-0 before:ml-[11px] before:w-0.5 before:bg-slate-200">
-                    {campaign.steps?.map((step, i) => (
-                      <div key={step.id || i} className="relative">
+                    {draftCampaigns[campaign.id].steps?.map((step, i) => (
+                      <div key={i} className="relative">
                         {/* Timeline Node */}
                         <div className="absolute -left-6 mt-2 h-6 w-6 rounded-full border-2 border-[#fafafa] bg-slate-300 flex items-center justify-center z-10">
                           <Clock className="h-3 w-3 text-white" />
@@ -248,7 +301,7 @@ const SmsCampaignsPage = () => {
                                 <input 
                                   type="number" 
                                   value={step.dayOffset} 
-                                  onChange={e => updateStep(campaign, i, 'dayOffset', parseInt(e.target.value) || 0)} 
+                                  onChange={e => updateDraftStep(campaign.id, i, 'dayOffset', parseInt(e.target.value) || 0)} 
                                   className="w-16 px-2 py-1 text-center font-bold text-slate-700 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500" 
                                 />
                               </div>
@@ -260,7 +313,7 @@ const SmsCampaignsPage = () => {
                               </label>
                               <textarea
                                 value={step.message}
-                                onChange={e => updateStep(campaign, i, 'message', e.target.value)}
+                                onChange={e => updateDraftStep(campaign.id, i, 'message', e.target.value)}
                                 className="w-full rounded border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 min-h-[80px] resize-y"
                               />
                               <div className="flex justify-end mt-1">
@@ -274,6 +327,15 @@ const SmsCampaignsPage = () => {
                         </div>
                       </div>
                     ))}
+                    
+                    <div className="relative pt-2">
+                       <button 
+                         onClick={() => addDraftStep(campaign.id)}
+                         className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-slate-500 bg-white border border-slate-200 rounded-full hover:bg-slate-50 hover:text-blue-600 transition-colors shadow-sm ml-4"
+                       >
+                         <Plus className="w-4 h-4" /> Add SMS Step
+                       </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -281,9 +343,8 @@ const SmsCampaignsPage = () => {
           ))}
         </div>
 
-        {/* Right Column: Widgets */}
+        {/* Right Column: Opt-in Portal widget (Moved to side) */}
         <div className="space-y-6">
-          
           <div className="bg-[#1e3a8a] text-white p-6 rounded border border-blue-900 shadow-sm relative overflow-hidden">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-2">
@@ -294,12 +355,17 @@ const SmsCampaignsPage = () => {
                 Deploy this URL across marketing channels.
               </p>
               <div className="bg-black/20 p-3 rounded border border-white/10 cursor-pointer hover:bg-black/30 transition-colors" onClick={() => {
-                const url = `${import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'}/sms-signup${expanded ? `?campaignId=${expanded}` : ''}`;
+                const expandedSlug = campaigns.find(c => c.id === expanded)?.slug;
+                const url = expanded ? `${import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'}/sms-signup/${expandedSlug}` : '#';
+                if (!expanded) {
+                  toast.error("Please expand a campaign first");
+                  return;
+                }
                 navigator.clipboard.writeText(url);
                 toast.success("URL copied to clipboard!", { style: { background: '#333', color: '#fff', fontSize: '12px' } });
               }}>
                 <code className="block text-xs font-mono text-green-300 break-all">
-                  {`${import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'}/sms-signup${expanded ? `?campaignId=${expanded}` : ''}`}
+                  {expanded ? `${import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'}/sms-signup/${campaigns.find(c => c.id === expanded)?.slug}` : 'Select a campaign to view URL'}
                 </code>
                 <p className="text-[10px] font-bold uppercase text-white/50 mt-1 flex justify-end">
                   Click to Copy
@@ -307,53 +373,78 @@ const SmsCampaignsPage = () => {
               </div>
             </div>
           </div>
-
-          <div className="bg-white border border-slate-200 rounded flex flex-col h-[400px]">
-            <div className="px-4 py-3 border-b border-slate-200 bg-[#fafafa] flex items-center justify-between shrink-0">
-              <h3 className="font-bold text-slate-700 text-sm flex items-center gap-2">
-                <Send className="h-4 w-4 text-green-600" /> Dispatch Log
-              </h3>
-              <span className="bg-slate-200 text-slate-600 text-xs font-bold px-2 py-0.5 rounded">{messages.length}</span>
-            </div>
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
-              {messages.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-slate-400 p-4 text-center">
-                  <Clock className="h-8 w-8 mb-2 opacity-20" />
-                  <p className="text-xs font-bold">No dispatches logged yet.</p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {messages.slice(0, 30).map(msg => (
-                    <div key={msg.id} className="p-3 rounded hover:bg-slate-50 transition-colors flex flex-col gap-1.5 border-b border-slate-100 last:border-0">
-                      <div className="flex items-center justify-between">
-                        <p className="text-xs font-bold text-slate-800 truncate">{msg.customer?.name || 'Unknown'} <span className="text-slate-400 font-medium ml-1">{msg.phone}</span></p>
-                        <span className={cn(
-                          "text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0",
-                          msg.status === 'SENT' ? 'bg-green-100 text-green-700' :
-                          msg.status === 'SCHEDULED' ? 'bg-blue-100 text-blue-700' :
-                          msg.status === 'CANCELLED' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700'
-                        )}>
-                          {msg.status}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">{msg.message}</p>
-                      <div className="flex items-center gap-1 text-[10px] text-slate-400 font-medium mt-1">
-                        <Clock className="w-3 h-3" />
-                        {msg.status === 'SENT' && msg.sentAt ? 
-                          `Sent on ${new Date(msg.sentAt).toLocaleString('da-DK', { dateStyle: 'medium', timeStyle: 'short' })}` : 
-                          `Scheduled for ${new Date(msg.scheduledFor).toLocaleString('da-DK', { dateStyle: 'medium', timeStyle: 'short' })}`
-                        }
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
           
+          <div className={`p-4 bg-white border border-slate-200 rounded flex flex-col gap-4 items-center text-center ${!expanded ? 'opacity-50' : ''}`}>
+              <div className={`bg-slate-50 p-2 border border-slate-100 rounded-xl ${expanded ? 'cursor-pointer' : 'cursor-not-allowed'}`} onClick={() => { if (expanded) setShowQrModal(expanded) }}>
+                {expanded ? (
+                  <QRCodeSVG 
+                    value={`${import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'}/sms-signup/${campaigns.find(c => c.id === expanded)?.slug}`}
+                    size={120}
+                    level="M"
+                    fgColor="#1e293b"
+                  />
+                ) : (
+                  <div className="w-[120px] h-[120px] flex items-center justify-center bg-slate-100 rounded">
+                    <QrCode className="w-8 h-8 text-slate-400" />
+                  </div>
+                )}
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-700 tracking-wider uppercase">Campaign QR</p>
+                <p className="text-[11px] text-slate-500 mt-1">{expanded ? 'Scan to join the selected pipeline.' : 'Select a campaign to view QR.'}</p>
+              </div>
+          </div>
         </div>
       </div>
+      
+      {/* Dispatch Log full width section */}
+      <div className="mt-8">
+        <SmsDispatchLog campaigns={campaigns} />
+      </div>
 
+      {/* Save Confirmation Modal */}
+      {saveModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded shadow-xl max-w-md w-full p-6 animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-slate-800 mb-2">Save Campaign Changes</h3>
+            <p className="text-sm text-slate-600 mb-6">
+              You are about to save changes to the campaign steps. How should we handle existing users enrolled in this campaign?
+            </p>
+            
+            <label className="flex items-start gap-3 p-4 border border-blue-100 bg-blue-50/50 rounded-lg cursor-pointer hover:bg-blue-50 transition-colors">
+              <input 
+                type="checkbox" 
+                className="mt-0.5 shrink-0"
+                checked={saveModal.applyToExisting}
+                onChange={e => setSaveModal(prev => ({ ...prev, applyToExisting: e.target.checked }))}
+              />
+              <div>
+                <span className="block text-sm font-bold text-slate-800">Apply to existing scheduled messages</span>
+                <span className="block text-xs text-slate-500 mt-1">If checked, we will update pending messages and queue any newly added messages for existing enrollments. If unchecked, changes only affect future enrollments.</span>
+              </div>
+            </label>
+
+            <div className="mt-6 flex gap-3 justify-end">
+              <button 
+                onClick={() => setSaveModal({ isOpen: false, campaignId: null, applyToExisting: false, isSaving: false })}
+                className="px-4 py-2 text-sm font-bold text-slate-600 hover:text-slate-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmSave}
+                disabled={saveModal.isSaving}
+                className="bg-blue-600 text-white px-6 py-2 rounded text-sm font-bold hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                {saveModal.isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                Confirm Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QR Modal */}
       {showQrModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowQrModal(null)}>
           <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-8 relative flex flex-col items-center" onClick={(e) => e.stopPropagation()}>
@@ -368,7 +459,7 @@ const SmsCampaignsPage = () => {
             
             <div className="p-4 bg-white border-2 border-slate-200 rounded-xl">
               <QRCodeSVG 
-                value={`${import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'}/sms-signup?campaignId=${showQrModal}`}
+                value={`${import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'}/sms-signup/${campaigns.find(c => c.id === showQrModal)?.slug || ''}`}
                 size={220}
                 level="M"
               />
@@ -387,7 +478,6 @@ const SmsCampaignsPage = () => {
   );
 };
 
-// Extracted small icons for inline usage to keep imports clean
 const UsersIcon = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />

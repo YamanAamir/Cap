@@ -24,4 +24,11 @@ export const submitSmsSignup = async (payload) => {
   return data;
 };
 
+export const getSmsCampaignBySlug = async (slug) => {
+  const res = await fetch(`${getBaseUrl()}/marketing/sms-campaigns/${slug}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || 'Campaign not found');
+  return data;
+};
+
 export { getBaseUrl };

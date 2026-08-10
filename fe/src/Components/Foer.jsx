@@ -98,6 +98,11 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program }) 
     const kokardeMaterialTypes = isRestricted
         ? ['Læder']
         : ['Læder', 'Kunstlæder', 'Ruskin', 'Alcantra'];
+    const isSTU = program?.toLowerCase() === 'stu';
+    let filteredKokardeMaterials = kokardeMaterialTypes;
+    if (isSTU) {
+        filteredKokardeMaterials = ['Læder', 'Kunstlæder']; // Læder, Kunstlæder encoded values
+    }
 
     // ====================== Emblem & Colors ======================
     const getCurrentEmblem = () => {
@@ -124,12 +129,15 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program }) 
         getCurrentEmblem()
     ];
 
-    const bowMaterialTypes = [
+    let bowMaterialTypes = [
         { name: 'Hvid', value: 'Hvid', color: '#fafcfd' },
         { name: 'Brun', value: 'Brun', color: '#a66f5a' },
         getSatinColor(),
         { name: 'Champagne', value: 'Champagne', color: '#F7E7CE' },
     ];
+    if (isSTU) {
+        bowMaterialTypes = bowMaterialTypes.filter(opt => opt.name === 'Champagne');
+    }
 
     const silkeTypes = [
         { name: 'Hvid', value: 'Hvid', color: '#ffffff' },
@@ -506,7 +514,7 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program }) 
                     label="Svederem"
                     currentSelection={selectedKokardeMaterial}
                     onSelectionChange={setSelectedKokardeMaterial}
-                    options={kokardeMaterialTypes}
+                    options={filteredKokardeMaterials}
                 />
 
                 <ColorSelector

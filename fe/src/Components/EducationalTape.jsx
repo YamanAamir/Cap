@@ -472,7 +472,7 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
         getHuebandColor()
         // Consider using different colors or removing duplicate
         ;
-    const chinStrapColorOptions = [
+    let chinStrapColorOptions = [
         { name: 'Mat', value: '#2e2e2e', img: matteleather },
         { name: 'Shiny', value: '#757575' },
         { name: 'Sort med sorteknuder', value: '#000000', img: shinyblack },
@@ -496,13 +496,22 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
                 return null; // nothing if no match
         }
     };
-    const embroideryColorOptions = [
+    let embroideryColorOptions = [
         { name: 'Guld', value: 'Guld', color: '#ba9200' },
         { name: 'Sølv', value: 'Sølv', color: '#757575' },
         getEmbroideryColor(),
         { name: 'Hvid', value: 'Hvid', color: '#E5E7EB' },
         { name: 'Sort', value: 'Sort', color: '#000000' },
     ].filter(Boolean); // removes null
+
+    const isSTU = program?.toLowerCase() === 'stu';
+    if (isSTU) {
+        const allowedSTUChins = ['Mat', 'Shiny', 'Sort med sorteknuder', 'Guld hagerem med guld knuder', 'S�lv hagerem med s�lvknuder', 'S�lv hagerem med sort knuder'];
+        chinStrapColorOptions = chinStrapColorOptions.filter(opt => allowedSTUChins.includes(opt.name));
+        
+        const allowedSTUEmb = ['Guld', 'Hvid', 'S�lv', 'Sort'];
+        embroideryColorOptions = embroideryColorOptions.filter(opt => allowedSTUEmb.includes(opt.name));
+    }
     const buttonColorOptions = [
         // { name: 'BLANK', value: 'BLANK', img: coverColorOptionsimg2 },
         { name: 'Guld', value: 'Guld', color: '#ba9200' },

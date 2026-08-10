@@ -82,7 +82,7 @@ const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem })
         'pædagog',
         'pau',
         'ernæringsassisten'
-    ];
+    , 'stu'];
 
     const shouldHideSelectors = hideSelectorsPrograms.includes(program?.toLowerCase());
 
@@ -95,13 +95,18 @@ const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem })
         }
     };
 
-    const coverColorOptions = [
+    let coverColorOptions = [
         { name: 'Hvid', value: 'Hvid', color: '#ffffff' },
         { name: 'Sort', value: 'Sort', color: '#000000' },
         paedagog(),
         { name: 'Hvid med glimmer', value: 'Hvid med glimmer', img: whiteGlitter, color: '#ffffff' },
         { name: 'Sort med glimmer', value: 'Sort med glimmer', img: blackGlitter, color: '#000000' },
     ].filter(Boolean);
+    const isSTU = program?.toLowerCase() === 'stu';
+    if (isSTU) {
+        const allowedSTUCover = ['Hvid', 'Sort', 'Hvid med glimmer', 'Sort med glimmer'];
+        coverColorOptions = coverColorOptions.filter(opt => allowedSTUCover.includes(opt.name));
+    }
 
     const getCoverColor = () => {
         switch (program?.toLowerCase()) {
@@ -155,10 +160,14 @@ const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem })
             getCoverColor()
         ].filter(Boolean);
 
-    const topKantColorOptions = [
+    let topKantColorOptions = [
         { name: 'NONE', value: 'NONE', img: coverColorOptionsimg2 },
         getCurrentEmblem(),
     ].filter(Boolean);
+    if (isSTU) {
+        const allowedSTUTopkant = ['NONE', 'Guld', 'Sølv']; // 'NONE' is 'Ingen' in the UI if it's the empty one, wait, it says "NONE" but value is "NONE"
+        topKantColorOptions = topKantColorOptions.filter(opt => allowedSTUTopkant.includes(opt.name) || allowedSTUTopkant.includes(opt.value));
+    }
 
     const starsOptions = [
         { name: 'NONE', value: 'NONE', img: coverColorOptionsimg2 },

@@ -27,14 +27,19 @@ const extractOrderField = (order, fieldKey) => {
       : order.selectedOptions || {};
 
   const map = {
+    orderId: order.id,
     orderNumber: order.orderNumber,
     orderDate: new Date(order.orderDate || order.createdAt).toISOString().split('T')[0],
+    createdAt: new Date(order.createdAt).toLocaleString('da-DK'),
+    updatedAt: new Date(order.updatedAt).toLocaleString('da-DK'),
+    customerId: order.customerId || '',
     customerName: `${customerDetails.firstName || ''} ${customerDetails.lastName || ''}`.trim() || customerDetails.name || '',
     customerEmail: order.customerEmail || customerDetails.email || '',
     customerPhone: customerDetails.phone || '',
     customerAddress: customerDetails.address || '',
     customerCity: customerDetails.city || '',
     customerPostalCode: customerDetails.postalCode || '',
+    customerDeliveryCountry: customerDetails.deliveryCountry || customerDetails.country || '',
     schoolName: customerDetails.Skolenavn || '',
     deliveryType: customerDetails.deliveryType || '',
     totalPrice: order.totalPrice,
@@ -42,6 +47,8 @@ const extractOrderField = (order, fieldKey) => {
     packageName: order.packageName || '',
     program: order.program || '',
     status: order.status,
+    paymentStatus: order.paymentStatus || '',
+    paymentIntentId: order.paymentIntentId || '',
     discountCode: order.discountCode?.code || '',
     discountAmount: order.discountAmount || 0,
   };
