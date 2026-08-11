@@ -1158,7 +1158,7 @@ const getSilverEmblem = () => {
                     </div>
                 </div>
                 <div className="flex space-x-3 flex-wrap gap-y-2">
-                    {(program?.toLowerCase() === 'stu' ? ['Signature', 'Prestige', 'Stjernetegn'] : ['Signature', 'Prestige', 'Stjernetegn', 'Flag']).map((type) => (
+                    {(['stu', 'landmand'].includes(program?.toLowerCase()) ? ['Signature', 'Prestige', 'Stjernetegn'] : ['Signature', 'Prestige', 'Stjernetegn', 'Flag']).map((type) => (
                         <button
                             key={type}
                             onClick={() => handlePrestigeChange(type)}

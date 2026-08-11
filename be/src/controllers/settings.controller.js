@@ -10,6 +10,17 @@ const DEFAULT_CONFIG = {
   "programsVisibility": PROGRAM_LIST.reduce((acc, p) => ({ ...acc, [p]: true }), {}),
   expressDelivery: PROGRAM_LIST.reduce((acc, p) => ({ ...acc, [p]: { active: true, price: 250 } }), {}),
   "deliveryCharges": PROGRAM_LIST.reduce((acc, p) => ({ ...acc, [p]: { "Denmark": 79, "Grønland": 348 } }), {}),
+  "basePrices": PROGRAM_LIST.reduce((acc, p) => {
+    const hasSurcharge = ["STX", "HF", "HHX", "HTX"].includes(p);
+    return {
+      ...acc,
+      [p]: {
+        "standard": 449,
+        "luksus": hasSurcharge ? 1595 : 995,
+        "premium": hasSurcharge ? 2450 : 1850
+      }
+    };
+  }, {}),
   "priceConfig": {
     "standard": {
       "KOKARDE": {

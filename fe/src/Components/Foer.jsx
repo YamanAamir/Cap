@@ -99,9 +99,10 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program }) 
         ? ['Læder']
         : ['Læder', 'Kunstlæder', 'Ruskin', 'Alcantra'];
     const isSTU = program?.toLowerCase() === 'stu';
+    const isLandmand = program?.toLowerCase() === 'landmand';
     let filteredKokardeMaterials = kokardeMaterialTypes;
-    if (isSTU) {
-        filteredKokardeMaterials = ['Læder', 'Kunstlæder']; // Læder, Kunstlæder encoded values
+    if (isSTU || isLandmand) {
+        filteredKokardeMaterials = kokardeMaterialTypes.slice(0, 2);
     }
 
     // ====================== Emblem & Colors ======================

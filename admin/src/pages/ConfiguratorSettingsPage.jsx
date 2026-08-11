@@ -72,8 +72,10 @@ function isRelevantForProgram(item, activeProgram, groupName) {
   }
   
   if (activeProgram === 'Landmand') {
-    if (['satin', 'velour', 'glimmer', 'shimmer'].includes(itemLower)) return false;
-    if (groupName === 'Huebånd' && itemLower === 'sort') return false; // Hide Sort Huebånd
+    if (['satin', 'velour', 'shimmer', 'ruskin', 'alcantra', 'vegansk'].includes(itemLower)) return false;
+    if (groupName && groupName.includes('Hueb') && itemLower !== 'landmand') return false; 
+    if (groupName === 'Kokarde' && itemLower === 'flag') return false;
+    if (groupName && (groupName.includes('Kant') || groupName.includes('Stjerner') || groupName.includes('Flag') || groupName.includes('Top broderi'))) return false;
   }
 
   return true;
@@ -223,6 +225,23 @@ const ConfiguratorSettingsPage = () => {
     setDeleteFlagModal({ isOpen: false, program: '', id: '' });
   };
 
+  const handleBasePriceChange = (program, tier, value) => {
+    setConfig(prev => {
+      const newConfig = { ...prev };
+      if (!newConfig.basePrices) newConfig.basePrices = {};
+      if (!newConfig.basePrices[program]) newConfig.basePrices[program] = {};
+      
+      newConfig.basePrices = {
+        ...newConfig.basePrices,
+        [program]: {
+          ...newConfig.basePrices[program],
+          [tier]: parseFloat(value) || 0
+        }
+      };
+      return newConfig;
+    });
+  };
+
   const handlePriceConfigChange = (tier, category, optionGroup, item, value) => {
     setConfig(prevConfig => {
       const newConfig = { ...prevConfig };
@@ -358,13 +377,31 @@ const ConfiguratorSettingsPage = () => {
                 />
               </div>
 
-              {/* Delivery Settings for Active Program */}
               <div className="mb-8 p-5 bg-blue-50 rounded-lg border border-blue-100">
                 <h3 className="text-xl font-bold text-gray-800 mb-4 capitalize">
-                  {activeProgram} Delivery Settings
+                  {activeProgram} Settings ({activeTier} package)
                 </h3>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Base Package Price */}
+                  <div>
+                    <h4 className="font-semibold text-gray-700 mb-3 capitalize border-b border-gray-200 pb-2">
+                      Base Package Price
+                    </h4>
+                    <div className="flex justify-between items-center bg-white p-2 rounded border border-gray-100">
+                      <span className="text-sm font-medium text-gray-700">Price (DKK)</span>
+                      <div className="flex items-center">
+                        <span className="text-xs text-gray-400 mr-2 font-semibold">DKK</span>
+                        <input
+                          type="number"
+                          value={config.basePrices?.[activeProgram]?.[activeTier] ?? 0}
+                          onChange={(e) => handleBasePriceChange(activeProgram, activeTier, e.target.value)}
+                          className="w-20 p-1.5 text-right border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Delivery Charges */}
                   <div>
                     <h4 className="font-semibold text-gray-700 mb-3 capitalize border-b border-gray-200 pb-2">

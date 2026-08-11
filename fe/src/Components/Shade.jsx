@@ -313,9 +313,14 @@ const Shade = ({ selectedOptions = {}, onOptionChange, program }) => {
         { name: 'Shimmer', value: 'Shimmer', img: img1 },
     ];
     const isSTU = program?.toLowerCase() === 'stu';
+    const isLandmand = program?.toLowerCase() === 'landmand';
     if (isSTU) {
         const allowedSTUShade = ['Mat', 'Shiny', 'Glimmer', 'Blank']; // Including 'Mat' and 'Blank' for safety
         shadeTypeOptions = shadeTypeOptions.filter(opt => allowedSTUShade.includes(opt.name));
+    }
+    if (isLandmand) {
+        const allowedShade = ['Mat', 'Shiny', 'Glimmer', 'Blank'];
+        shadeTypeOptions = shadeTypeOptions.filter(opt => allowedShade.includes(opt.name));
     }
 
 

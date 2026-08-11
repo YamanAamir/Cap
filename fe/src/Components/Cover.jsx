@@ -82,7 +82,7 @@ const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem })
         'pædagog',
         'pau',
         'ernæringsassisten'
-    , 'stu'];
+    , 'stu', 'landmand'];
 
     const shouldHideSelectors = hideSelectorsPrograms.includes(program?.toLowerCase());
 

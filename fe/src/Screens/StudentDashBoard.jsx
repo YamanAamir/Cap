@@ -24,7 +24,7 @@ import Size from "../Components/Size";
 import Bows from "../Components/Bows";
 import QuoteModal from "../Components/Modal";
 import { useParams, useSearchParams } from "react-router-dom";
-import { GraduationCap, ChevronUp, ChevronDown, Box, Loader2 } from "lucide-react";
+import { GraduationCap, ChevronUp, ChevronDown, Box, Loader2, AlertCircle } from "lucide-react";
 
 import HHX from "../Default/HHX";
 import HTX from "../Default/HTX";
@@ -347,18 +347,22 @@ const StudentDashboard = () => {
     ////////////////////////////////////zee///////////////////////////////////////
 
     // Package base price
-    // let iniialPrice = 0;
-    // if (packageName === "standard") iniialPrice = 449;
-    // else if (packageName === "luksus") iniialPrice = 995;
-    // else if (packageName === "premium") iniialPrice = 1850;
-
     let iniialPrice = 0;
-    const programsWithSurcharge = ["stx", "hf", "hhx", "htx"];
-    const hasSurcharge = programsWithSurcharge.includes(program?.toLowerCase());
+    
+    // Attempt to read from dynamicConfig
+    const progKey = program ? (Object.keys(dynamicConfig?.basePrices || {}).find(k => k.toLowerCase() === program.toLowerCase()) || program) : 'STX';
+    
+    if (dynamicConfig?.basePrices && dynamicConfig.basePrices[progKey] && dynamicConfig.basePrices[progKey][packageName] !== undefined) {
+      iniialPrice = dynamicConfig.basePrices[progKey][packageName];
+    } else {
+      // Fallback if not configured
+      const programsWithSurcharge = ["stx", "hf", "hhx", "htx"];
+      const hasSurcharge = programsWithSurcharge.includes(program?.toLowerCase());
 
-    if (packageName === "standard") iniialPrice = 449;
-    else if (packageName === "luksus") iniialPrice = hasSurcharge ? 1595 : 995;
-    else if (packageName === "premium") iniialPrice = hasSurcharge ? 2450 : 1850;
+      if (packageName === "standard") iniialPrice = 449;
+      else if (packageName === "luksus") iniialPrice = hasSurcharge ? 1595 : 995;
+      else if (packageName === "premium") iniialPrice = hasSurcharge ? 2450 : 1850;
+    }
 
     ////////////////////////////////////zee///////////////////////////////////////
 
@@ -735,10 +739,12 @@ const StudentDashboard = () => {
 
   if (dynamicConfig?.programsVisibility && program && dynamicConfig.programsVisibility[program.toUpperCase()] === false) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center bg-white p-8 rounded-xl shadow-lg border border-gray-100 max-w-md">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Program Disabled</h2>
-          <p className="text-gray-600">The requested program is currently not available for configuration.</p>
+      <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center p-6 font-sans">
+        <div className="max-w-md w-full bg-white rounded shadow-sm border border-slate-200 p-8 text-center animate-in zoom-in-95 duration-500">
+          <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-2">Program Disabled</h2>
+          <p className="text-slate-500 mt-2 text-sm font-medium">
+            The requested program is currently not available for configuration.
+          </p>
         </div>
       </div>
     );
@@ -899,11 +905,12 @@ const StudentDashboard = () => {
               )}
               {activeMenu === "SKYGGE" && (
                 <Shade
-                  selectedOptions={selectedOptions.SKYGGE}
-                  onOptionChange={(key, value) =>
-                    handleOptionChange("SKYGGE", key, value)
-                  }
-                />
+                    selectedOptions={selectedOptions.SKYGGE}
+                    onOptionChange={(key, value) =>
+                      handleOptionChange("SKYGGE", key, value)
+                    }
+                    program={program}
+                  />
               )}
               {activeMenu === "FOER" && (
                 <Foer
@@ -1313,11 +1320,12 @@ const StudentDashboard = () => {
                   )}
                   {activeMenu === "SKYGGE" && (
                     <Shade
-                      selectedOptions={selectedOptions.SKYGGE}
-                      onOptionChange={(key, value) =>
-                        handleOptionChange("SKYGGE", key, value)
-                      }
-                    />
+                    selectedOptions={selectedOptions.SKYGGE}
+                    onOptionChange={(key, value) =>
+                      handleOptionChange("SKYGGE", key, value)
+                    }
+                    program={program}
+                  />
                   )}
                   {activeMenu === "FOER" && (
                     <Foer

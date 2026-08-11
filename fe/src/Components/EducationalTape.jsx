@@ -505,12 +505,15 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
     ].filter(Boolean); // removes null
 
     const isSTU = program?.toLowerCase() === 'stu';
+    const isLandmand = program?.toLowerCase() === 'landmand';
     if (isSTU) {
         const allowedSTUChins = ['Mat', 'Shiny', 'Sort med sorteknuder', 'Guld hagerem med guld knuder', 'S�lv hagerem med s�lvknuder', 'S�lv hagerem med sort knuder'];
         chinStrapColorOptions = chinStrapColorOptions.filter(opt => allowedSTUChins.includes(opt.name));
-        
-        const allowedSTUEmb = ['Guld', 'Hvid', 'S�lv', 'Sort'];
-        embroideryColorOptions = embroideryColorOptions.filter(opt => allowedSTUEmb.includes(opt.name));
+    }
+    
+    if (isSTU || isLandmand) {
+        const allowedEmb = ['Guld', 'Hvid', 'S\u00A0lv', 'SA,lv', 'Sølv', 'Sort'];
+        embroideryColorOptions = embroideryColorOptions.filter(opt => allowedEmb.includes(opt.name));
     }
     const buttonColorOptions = [
         // { name: 'BLANK', value: 'BLANK', img: coverColorOptionsimg2 },

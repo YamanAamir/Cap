@@ -515,7 +515,8 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
         "pau",
         "ernæringsassistent"
     ,
-        "stu"
+        "stu",
+        "landmand"
     ];
 
     const isRestricted = restrictedPrograms.includes(programNew?.toLowerCase());
