@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { getSmsMessages } from '../../services/admin.service';
+import { getSmsMessages, forceSendSmsMessage } from '../../services/admin.service';
 import {  Clock, Send, Search, Filter, RefreshCcw, AlertCircle, CheckCircle, XCircle, Loader2 , ChevronDown, ChevronRight } from 'lucide-react';
+import ConfirmModal from '../common/ConfirmModal';
 import { cn } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
 
@@ -35,6 +36,8 @@ export default function SmsDispatchLog({ campaigns }) {
   const [messages, setMessages] = useState([]);
   const [expandedPhone, setExpandedPhone] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [forceSendingId, setForceSendingId] = useState(null);
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, msgId: null });
   
   // Filters
   const [filters, setFilters] = useState({
@@ -65,6 +68,23 @@ export default function SmsDispatchLog({ campaigns }) {
   useEffect(() => {
     loadMessages();
   }, [filters]);
+
+  const confirmForceSend = async () => {
+    const id = confirmModal.msgId;
+    if (!id) return;
+    
+    setForceSendingId(id);
+    try {
+      await forceSendSmsMessage(id);
+      toast.success('Message sent successfully');
+      loadMessages();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to force send message');
+    } finally {
+      setForceSendingId(null);
+      setConfirmModal({ isOpen: false, msgId: null });
+    }
+  };
 
   const handleFilterChange = (e) => {
     setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -221,8 +241,26 @@ export default function SmsDispatchLog({ campaigns }) {
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-2 text-xs text-slate-500 max-w-[300px] truncate" title={msg.message}>
-                          {msg.message}
+                        <td className="px-4 py-2 text-xs text-slate-500 max-w-[300px]">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="truncate" title={msg.message}>{msg.message}</span>
+                            {(msg.status === 'SCHEDULED' || msg.status === 'PENDING') && (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setConfirmModal({ isOpen: true, msgId: msg.id }); }}
+                                disabled={forceSendingId === msg.id}
+                                className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded border border-blue-200 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {forceSendingId === msg.id ? (
+                                  <>
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                    Sending...
+                                  </>
+                                ) : (
+                                  "Force Send"
+                                )}
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -236,6 +274,17 @@ export default function SmsDispatchLog({ campaigns }) {
       <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 font-bold text-right shrink-0">
         Showing top {messages.length} records matching filters
       </div>
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title="Force Send Message"
+        message="Are you sure you want to force send this message right now?"
+        confirmText="Yes, Send Now"
+        onConfirm={confirmForceSend}
+        onCancel={() => setConfirmModal({ isOpen: false, msgId: null })}
+        isLoading={forceSendingId !== null}
+        isDestructive={false}
+      />
     </div>
   );
 }

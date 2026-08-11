@@ -40,6 +40,7 @@ router.post('/sms/campaigns', admin, adminController.createSmsCampaign);
 router.patch('/sms/campaigns/:id', admin, adminController.updateSmsCampaign);
 router.get('/sms/campaigns/:id/export', admin, adminController.exportCampaignNonPurchasers);
 router.get('/sms/messages', admin, adminController.getSmsMessages);
+router.post('/sms/messages/:id/force-send', admin, adminController.forceSendSmsMessage);
 
 router.get('/excel/columns', admin, adminController.getExcelColumns);
 router.post('/excel/columns', admin, adminController.createExcelColumn);

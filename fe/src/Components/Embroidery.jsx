@@ -12,7 +12,8 @@ import topDesign2 from '../assets/topDesignImg/2.png';
 import topDesign3 from '../assets/topDesignImg/3.png';
 import topDesign4 from '../assets/topDesignImg/4.png';
 
-const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke }) => {
+const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visibilityConfig = {} }) => {
+    const isVisible = (key) => visibilityConfig?.['BRODERI_' + key] !== false;
     // Default value functions
     const cameraTriggers = useRef({});
     const nameTimeoutRef = useRef(null);
@@ -316,13 +317,13 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke }) =>
         getEmbroideryColor(),
         { name: 'Hvid', value: '#E5E7EB' },
         { name: 'Sort', value: '#000000' },
-    ].filter(Boolean);
+    ].filter(Boolean).filter(opt => isVisible(`Navnebroderifarve_${opt.name}`));
 
     const schoolEmbroideryColorOptions = [
         { name: 'Hvid', value: '#E5E7EB' },
         { name: 'Guld', value: '#ba9200' },
         { name: 'Sølv', value: '#757575' },
-    ];
+    ].filter(opt => isVisible(`Skolebroderifarve_${opt.name}`));
 
     // Reusable ColorSelector
     const ColorSelector = ({ label, currentSelection, onSelectionChange, colorOptions }) => (
@@ -379,7 +380,7 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke }) =>
                         { value: 'Top broderi 2', label: 'Top broderi 2', img: topDesign3 },
                         { value: 'Top broderi 3', label: 'Top broderi 3', img: topDesign2 },
                         { value: 'Top broderi 4', label: 'Top broderi 4', img: topDesign4 },
-                    ].map((option) => (
+                    ].filter(opt => isVisible(`Top broderi_${opt.value}`)).map((option) => (
                         <button
                             key={option.value}
                             onClick={() => setTopEmbroiderySelection(option.value)}

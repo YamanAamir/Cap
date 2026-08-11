@@ -21,8 +21,9 @@ const preserveConfigPanelScroll = (fn) => {
     });
 };
 
-const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program }) => {
+const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, visibilityConfig = {} }) => {
     // ====================== Default Values ======================
+    const isVisible = (key) => visibilityConfig?.['FOER_' + key] !== false;
     const getDefaultKokardeMaterial = () => 'Læder';
     const getDefaultKokardeColor = () => 'Hvid';
     const getDefaultBowColor = () => 'Hvid';
@@ -95,9 +96,9 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program }) 
         p => p.toLowerCase() === program?.toLowerCase()
     );
 
-    const kokardeMaterialTypes = isRestricted
+    const kokardeMaterialTypes = (isRestricted
         ? ['Læder']
-        : ['Læder', 'Kunstlæder', 'Ruskin', 'Alcantra'];
+        : ['Læder', 'Kunstlæder', 'Ruskin', 'Alcantra']).filter(opt => isVisible(`Svederem_${opt}`));
     const isSTU = program?.toLowerCase() === 'stu';
     const isLandmand = program?.toLowerCase() === 'landmand';
     let filteredKokardeMaterials = kokardeMaterialTypes;
@@ -128,14 +129,14 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program }) 
         { name: 'Hvid', value: 'Hvid', color: '#FFFFFF' },
         { name: 'Sort', value: 'Sort', color: '#000000' },
         getCurrentEmblem()
-    ];
+    ].filter(opt => isVisible(`Sløjfe_${opt.name}`));
 
     let bowMaterialTypes = [
         { name: 'Hvid', value: 'Hvid', color: '#fafcfd' },
         { name: 'Brun', value: 'Brun', color: '#a66f5a' },
         getSatinColor(),
         { name: 'Champagne', value: 'Champagne', color: '#F7E7CE' },
-    ];
+    ].filter(opt => isVisible(`Type_${opt.name === 'Brun' ? 'Brown' : opt.name}`));
     if (isSTU) {
         bowMaterialTypes = bowMaterialTypes.filter(opt => opt.name === 'Champagne');
     }
@@ -144,9 +145,9 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program }) 
         { name: 'Hvid', value: 'Hvid', color: '#ffffff' },
         { name: 'Sort', value: 'Sort', color: '#000000' },
         { name: 'Rosa', value: 'Rosa', color: '#FFC0CB' },
-    ];
+    ].filter(opt => isVisible(`Type_${opt.name}`));
 
-    const foerMaterialTypes = ['Viskose', 'Polyester', 'Satin', 'Silk'];
+    const foerMaterialTypes = ['Viskose', 'Polyester', 'Satin', 'Silke'].filter(opt => isVisible(`Foer_${opt}`));
 
     // ====================== Helper: Always send message ======================
     const sendMessage = (message) => {
@@ -263,13 +264,15 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program }) 
 
     // Kokarde Color options according to material
     const getKokardeColorOptions = (material) => {
+        let opts = [];
         switch (material) {
-            case 'Læder': return [{ name: 'Hvid', value: 'Hvid', color: '#ffffff' }, { name: 'Sort', value: 'Sort', color: '#000000' }];
-            case 'Kunstlæder': return [{ name: 'Vegansk', value: 'Vegansk', color: '#006644' }];
-            case 'Ruskin': return [{ name: 'Cognac', value: 'Cognac', color: '#a66f5a' }];
-            case 'Alcantra': return [{ name: 'Sort', value: 'Sort', color: '#000000' }];
-            default: return [{ name: 'Hvid', value: 'Hvid', color: '#ffffff' }];
+            case 'Læder': opts = [{ name: 'Hvid', value: 'Hvid', color: '#ffffff' }, { name: 'Sort', value: 'Sort', color: '#000000' }]; break;
+            case 'Kunstlæder': opts = [{ name: 'Vegansk', value: 'Vegansk', color: '#006644' }]; break;
+            case 'Ruskin': opts = [{ name: 'Cognac', value: 'Cognac', color: '#8b4513' }]; break;
+            case 'Alcantra': opts = [{ name: 'black', value: 'black', color: '#000000' }]; break;
+            default: opts = [{ name: 'Hvid', value: 'Hvid', color: '#ffffff' }, { name: 'Sort', value: 'Sort', color: '#000000' }]; break;
         }
+        return opts.filter(opt => isVisible(`Farve_${opt.name}`));
     };
 
     const kokardeColorOptions = getKokardeColorOptions(selectedKokardeMaterial);

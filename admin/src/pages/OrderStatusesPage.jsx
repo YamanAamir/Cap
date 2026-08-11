@@ -47,6 +47,10 @@ const OrderStatusesPage = () => {
     load();
   };
 
+  const handleDeleteClick = (id) => {
+    setConfirmModal({ isOpen: true, id });
+  };
+
   const executeDelete = async () => {
     if (!confirmModal.id) return;
     setIsDeleting(true);

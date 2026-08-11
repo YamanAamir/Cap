@@ -24,7 +24,8 @@ const AccessorySelector = ({ label, currentSelection, onSelectionChange, accesso
     </div>
 );
 
-const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, pakke, programFlags = [] }) => {
+const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, pakke, programFlags = [], visibilityConfig = {} }) => {
+    const isVisible = (key) => visibilityConfig?.['TILBEHOR_' + key] !== false;
     const cameraTriggers = useRef({});
     const tilbehor = selectedOptions?.TILBEHØR || {};
 
@@ -35,8 +36,8 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
         { name: 'No', value: 'No', icon: '❌' },
     ];
 
-    const hatBoxTypes = ['Standard', 'Luksus æske', 'Premium æske'];
-    const premiumaske = ['Grøn velour', 'Sort velour', 'Kunstlæderæske'];
+    const hatBoxTypes = ['Standard', 'Luksus æske', 'Premium æske'].filter(opt => isVisible(`Hueæske_${opt}`));
+    const premiumaske = ['Sort velour', 'Kunstlæderæske', 'Hvid læderæske'].filter(opt => isVisible(`Premiumæske_${opt}`));
 
     const selectedHatBoxType = tilbehor.Hueæske || 'Standard';
     const selectedPremiumæske = tilbehor['Premium æske'] || '';
@@ -262,7 +263,7 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
                 onSelectionChange={(value) =>
                     handleAccessoryToggle('Huekuglepen', value, 'Huekuglepen', 'pen', 'pen camera')
                 }
-                accessoryOptions={accessoryOptions}
+                accessoryOptions={accessoryOptions.filter(opt => isVisible(`Huekuglepen_${opt.value}`))}
             />
             <AccessorySelector
                 label="Silkepude"
@@ -270,7 +271,7 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
                 onSelectionChange={(value) =>
                     handleAccessoryToggle('Silkepude', value, 'Silkepude', 'silke', 'silkepude camera')
                 }
-                accessoryOptions={accessoryOptions}
+                accessoryOptions={accessoryOptions.filter(opt => isVisible(`Silkepude_${opt.value}`))}
             />
             <AccessorySelector
                 label="Ekstra korkarde"
@@ -278,7 +279,7 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
                 onSelectionChange={(value) =>
                     handleAccessoryToggle('Ekstra korkarde', value, 'EkstraKorkarde', 'kork', 'ekstrakorkarde camera')
                 }
-                accessoryOptions={accessoryOptions}
+                accessoryOptions={accessoryOptions.filter(opt => isVisible(`Ekstra korkarde_${opt.value}`))}
             />
 
             {badgesSelection === 'Yes' && (
@@ -351,7 +352,7 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
                     onSelectionChange={(value) =>
                         handleAccessoryToggle('Handsker', value, 'Handsker', 'hand', 'handsker camera')
                     }
-                    accessoryOptions={accessoryOptions}
+                    accessoryOptions={accessoryOptions.filter(opt => isVisible(`Handsker_${opt.value}`))}
                 />
             </div>
             <AccessorySelector
@@ -360,7 +361,7 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
                 onSelectionChange={(value) =>
                     handleAccessoryToggle('Store kuglepen', value, 'StoreKuglepen', 'store', 'storekuglepen camera')
                 }
-                accessoryOptions={accessoryOptions}
+                accessoryOptions={accessoryOptions.filter(opt => isVisible(`Store kuglepen_${opt.value}`))}
             />
             <AccessorySelector
                 label="Smart Tag"
@@ -368,7 +369,7 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
                 onSelectionChange={(value) =>
                     handleAccessoryToggle('Smart Tag', value, 'SmartTag', 'smart', 'smarttag camera')
                 }
-                accessoryOptions={accessoryOptions}
+                accessoryOptions={accessoryOptions.filter(opt => isVisible(`Smart Tag_${opt.value}`))}
             />
             <AccessorySelector
                 label="Lyskugle"
@@ -376,7 +377,7 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
                 onSelectionChange={(value) =>
                     handleAccessoryToggle('Lyskugle', value, 'Lyskugle', 'lys', 'lyskugle camera')
                 }
-                accessoryOptions={accessoryOptions}
+                accessoryOptions={accessoryOptions.filter(opt => isVisible(`Lyskugle_${opt.value}`))}
             />
             <AccessorySelector
                 label="Luksus champagneglas"
@@ -384,7 +385,7 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
                 onSelectionChange={(value) =>
                     handleAccessoryToggle('Luksus champagneglas', value, 'LuksusChampagneglas', 'champ', 'luksuschampagneglas camera')
                 }
-                accessoryOptions={accessoryOptions}
+                accessoryOptions={accessoryOptions.filter(opt => isVisible(`Luksus champagneglas_${opt.value}`))}
             />
             <AccessorySelector
                 label="Fløjte"
@@ -392,7 +393,7 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
                 onSelectionChange={(value) =>
                     handleAccessoryToggle('Fløjte', value, 'Fløjte', 'floj', 'fløjte camera')
                 }
-                accessoryOptions={accessoryOptions}
+                accessoryOptions={accessoryOptions.filter(opt => isVisible(`Fløjte_${opt.value}`))}
             />
             <AccessorySelector
                 label="Trompet"
@@ -400,7 +401,7 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
                 onSelectionChange={(value) =>
                     handleAccessoryToggle('Trompet', value, 'Trompet', 'tromp', 'trompet camera')
                 }
-                accessoryOptions={accessoryOptions}
+                accessoryOptions={accessoryOptions.filter(opt => isVisible(`Trompet_${opt.value}`))}
             />
             <AccessorySelector
                 label="Bucketpins"
@@ -410,7 +411,7 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
                     sendMessageToIframes(`Accessories Bucketpins:${value.toLowerCase()}`);
                     sendMessageToIframes('bucketpins camera');
                 }}
-                accessoryOptions={accessoryOptions}
+                accessoryOptions={accessoryOptions.filter(opt => isVisible(`Bucketpins_${opt.value}`))}
             />
         </>
     );

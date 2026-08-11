@@ -2,7 +2,7 @@ import React from 'react';
 import { Settings2, Tag, Check, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const ConfigBlueprintCards = ({ selectedOptions }) => {
+const ConfigBlueprintCards = ({ selectedOptions, productionFilters }) => {
   if (!selectedOptions || Object.keys(selectedOptions).length === 0) {
     return (
       <div className="p-8 text-center bg-slate-50 border border-slate-200 border-dashed rounded text-slate-500">
@@ -47,14 +47,25 @@ const ConfigBlueprintCards = ({ selectedOptions }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {Object.entries(selectedOptions).map(([category, details], idx) => {
-        // Skip FOER inside selectedOptions if it contains the base64 image, as it's shown separately,
-        // but let's just show it safely (excluding huge base64 strings if any)
+        // If production filters are provided, check if the category itself is translated
+        let displayCategory = category;
+        let isCategoryVisible = true;
         
+        if (productionFilters && Array.isArray(productionFilters) && productionFilters.length > 0) {
+          const catFilter = productionFilters.find(f => f.danish.toLowerCase() === category.toLowerCase());
+          if (catFilter) {
+            if (!catFilter.visible) isCategoryVisible = false;
+            if (catFilter.english) displayCategory = catFilter.english;
+          }
+        }
+        
+        if (!isCategoryVisible) return null;
+
         return (
           <div key={idx} className="bg-white border border-slate-200 rounded overflow-hidden shadow-sm">
             <div className="bg-[#fafafa] px-4 py-3 border-b border-slate-200 flex items-center gap-2">
               <Tag className="w-4 h-4 text-slate-400" />
-              <h4 className="font-bold text-slate-700 text-sm uppercase tracking-wider">{category}</h4>
+              <h4 className="font-bold text-slate-700 text-sm uppercase tracking-wider">{displayCategory}</h4>
             </div>
             
             <div className="p-4 space-y-4">
@@ -64,10 +75,33 @@ const ConfigBlueprintCards = ({ selectedOptions }) => {
                   if (typeof value === 'string' && value.startsWith('data:image')) return null;
                   if (Array.isArray(value) && value[0]?.url) return null; // Hide custom lining arrays
                   
+                  let displayKey = key;
+                  let displayValue = value;
+                  
+                  // Apply production filters if they exist
+                  if (productionFilters && Array.isArray(productionFilters) && productionFilters.length > 0) {
+                    const filter = productionFilters.find(f => f.danish.toLowerCase() === key.toLowerCase());
+                    if (filter) {
+                      if (!filter.visible) return null; // Hide it completely
+                      if (filter.english) displayKey = filter.english; // Translate it
+                    } else {
+                      // If a filter exists but this key is NOT in it, we hide it by default for production portal
+                      return null;
+                    }
+                    
+                    // Also translate the VALUE if it's a string and a translation exists
+                    if (typeof displayValue === 'string') {
+                      const valFilter = productionFilters.find(f => f.danish.toLowerCase() === displayValue.toLowerCase());
+                      if (valFilter && valFilter.english) {
+                        displayValue = valFilter.english;
+                      }
+                    }
+                  }
+                  
                   return (
                     <div key={i} className="flex flex-col">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{key}</span>
-                      {renderValue(value)}
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{displayKey}</span>
+                      {renderValue(displayValue)}
                     </div>
                   );
                 })

@@ -24,6 +24,7 @@ const getNavItems = (role) => {
     { title: 'SMS Campaigns', icon: MessageSquare, path: '/dashboard/sms' },
     { title: 'Discount Codes', icon: Tag, path: '/dashboard/discounts' },
     { title: 'Configurator', icon: Settings, path: '/dashboard/settings/configurator' },
+    { title: 'Production Settings', icon: Factory, path: '/dashboard/settings/production' },
     { title: 'Users & Roles', icon: Users, path: '/dashboard/users' },
   ];
 };
@@ -39,6 +40,7 @@ const pageTitles = {
   '/dashboard/sms': 'SMS Campaigns',
   '/dashboard/discounts': 'Discount Codes',
   '/dashboard/settings/configurator': 'Configurator Settings',
+  '/dashboard/settings/production': 'Production Display Settings',
   '/dashboard/users': 'Users & Roles',
   '/dashboard/factory': 'Factory Tasks',
 };

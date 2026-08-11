@@ -16,8 +16,9 @@ import international from '../assets/flagbandimages/international.webp';
 import usakinaden from '../assets/flagbandimages/USAKINADEN.webp';
 import europe from '../assets/flagbandimages/europe.webp';
 
-const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem }) => {
+const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem, visibilityConfig = {} }) => {
     // Default value functions
+    const isVisible = (key) => visibilityConfig?.['BETRÆK_' + key] !== false;
 
     const accessoryOptions = [
         { name: 'Yes', value: 'Yes', icon: '✔️' },
@@ -101,7 +102,7 @@ const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem })
         paedagog(),
         { name: 'Hvid med glimmer', value: 'Hvid med glimmer', img: whiteGlitter, color: '#ffffff' },
         { name: 'Sort med glimmer', value: 'Sort med glimmer', img: blackGlitter, color: '#000000' },
-    ].filter(Boolean);
+    ].filter(Boolean).filter(opt => isVisible(`Farve_${opt.name}`));
     const isSTU = program?.toLowerCase() === 'stu';
     if (isSTU) {
         const allowedSTUCover = ['Hvid', 'Sort', 'Hvid med glimmer', 'Sort med glimmer'];
@@ -158,12 +159,12 @@ const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem })
             ] : []),
             ///zee///
             getCoverColor()
-        ].filter(Boolean);
+        ].filter(Boolean).filter(opt => isVisible(`Kantbånd_${opt.value}`));
 
     let topKantColorOptions = [
         { name: 'NONE', value: 'NONE', img: coverColorOptionsimg2 },
         getCurrentEmblem(),
-    ].filter(Boolean);
+    ].filter(Boolean).filter(opt => isVisible(`Topkant_${opt.name}`));
     if (isSTU) {
         const allowedSTUTopkant = ['NONE', 'Guld', 'Sølv']; // 'NONE' is 'Ingen' in the UI if it's the empty one, wait, it says "NONE" but value is "NONE"
         topKantColorOptions = topKantColorOptions.filter(opt => allowedSTUTopkant.includes(opt.name) || allowedSTUTopkant.includes(opt.value));
@@ -177,14 +178,13 @@ const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem })
         { name: 'Four Stars', value: '4', img: img4 },
         { name: 'Five Stars', value: '5', img: img5 },
         { name: 'Six Stars', value: '6', img: img6 },
-    ];
+    ].filter(opt => isVisible(`Stjerner_${opt.value}`));
 
     const flagbandOptions = [
         { name: 'International', value: 'International', img: international },
         { name: 'Frankrig-Spanien-Tyskland-UK-Danmark', value: 'Frankrig-Spanien-Tyskland-UK-Danmark', img: europe },
         { name: 'Usa-Kina-Danmark', value: 'Usa-Kina-Danmark', img: usakinaden },
-
-    ];
+    ].filter(opt => isVisible(`Flagbånd_${opt.value}`));
 
     // Effect hooks to propagate changes to parent component
     useEffect(() => {

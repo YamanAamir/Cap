@@ -750,18 +750,21 @@ const StudentDashboard = () => {
     );
   }
 
+  const progKey = program ? program.toUpperCase() : 'STX';
+  const visibilityConfig = dynamicConfig?.programOptionVisibility?.[progKey] || {};
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="h-screen bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
       {/* Desktop Layout (md and up) */}
-      <div className="hidden md:flex h-[calc(100vh-80px)]">
+      <div className="hidden md:flex h-screen">
         {/* Sidebar */}
-        <aside className="bg-white/70 backdrop-blur-sm border-r border-slate-200 overflow-y-auto pb-[133px]">
+        <aside className="bg-white/70 backdrop-blur-sm border-r border-slate-200 overflow-y-auto">
           <div className="p-6">
             <h2 className="text-sm font-semibold text-center text-slate-600 uppercase tracking-wider mb-4">
               Kasketter
             </h2>
             <nav className="">
-              {menuItems.map((item, index) => (
+              {menuItems.filter(item => visibilityConfig?.[item.name] !== false).map((item, index) => (
                 <button
                   key={index}
                   onClick={() => {
@@ -828,7 +831,7 @@ const StudentDashboard = () => {
                     }
                   }}
                   className={`flex items-center px-2 py-3 rounded-xl transition-all duration-200 group ${activeMenu === item.name
-                    ? "bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 shadow-sm"
+                    ? "bg-white shadow-sm"
                     : "hover:bg-slate-50 hover:shadow-sm"
                     }`}
                 >
@@ -856,19 +859,19 @@ const StudentDashboard = () => {
         </aside>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex">
+        <div className="flex-1 flex overflow-hidden">
           {/* Configuration Panel */}
           {/* jjjjjjjjjjjj */}
-          <div className="w-[40%] bg-white/50 backdrop-blur-sm" id="desktop-config-panel">
+          <div className="w-[40%] bg-white/50 backdrop-blur-sm flex flex-col h-full border-r border-slate-200" id="desktop-config-panel">
             {/* jjjjjjjjjjjj */}
-            <div className="p-6 space-y-8 h-full overflow-y-auto pb-[133px]">
+            <div className="p-6 space-y-8 flex-1 overflow-y-auto">
               {activeMenu === "KOKARDE" && (
                 <Bows
                   selectedOptions={selectedOptions.KOKARDE}
                   onOptionChange={(key, value) =>
                     handleOptionChange("KOKARDE", key, value)
                   }
-                  program={program}
+                  program={program} visibilityConfig={visibilityConfig}
                   changeCurrentEmblem={setGlobalEmblem}
                 />
               )}
@@ -878,7 +881,7 @@ const StudentDashboard = () => {
                   onOptionChange={(key, value) =>
                     handleOptionChange("UDDANNELSESBÅND", key, value)
                   }
-                  program={program}
+                  program={program} visibilityConfig={visibilityConfig}
                   currentEmblem={globalEmblem}
                   pakke={packageName}
                 />
@@ -889,7 +892,7 @@ const StudentDashboard = () => {
                   onOptionChange={(key, value) =>
                     handleOptionChange("BRODERI", key, value)
                   }
-                  program={program}
+                  program={program} visibilityConfig={visibilityConfig}
                   pakke={packageName}
                 />
               )}
@@ -899,7 +902,7 @@ const StudentDashboard = () => {
                   onOptionChange={(key, value) =>
                     handleOptionChange("BETRÆK", key, value)
                   }
-                  program={program}
+                  program={program} visibilityConfig={visibilityConfig}
                   currentEmblem={globalEmblem}
                 />
               )}
@@ -909,7 +912,7 @@ const StudentDashboard = () => {
                     onOptionChange={(key, value) =>
                       handleOptionChange("SKYGGE", key, value)
                     }
-                    program={program}
+                    program={program} visibilityConfig={visibilityConfig}
                   />
               )}
               {activeMenu === "FOER" && (
@@ -919,7 +922,7 @@ const StudentDashboard = () => {
                     handleOptionChange("FOER", key, value)
                   }
                   currentEmblem={globalEmblem}
-                  program={program}
+                  program={program} visibilityConfig={visibilityConfig}
                 />
               )}
               {activeMenu === "EKSTRABETRÆK" && (
@@ -929,7 +932,7 @@ const StudentDashboard = () => {
                     handleOptionChange("EKSTRABETRÆK", key, value)
                   }
                   currentEmblem={globalEmblem}
-                  program={program}
+                  program={program} visibilityConfig={visibilityConfig}
                   priceReset={setExtraCoverReset}
                   pakke={packageName}
                 />
@@ -941,6 +944,7 @@ const StudentDashboard = () => {
                   errors={errors}
                   setErrors={setErrors}
                   pakke={packageName}
+                  visibilityConfig={visibilityConfig}
                   programFlags={dynamicConfig?.programFlags?.[(program || '').toUpperCase()] || []}
                 />
               )}
@@ -951,40 +955,47 @@ const StudentDashboard = () => {
                     handleOptionChange("STØRRELSE", key, value)
                   }
                   size={setSizeFlag}
+                  visibilityConfig={visibilityConfig}
                 />
               )}
+            </div>
+
+            {/* Desktop Footer (Moved here to be inside Config Panel) */}
+            <div className="p-6 bg-white border-t border-slate-200">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-sm font-semibold text-slate-600 uppercase tracking-wider">
+                  Pris
+                </span>
+                <span className="text-xl font-bold text-slate-900">
+                  {calculateTotalPrice().toFixed(2)} DKK
+                </span>
+              </div>
+              <div className="flex justify-between items-center mb-6">
+                <span className="text-xs font-semibold text-slate-400">
+                  Ekspeditionsgebyr
+                </span>
+                <span className="text-xs font-semibold text-slate-400">
+                  +{getDeliveryFee().toFixed(2)} DKK
+                </span>
+              </div>
+              <button
+                onClick={collectSelectedOptions}
+                disabled={!sizeFlag}
+                className={`w-full py-3.5 rounded text-sm font-bold uppercase tracking-wider transition-colors
+                  ${sizeFlag
+                    ? "bg-[#16a34a] text-white hover:bg-[#15803d]"
+                    : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                  }`}
+              >
+                Godkend og Betal
+              </button>
             </div>
           </div>
 
           {/* Preview Panel */}
-          <div className="flex-1 p-6">
-            <div className="bg-white/50 backdrop-blur-sm rounded-2xl shadow-xl h-full flex flex-col border border-slate-200">
-              {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-slate-200">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-                    <GraduationCap className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-slate-800">Valgt hue</h4>
-                    <p className="text-sm text-slate-600">
-                      {program.toUpperCase()}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4">
-
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                    <span className="text-xs font-medium text-slate-600 uppercase tracking-widest">
-                      LIVE FORSIDE
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Iframe Preview Area */}
-              <div className="flex-1 rounded-b-2xl overflow-hidden relative">
+          <div className="flex-1 relative bg-slate-50">
+            {/* Iframe Preview Area */}
+            <div className="absolute inset-0 w-full h-full overflow-hidden">
                 <iframe
                   id="preview-iframe"
                   src=""
@@ -1085,39 +1096,6 @@ const StudentDashboard = () => {
             </div>
           </div>
         </div>
-
-        {/* Desktop Footer */}
-        <div className=" border-slate-200 p-6 bg-white/50 backdrop-blur-sm w-[49.5%] absolute bottom-0 left-0 lg:w-[47%] 2xl:w-[43.5%] xl:w-[45%] ">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-sm font-medium text-slate-600">
-              Samlet pris
-            </span>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-slate-900">
-                {calculateTotalPrice().toFixed(2)} DKK
-              </div>
-              <div className="text-xs text-slate-500">
-                {" "}
-
-                Servicegebyr på {getDeliveryFee()},00 kr. inkl.
-
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={collectSelectedOptions}
-            disabled={!sizeFlag}
-            className={`w-full py-3 rounded-xl font-semibold transition-all duration-200 shadow-md
-            
-        ${sizeFlag
-                ? "bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800 hover:shadow-lg"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }`}
-          >
-            Godkend og Betal
-          </button>
-        </div>
-      </div>
       {/* moblail */}
       <div className="md:hidden flex flex-col ">
         {/* Mobile Preview Panel - Top */}
@@ -1223,7 +1201,7 @@ const StudentDashboard = () => {
             <div className="bg-white/70 backdrop-blur-sm border-t border-green-600 flex-shrink-0 z-20">
               <div className="flex overflow-x-auto no-scrollbar py-2 px-4">
                 <div className="flex items-end space-x-4">
-                  {menuItems.map((item, index) => {
+                  {menuItems.filter(item => visibilityConfig?.[item.name] !== false).map((item, index) => {
                     const isActive = activeMenu === item.name;
                     return (
                       <button
@@ -1283,7 +1261,7 @@ const StudentDashboard = () => {
                       onOptionChange={(key, value) =>
                         handleOptionChange("KOKARDE", key, value)
                       }
-                      program={program}
+                      program={program} visibilityConfig={visibilityConfig}
                       changeCurrentEmblem={setGlobalEmblem}
                     />
                   )}
@@ -1293,7 +1271,7 @@ const StudentDashboard = () => {
                       onOptionChange={(key, value) =>
                         handleOptionChange("UDDANNELSESBÅND", key, value)
                       }
-                      program={program}
+                      program={program} visibilityConfig={visibilityConfig}
                       currentEmblem={globalEmblem}
                       pakke={packageName}
                     />
@@ -1304,7 +1282,7 @@ const StudentDashboard = () => {
                       onOptionChange={(key, value) =>
                         handleOptionChange("BRODERI", key, value)
                       }
-                      program={program}
+                      program={program} visibilityConfig={visibilityConfig}
                       pakke={packageName}
                     />
                   )}
@@ -1314,7 +1292,7 @@ const StudentDashboard = () => {
                       onOptionChange={(key, value) =>
                         handleOptionChange("BETRÆK", key, value)
                       }
-                      program={program}
+                      program={program} visibilityConfig={visibilityConfig}
                       currentEmblem={globalEmblem}
                     />
                   )}
@@ -1324,7 +1302,7 @@ const StudentDashboard = () => {
                     onOptionChange={(key, value) =>
                       handleOptionChange("SKYGGE", key, value)
                     }
-                    program={program}
+                    program={program} visibilityConfig={visibilityConfig}
                   />
                   )}
                   {activeMenu === "FOER" && (
@@ -1334,7 +1312,7 @@ const StudentDashboard = () => {
                         handleOptionChange("FOER", key, value)
                       }
                       currentEmblem={globalEmblem}
-                      program={program}
+                      program={program} visibilityConfig={visibilityConfig}
                     />
                   )}
                   {activeMenu === "EKSTRABETRÆK" && (
@@ -1344,7 +1322,7 @@ const StudentDashboard = () => {
                         handleOptionChange("EKSTRABETRÆK", key, value)
                       }
                       currentEmblem={globalEmblem}
-                      program={program}
+                      program={program} visibilityConfig={visibilityConfig}
                       priceReset={setExtraCoverReset}
                       pakke={packageName}
                     />
@@ -1356,6 +1334,7 @@ const StudentDashboard = () => {
                       errors={errors}
                       setErrors={setErrors}
                       pakke={packageName}
+                      visibilityConfig={visibilityConfig}
                       programFlags={dynamicConfig?.programFlags?.[(program || '').toUpperCase()] || []}
                     />
                   )}
@@ -1366,6 +1345,7 @@ const StudentDashboard = () => {
                         handleOptionChange("STØRRELSE", key, value)
                       }
                       size={setSizeFlag}
+                      visibilityConfig={visibilityConfig}
                     />
                   )}
                 </div>
@@ -1413,7 +1393,7 @@ const StudentDashboard = () => {
         selectedOptions={selectedOptions}
         price={calculateTotalPrice().toFixed(2)}
         packageName={packageName}
-        program={program}
+        program={program} visibilityConfig={visibilityConfig}
       />
     </div >
   );

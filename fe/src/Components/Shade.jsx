@@ -3,7 +3,8 @@ import img1 from '../assets/shadeimages/glimmer.webp';
 import img2 from '../assets/shadeimages/none.webp';
 import img3 from '../assets/shadeimages/shade.webp';
 
-const Shade = ({ selectedOptions = {}, onOptionChange, program }) => {
+const Shade = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig = {} }) => {
+    const isVisible = (key) => visibilityConfig?.['SKYGGE_' + key] !== false;
     const getDefaultShadeType = () => 'Mat';
     const getDefaultMaterialType = () => 'Uden kant';
     const getDefaultShadowTapeColor = () => 'INGEN';
@@ -274,13 +275,15 @@ const Shade = ({ selectedOptions = {}, onOptionChange, program }) => {
     }, [engravingLine3]);
 
     const getMaterialOptions = () => {
+        let options = [];
         switch (selectedShadeType) {
-            case 'Mat': return ['Uden kant', 'Med kant'];
-            case 'Shiny': return ['Uden kant', 'Med kant'];
-            case 'Glimmer': return ['Uden kant', 'Med kant'];
-            case 'Shimmer': return ['Uden kant', 'Med kant'];
-            default: return ['Uden kant', 'Med kant'];
+            case 'Mat': options = ['Uden kant', 'Med kant']; break;
+            case 'Shiny': options = ['Uden kant', 'Med kant']; break;
+            case 'Glimmer': options = ['Uden kant', 'Med kant']; break;
+            case 'Shimmer': options = ['Uden kant', 'Med kant']; break;
+            default: options = ['Uden kant', 'Med kant']; break;
         }
+        return options.filter(opt => isVisible(`Materiale_${opt}`));
     };
 
     useEffect(() => {
@@ -311,7 +314,7 @@ const Shade = ({ selectedOptions = {}, onOptionChange, program }) => {
         { name: 'Shiny', value: 'Shiny', img: img3 },
         { name: 'Glimmer', value: 'Glimmer', color: '#5d5d5e' },
         { name: 'Shimmer', value: 'Shimmer', img: img1 },
-    ];
+    ].filter(opt => isVisible(`Type_${opt.name}`));
     const isSTU = program?.toLowerCase() === 'stu';
     const isLandmand = program?.toLowerCase() === 'landmand';
     if (isSTU) {
@@ -328,7 +331,7 @@ const Shade = ({ selectedOptions = {}, onOptionChange, program }) => {
         { name: 'INGEN', value: 'INGEN', img: img2 },
         { name: 'Guld', value: 'Guld', color: '#bb9300' },
         { name: 'Sølv', value: 'Sølv', color: '#C0C0C0' }
-    ];
+    ].filter(opt => isVisible(`Skyggebånd_${opt.name}`));
 
     const Selector = ({ label, currentSelection, onSelectionChange, options }) => (
         <div className="space-y-4 mt-6">

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ForExtraCover from './ForExtraCover';
 
-const ExtraCover = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, priceReset, pakke }) => {
+const ExtraCover = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, priceReset, pakke, visibilityConfig = {} }) => {
     // Default value function
+    const isVisible = (key) => visibilityConfig?.['EKSTRABETRÆK_' + key] !== false;
     const getDefaultExtraCoverOption = () => {
         return 'No'; // Default to not selecting extra cover
     };
@@ -17,7 +18,7 @@ const ExtraCover = ({ selectedOptions = {}, onOptionChange, currentEmblem, progr
     const extraCoverOptions = [
         { name: 'Yes', value: 'Yes', icon: '✔️' },
         { name: 'No', value: 'No', icon: '❌' },
-    ];
+    ].filter(opt => isVisible(`Tilvalg_${opt.value}`));
 
     const hatbandColorOptions = [
         { name: 'Hvid', value: '#ffffffff' },
@@ -191,18 +192,19 @@ const ExtraCover = ({ selectedOptions = {}, onOptionChange, currentEmblem, progr
                 currentSelection={selectedExtraCoverOption}
                 onSelectionChange={handleExtraCoverChange}
                 options={extraCoverOptions}
-
-
             />
 
-            {selectedExtraCoverOption === 'Yes' && (
-                <ForExtraCover
-                    current={currentEmblem}
-                    programNew={`${theProgram}`}
-                    forOptionChange={onOptionChange}
-                    selectedOptions={selectedOptions}
-                    pakke={pakke}
-                />
+            {selectedExtraCoverOption === "Yes" && (
+                <div className=''>
+                    <ForExtraCover
+                        current={currentEmblem}
+                        programNew={`${theProgram}`}
+                        forOptionChange={onOptionChange}
+                        selectedOptions={selectedOptions}
+                        pakke={pakke}
+                        visibilityConfig={visibilityConfig}
+                    />
+                </div>
             )}
         </>
     );

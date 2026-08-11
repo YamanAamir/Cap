@@ -660,3 +660,30 @@ exports.smsWebhook = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+exports.forceSendSmsMessage = async (req, res) => {
+  try {
+    const messageId = parseInt(req.params.id);
+    const msg = await prisma.smsMessage.findUnique({
+      where: { id: messageId },
+      include: { customer: true }
+    });
+    if (!msg) return res.status(404).json({ message: 'Message not found' });
+    if (msg.status === 'SENT' || msg.status === 'DELIVERED') return res.status(400).json({ message: 'Message already sent' });
+    if (!msg.customer.smsMarketingConsent || msg.customer.smsOptOut) {
+      await prisma.smsMessage.update({ where: { id: messageId }, data: { status: 'CANCELLED' } });
+      return res.status(400).json({ message: 'Customer opted out or has no consent' });
+    }
+    const { sendSms } = require('../services/sms.service');
+    const result = await sendSms(msg.phone, msg.message);
+    if (result.sent) {
+      await prisma.smsMessage.update({ where: { id: messageId }, data: { status: 'SENT', sentAt: new Date(), gatewayId: result.gatewayId } });
+      res.json({ success: true, message: 'Message sent successfully' });
+    } else {
+      await prisma.smsMessage.update({ where: { id: messageId }, data: { status: 'FAILED' } });
+      res.status(500).json({ success: false, message: result.error || 'Failed to send SMS' });
+    }
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};

@@ -26,7 +26,8 @@ const LUKSUS_YES = {
 
 const PREMIUM_YES = {
     Hueæske: 'Premium æske',
-    'Premium æske': 'Grøn velour',
+    // 'Premium æske': 'Grøn velour',
+    'Premium æske': 'Sort velour',
     Huekuglepen: 'Yes',
     Silkepude: 'Yes',
     'Ekstra korkarde': 'Yes',

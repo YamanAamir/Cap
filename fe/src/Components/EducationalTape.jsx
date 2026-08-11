@@ -16,10 +16,11 @@ import silver from '../assets/button images/silver.webp';
 import gold from '../assets/button images/gold.webp';
 import stuBandImg from '../assets/button images/stu_band.jpg';
 import landmandBandImg from '../assets/images/landmandBandImg.png';
-const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke, currentEmblem }) => {
+const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke, currentEmblem, visibilityConfig = {} }) => {
     // State variables with descriptive names
     const cameraTriggers = useRef({});
     const currentYear = new Date().getFullYear();
+    const isVisible = (key) => visibilityConfig?.['UDDANNELSESBÅND_' + key] !== false;
     // Default value functions
     const getDefaultHatbandColor = () => {
         switch (program?.toLowerCase()) {
@@ -468,16 +469,13 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
                 ];
         }
     };
-    const hatbandColorOptions =
-        getHuebandColor()
-        // Consider using different colors or removing duplicate
-        ;
+    const hatbandColorOptions = getHuebandColor().filter(opt => opt.name === '' || isVisible(`Huebånd_${opt.name}`));
     let chinStrapColorOptions = [
         { name: 'Mat', value: '#2e2e2e', img: matteleather },
         { name: 'Shiny', value: '#757575' },
         { name: 'Sort med sorteknuder', value: '#000000', img: shinyblack },
         ...getCurrentEmblem()
-    ];
+    ].filter(opt => isVisible(`Hagerem_${opt.name}`));
     const getEmbroideryColor = () => {
         switch (program?.toLowerCase()) {
             case 'hhx':
@@ -502,12 +500,12 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
         getEmbroideryColor(),
         { name: 'Hvid', value: 'Hvid', color: '#E5E7EB' },
         { name: 'Sort', value: 'Sort', color: '#000000' },
-    ].filter(Boolean); // removes null
+    ].filter(Boolean).filter(opt => isVisible(`Broderi farve_${opt.name}`));
 
     const isSTU = program?.toLowerCase() === 'stu';
     const isLandmand = program?.toLowerCase() === 'landmand';
     if (isSTU) {
-        const allowedSTUChins = ['Mat', 'Shiny', 'Sort med sorteknuder', 'Guld hagerem med guld knuder', 'S�lv hagerem med s�lvknuder', 'S�lv hagerem med sort knuder'];
+        const allowedSTUChins = ['Mat', 'Shiny', 'Sort med sorteknuder', 'Guld hagerem med guld knuder', 'Slv hagerem med slvknuder', 'Slv hagerem med sort knuder'];
         chinStrapColorOptions = chinStrapColorOptions.filter(opt => allowedSTUChins.includes(opt.name));
     }
     
@@ -519,7 +517,7 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
         // { name: 'BLANK', value: 'BLANK', img: coverColorOptionsimg2 },
         { name: 'Guld', value: 'Guld', color: '#ba9200' },
         { name: 'Sølv', value: 'Sølv', color: '#757575' },
-    ];
+    ].filter(opt => isVisible(`Knap farve_${opt.name}`));
     const materialEUXTypes = ['BOMULD', 'SATIN', 'VELOUR', 'GLIMMER', 'SHIMMER',];
     const materialEUXAndEUDTypes = ['BOMULD', 'SATIN', 'VELOUR', 'GLIMMER'];
     const materialSORTTypes = ['VELOUR', 'SATIN', 'GLIMMER'];
@@ -535,6 +533,7 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
     const buttonMaterialGuldTypes = ['Guld hagerem med guld knuder'];
     const year = ['2025', '2026', '2027'];
     function getMaterialOptions() {
+        let baseOptions = [];
         switch (selectedHatbandColor) {
             case 'HHX':
             case 'HTX':
@@ -542,7 +541,8 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
             case 'HF':
             case 'EUD':
             case 'EUX':
-                return materialEUXTypes
+                baseOptions = materialEUXTypes;
+                break;
             case 'Sosuassistent':
             case 'Sosuhjælper':
             case 'Frisør':
@@ -550,16 +550,22 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
             case 'Pædagog':
             case 'PAU':
             case 'Ernæringsassisten':
-                return materialColorTypes;
+                baseOptions = materialColorTypes;
+                break;
             case 'Sort':
-                return materialSORTTypes;
+                baseOptions = materialSORTTypes;
+                break;
             case 'STU':
-                return materialSTUTypes;
+                baseOptions = materialSTUTypes;
+                break;
             case 'Grøn':
-                return materialLandmandTypes;
+                baseOptions = materialLandmandTypes;
+                break;
             default:
-                return [];
+                baseOptions = [];
+                break;
         }
+        return baseOptions.filter(opt => isVisible(`Materiale_${opt}`));
     }
     useEffect(() => {
         let materialType = getMaterialOptions()

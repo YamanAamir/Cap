@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { Save, Loader2, AlertCircle, Search } from 'lucide-react';
+import { Save, Loader2, AlertCircle, Search, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const LABEL_MAP = {
@@ -238,6 +238,17 @@ const ConfiguratorSettingsPage = () => {
           [tier]: parseFloat(value) || 0
         }
       };
+      return newConfig;
+    });
+  };
+
+  const handleOptionVisibilityChange = (program, key, isVisible) => {
+    setConfig(prevConfig => {
+      const newConfig = { ...prevConfig };
+      if (!newConfig.programOptionVisibility) newConfig.programOptionVisibility = {};
+      if (!newConfig.programOptionVisibility[program]) newConfig.programOptionVisibility[program] = {};
+      
+      newConfig.programOptionVisibility[program][key] = isVisible;
       return newConfig;
     });
   };
@@ -540,24 +551,62 @@ const ConfiguratorSettingsPage = () => {
 
                 return (
                   <div key={category} className="mb-8 last:mb-0">
-                    <h3 className="text-xl font-bold text-gray-800 mb-4 capitalize bg-gray-100 p-3 rounded-lg">
-                      {category.replace(/([A-Z])/g, ' $1').trim()}
-                    </h3>
+                    <div className="flex items-center justify-between bg-gray-100 p-3 rounded-lg mb-4">
+                      <h3 className="text-xl font-bold text-gray-800 capitalize">
+                        {category.replace(/([A-Z])/g, ' $1').trim()}
+                      </h3>
+                      <button
+                        title={`Toggle visibility for all ${category}`}
+                        onClick={() => {
+                          const current = config.programOptionVisibility?.[activeProgram]?.[category] ?? true;
+                          handleOptionVisibilityChange(activeProgram, category, !current);
+                        }}
+                        className="text-gray-500 hover:text-blue-600 transition"
+                      >
+                        {config.programOptionVisibility?.[activeProgram]?.[category] !== false ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5 text-red-500" />}
+                      </button>
+                    </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
                       {filteredGroups.map(({ groupName, items }) => (
                         <div key={groupName} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                          <h4 className="font-semibold text-gray-700 mb-3 capitalize border-b border-gray-200 pb-2">
-                            {groupName}
-                          </h4>
+                          <div className="flex items-center justify-between border-b border-gray-200 pb-2 mb-3">
+                            <h4 className="font-semibold text-gray-700 capitalize">
+                              {groupName}
+                            </h4>
+                            <button
+                              title={`Toggle visibility for ${groupName}`}
+                              onClick={() => {
+                                const key = `${category}_${groupName}`;
+                                const current = config.programOptionVisibility?.[activeProgram]?.[key] ?? true;
+                                handleOptionVisibilityChange(activeProgram, key, !current);
+                              }}
+                              className="text-gray-400 hover:text-blue-600 transition"
+                            >
+                              {config.programOptionVisibility?.[activeProgram]?.[`${category}_${groupName}`] !== false ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4 text-red-500" />}
+                            </button>
+                          </div>
                           <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
                             {Object.entries(items).map(([itemName, price]) => {
                               const displayLabel = LABEL_MAP[itemName] || itemName;
+                              const itemKey = `${category}_${itemName}`;
+                              const isHidden = config.programOptionVisibility?.[activeProgram]?.[itemKey] === false;
                               return (
-                                <div key={itemName} className="flex justify-between items-center bg-white p-2 rounded border border-gray-100">
-                                  <span className="text-sm font-medium text-gray-700 w-1/2 truncate pr-2" title={displayLabel}>
-                                    {displayLabel}
-                                  </span>
+                                <div key={itemName} className={`flex justify-between items-center p-2 rounded border ${isHidden ? 'bg-gray-100 border-gray-200 opacity-60' : 'bg-white border-gray-100'}`}>
+                                  <div className="flex items-center w-1/2 truncate pr-2">
+                                    <button
+                                      title={`Toggle visibility for ${displayLabel}`}
+                                      onClick={() => {
+                                        handleOptionVisibilityChange(activeProgram, itemKey, isHidden);
+                                      }}
+                                      className="mr-2 text-gray-400 hover:text-blue-600 transition flex-shrink-0"
+                                    >
+                                      {isHidden ? <EyeOff className="w-4 h-4 text-red-500" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                    <span className={`text-sm font-medium truncate ${isHidden ? 'text-gray-400 line-through' : 'text-gray-700'}`} title={displayLabel}>
+                                      {displayLabel}
+                                    </span>
+                                  </div>
                                   <div className="w-1/2 flex items-center justify-end">
                                     <span className="text-xs text-gray-400 mr-2 font-semibold">DKK</span>
                                     <input

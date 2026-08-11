@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getOrder, updateOrderStatus } from '../services/auth.service';
-import { getOrderStatuses } from '../services/admin.service';
+import { getOrderStatuses, getSettings } from '../services/admin.service';
 import { ChevronLeft, Loader2, User, Mail, MapPin, Phone, School, Truck, ImageIcon, X, ChevronRight, Settings2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -24,12 +24,21 @@ const ProductionOrderDetailPage = () => {
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, statusId: null });
+  const [productionFilters, setProductionFilters] = useState([]);
 
-  const fetchOrder = async () => {
+  const fetchOrderAndSettings = async () => {
     setLoading(true);
     try {
-      const data = await getOrder(id);
+      const [data, settings] = await Promise.all([
+        getOrder(id),
+        getSettings().catch(() => [])
+      ]);
       setOrder(data);
+      
+      const pTerms = settings.find(s => s.key === 'PRODUCTION_DISPLAY_TERMS');
+      if (pTerms && pTerms.value && Array.isArray(pTerms.value)) {
+        setProductionFilters(pTerms.value);
+      }
     } catch (err) {
       toast.error('Failed to load order details');
       navigate('/dashboard/factory');
@@ -39,10 +48,11 @@ const ProductionOrderDetailPage = () => {
   };
 
   useEffect(() => {
-    fetchOrder();
-    getOrderStatuses().then(res => {
-      setStatuses(res.filter(s => s.isVisibleToProduction));
-    }).catch(console.error);
+    fetchOrderAndSettings();
+    
+    getOrderStatuses()
+      .then(data => setStatuses(data.filter(s => s.isVisibleToProduction)))
+      .catch(err => console.error('Error fetching statuses:', err));
   }, [id]);
 
   const handleStatusUpdate = async () => {
@@ -51,7 +61,7 @@ const ProductionOrderDetailPage = () => {
     try {
       await updateOrderStatus(id, { statusId: parseInt(confirmModal.statusId) });
       toast.success('Status updated');
-      await fetchOrder();
+      await fetchOrderAndSettings();
     } catch (err) {
       toast.error('Failed to update status');
     } finally {
@@ -193,9 +203,9 @@ const ProductionOrderDetailPage = () => {
           <div className="mt-6">
              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-4">
                <Settings2 className="h-4 w-4 text-slate-400" />
-               Full Specifications
+               Production Specifications
              </h3>
-             <ConfigBlueprintCards selectedOptions={selectedOptions} />
+             <ConfigBlueprintCards selectedOptions={selectedOptions} productionFilters={productionFilters} />
           </div>
 
         </div>

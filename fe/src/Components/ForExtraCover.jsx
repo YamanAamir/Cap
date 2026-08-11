@@ -169,7 +169,8 @@ import purplegold from '../assets/rosent/purplegold.webp';
 import purplesilver from '../assets/rosent/purplesilver.webp';
 
 
-const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, pakke }) => {
+const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, pakke, visibilityConfig = {} }) => {
+    const isVisible = (key) => visibilityConfig?.['EKSTRABETRÆK_' + key] !== false;
 
 
     const accessoryOptions = [
@@ -271,7 +272,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
             { name: 'Light blå', value: '#7F1D1D', img: lightbluegold },
             { name: 'Bordeaux', value: '#7F1D1DX', img: redGold },
             { name: 'Purple', value: '#DC26266', img: purplegold },
-        ];
+        ].filter(opt => isVisible(`Rosetfarve_${opt.name}`));
     };
 
     const getFirstSilverColor = () => {
@@ -283,7 +284,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
             { name: 'Light blå', value: '#7F1D1D', img: lightbluesilver },
             { name: 'Bordeaux', value: '#7F1D1DX', img: redSilve },
             { name: 'Purple', value: '#DC26266', img: purplesilver },
-        ];
+        ].filter(opt => isVisible(`Rosetfarve_${opt.name}`));
     };
 
     const guldcolors = getFirstGoldColor();
@@ -292,7 +293,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
     const emblemOptions = [
         { name: 'Guld', value: 'Guld', color: '#FCD34D' },
         { name: 'Sølv', value: 'Sølv', color: '#E5E7EB' }
-    ];
+    ].filter(opt => isVisible(`Emblem_${opt.name}`));
 
     const getGoldEmblem = () => {
         return [
@@ -467,7 +468,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
         }
     };
 
-    const currentTypeOptions = allTypeOptions[selectedPrestige]?.[selectedEmblem.name] || [];
+    const currentTypeOptions = (allTypeOptions[selectedPrestige]?.[selectedEmblem.name] || []).filter(opt => isVisible(`Type_${opt.name}`));
 
     const getBaseName = (name) => {
         return name.replace(/\s*(Guld|Sølv|Solv)\s*$/i, '').trim();
@@ -476,7 +477,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
     const handlePrestigeChange = (type) => {
         const currentBaseName = getBaseName(selectedType);
         setSelectedPrestige(type);
-        const newOptions = allTypeOptions[type]?.[selectedEmblem.name] || [];
+        const newOptions = (allTypeOptions[type]?.[selectedEmblem.name] || []).filter(opt => isVisible(`Type_${opt.name}`));
 
         if (newOptions.length > 0) {
             const matchingOption = newOptions.find(option =>
@@ -490,7 +491,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
         const currentBaseName = getBaseName(selectedType);
         setSelectedEmblem(emblem);
 
-        const newOptions = allTypeOptions[selectedPrestige]?.[emblem.name] || [];
+        const newOptions = (allTypeOptions[selectedPrestige]?.[emblem.name] || []).filter(opt => isVisible(`Type_${opt.name}`));
         if (newOptions.length > 0) {
             const matchingOption = newOptions.find(option =>
                 getBaseName(option.name) === currentBaseName
@@ -505,7 +506,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
         { name: 'Sort', value: 'Sort', color: '#000000' },
         { name: 'Hvid med glimmer', value: 'Hvid med glimmer', img: whiteGlitter, color: '#ffffff' },
         { name: 'Sort med glimmer', value: 'Sort med glimmer', img: blackGlitter, color: '#000000' }
-    ];
+    ].filter(Boolean).filter(opt => isVisible(`Farve_${opt.name}`));
 
     const restrictedPrograms = [
         "sosuassistent",
@@ -550,7 +551,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
             { name: 'Bordeaux', value: 'Bordeaux', color: '#7F1D1D' },
         ] : []),
         getCoverColor()
-    ].filter(Boolean);
+    ].filter(Boolean).filter(opt => isVisible(`Kantbånd_${opt.value}`));
     const isSTU = programNew?.toLowerCase() === 'stu';
     if (isSTU) {
         const allowedSTUCover = ['Hvid', 'Sort', 'Hvid med glimmer', 'Sort med glimmer'];
@@ -560,7 +561,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
     let topKantColorOptions = [
         { name: 'NONE', value: 'NONE', img: coverColorOptionsimg2 },
         getCurrentEmblem()
-    ].filter(Boolean);
+    ].filter(Boolean).filter(opt => isVisible(`Topkant_${opt.name}`));
     if (isSTU) {
         const allowedSTUTopkant = ['NONE', 'Guld', 'Sølv'];
         topKantColorOptions = topKantColorOptions.filter(opt => allowedSTUTopkant.includes(opt.name) || allowedSTUTopkant.includes(opt.value));
@@ -574,14 +575,13 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
         { name: 'Four Stars', value: '4', img: img4 },
         { name: 'Five Stars', value: '5', img: img5 },
         { name: 'Six Stars', value: '6', img: img6 },
-    ];
+    ].filter(opt => isVisible(`Stjerner_${opt.value}`));
 
     const flagbandOptions = [
         { name: 'International', value: 'International', img: international },
         { name: 'Frankrig-Spanien-Tyskland-UK-Danmark', value: 'Frankrig-Spanien-Tyskland-UK-Danmark', img: europe },
         { name: 'Usa-Kina-Danmark', value: 'Usa-Kina-Danmark', img: usakinaden },
-
-    ];
+    ].filter(opt => isVisible(`Flagbånd_${opt.value}`));
 
 
     // Propagate changes to parent

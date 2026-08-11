@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const Size = ({ selectedOptions = {}, onOptionChange, size }) => {
+const Size = ({ selectedOptions = {}, onOptionChange, size, visibilityConfig = {} }) => {
+    const isVisible = (key) => visibilityConfig?.['STORRELSE_' + key] !== false;
     const [selectedSize, setSelectedSize] = useState(selectedOptions['Vælg størrelse'] || 49.5);
     const [selectedMillimeterAdjustment, setSelectedMillimeterAdjustment] = useState(selectedOptions['Millimeter tilpasningssæt'] || 'No');
 
@@ -11,12 +12,12 @@ const Size = ({ selectedOptions = {}, onOptionChange, size }) => {
         49.5, 50, 50.5, 51, 51.5, 52, 52.5, 53, 53.5, 54, 54.5,
         55, 55.5, 56, 56.5, 57, 57.5, 58, 58.5, 59, 59.5, 60, 60.5,
         61, 61.5, 62, 62.5, 63, 63.5, 64, 64.5, 65
-    ];
+    ].filter(opt => isVisible(`Vælg størrelse_${opt}`));
 
     const millimeterAdjustmentOptions = [
         { name: 'Yes', value: 'Yes', icon: '✔️' },
         { name: 'No', value: 'No', icon: '❌' },
-    ];
+    ].filter(opt => isVisible(`Millimeter tilpasningssæt_${opt.value}`));
 
     // ============== IMAGE GENERATE KARNE KA FUNCTION ==============
     const renderSizeImage = (sizeValue) => {

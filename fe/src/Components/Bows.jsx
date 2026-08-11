@@ -165,9 +165,9 @@ import purplesilver from '../assets/rosent/purplesilver.webp';
 
 
 
-const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmblem }) => {
+const Bows = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig = {}, changeCurrentEmblem }) => {
     const cameraTriggers = useRef({});
-    const getInitialColor = () => {
+    if (visibilityConfig?.["KOKARDE"] === false) return null; const getInitialColor = () => {
         switch (program?.toLowerCase()) {
             case 'hhx':
                 return { name: 'Royal blå', value: '#7F1D1D', img: blueGold };
@@ -1070,6 +1070,16 @@ const getSilverEmblem = () => {
         setSelectedType(typeName);
     };
 
+    const isVisible = (key) => visibilityConfig?.[`KOKARDE_${key}`] !== false;
+
+    const filteredGuld = guldcolors.filter(c => isVisible(c.value) && isVisible(c.name));
+    const filteredSulv = sulvcolors.filter(c => isVisible(c.value) && isVisible(c.name));
+    const filteredEmblems = emblemOptions.filter(e => isVisible(e.value) && isVisible(e.name));
+    const allPrestige = ['stu', 'landmand'].includes(program?.toLowerCase()) ? ['Signature', 'Prestige', 'Stjernetegn'] : ['Signature', 'Prestige', 'Stjernetegn', 'Flag'];
+    const filteredPrestige = allPrestige.filter(p => isVisible(p));
+    const filteredFlags = staticFlags.filter(f => isVisible(f.name));
+    const filteredTypes = currentTypeOptions.filter(t => isVisible(t.name));
+
     return (
         <>
             <div className="mt-8">
@@ -1081,7 +1091,7 @@ const getSilverEmblem = () => {
             {selectedEmblem.name === 'Guld' ? (
                 <>
                     <div className="flex space-x-3 mt-6">
-                        {guldcolors.map((color) => (
+                        {filteredGuld.map((color) => (
                             <button
                                 key={`${color.name}-${color.value}`}
                                 onClick={() => handleColorChange(color)}
@@ -1105,7 +1115,7 @@ const getSilverEmblem = () => {
             ) : (
                 <>
                     <div className="flex space-x-3 mt-6">
-                        {sulvcolors.map((color) => (
+                        {filteredSulv.map((color) => (
                             <button
                                 key={color.value}
                                 onClick={() => handleColorChange(color)}
@@ -1132,7 +1142,7 @@ const getSilverEmblem = () => {
             <div className="mt-4">
                 <span className="text-sm font-semibold text-slate-700">Kokarde Type</span>
                 <div className="flex space-x-3 mt-6">
-                    {emblemOptions.map((emblem) => (
+                    {filteredEmblems.map((emblem) => (
                         <button
                             key={emblem.value}
                             onClick={() => handleEmblemChange(emblem)}
@@ -1158,7 +1168,7 @@ const getSilverEmblem = () => {
                     </div>
                 </div>
                 <div className="flex space-x-3 flex-wrap gap-y-2">
-                    {(['stu', 'landmand'].includes(program?.toLowerCase()) ? ['Signature', 'Prestige', 'Stjernetegn'] : ['Signature', 'Prestige', 'Stjernetegn', 'Flag']).map((type) => (
+                    {filteredPrestige.map((type) => (
                         <button
                             key={type}
                             onClick={() => handlePrestigeChange(type)}
@@ -1183,7 +1193,7 @@ const getSilverEmblem = () => {
                         </p>
                     </div>
                     <div className="flex flex-wrap gap-3">
-                        {staticFlags.map((flag, index) => (
+                        {filteredFlags.map((flag, index) => (
                             <button
                                 key={index}
                                 onClick={() => handleFlagChange(flag)}
@@ -1206,7 +1216,7 @@ const getSilverEmblem = () => {
                         <p className="text-sm mt-1 text-slate-700">Valgt: {selectedType}</p>
                     </div>
                     <div className="flex flex-wrap gap-3">
-                        {currentTypeOptions.map((type, index) => (
+                        {filteredTypes.map((type, index) => (
                             <button
                                 key={index}
                                 onClick={() => handleTypeChange(type.name)}

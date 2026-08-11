@@ -17,6 +17,7 @@ import ExcelConfigPage from './pages/ExcelConfigPage';
 import EmailTemplatesPage from './pages/EmailTemplatesPage';
 import UsersPage from './pages/UsersPage';
 import ConfiguratorSettingsPage from './pages/ConfiguratorSettingsPage';
+import ProductionSettingsPage from './pages/ProductionSettingsPage';
 import ProductionFactoryPage from './pages/ProductionFactoryPage';
 import ProductionOrderDetailPage from './pages/ProductionOrderDetailPage';
 import ExcelTemplatesPage from './pages/ExcelTemplatesPage';
@@ -56,6 +57,7 @@ function App() {
             <Route path="excel" element={<ExcelConfigPage />} />
             <Route path="emails" element={<EmailTemplatesPage />} />
             <Route path="settings/configurator" element={<ConfiguratorSettingsPage />} />
+            <Route path="settings/production" element={<ProductionSettingsPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="factory" element={<ProductionFactoryPage />} />
             <Route path="factory/orders/:id" element={<ProductionOrderDetailPage />} />
