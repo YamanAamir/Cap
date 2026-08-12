@@ -86,4 +86,12 @@
 
 /* Hide animations previously used for glassmorphism */
 .animate-float { display: block; }
-.animate-pulse-glow { display: block; }
+.animate-pulse-glow { display: block; }/* Google Translate Overrides */
+.VIpgJd-ZVi9od-ORHb-OEVmcd { display: none !important; }
+iframe.skiptranslate { display: none !important; }
+.goog-te-banner-frame { display: none !important; }
+body { top: 0 !important; }
+.goog-tooltip { display: none !important; }
+.goog-tooltip:hover { display: none !important; }
+.goog-text-highlight { background-color: transparent !important; box-shadow: none !important; }
+#google_translate_element { display: none !important; }
