@@ -162,6 +162,8 @@ const getStatusBySlug = async (slug) => {
 const applyDiscountCode = async (code, phone, orderTotal) => {
   const discount = await prisma.discountCode.findUnique({ where: { code: code.toUpperCase() } });
 
+  console.log(discount);
+
   if (!discount || !discount.isActive) {
     throw new Error('Invalid discount code');
   }
@@ -171,7 +173,10 @@ const applyDiscountCode = async (code, phone, orderTotal) => {
   if (discount.usedAt) {
     throw new Error('Discount code already used');
   }
-  if (discount.phoneNumber && phone && discount.phoneNumber !== phone) {
+  const cleanPhone = (p) => p ? p.replace(/[^\d]/g, '') : '';
+  const dPhone = cleanPhone(discount.phoneNumber);
+  const cPhone = cleanPhone(phone);
+  if (dPhone && cPhone && !dPhone.endsWith(cPhone) && !cPhone.endsWith(dPhone)) {
     throw new Error('Discount code not valid for this phone number');
   }
 
