@@ -55,7 +55,8 @@ router.post('/email-templates', admin, adminController.createEmailTemplate);
 router.patch('/email-templates/:key', admin, adminController.updateEmailTemplate);
 router.delete('/email-templates/:id', admin, adminController.deleteEmailTemplate);
 
-router.get('/settings', admin, adminController.getSettings);
+// Settings
+router.get('/settings', adminOrProduction, adminController.getSettings);
 router.put('/settings', admin, adminController.updateSetting);
 // Configurator Settings
 router.get('/settings/configurator', admin, settingsController.getConfiguratorSettings);
