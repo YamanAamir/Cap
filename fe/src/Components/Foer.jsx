@@ -136,7 +136,7 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, vi
         { name: 'Brun', value: 'Brun', color: '#a66f5a' },
         getSatinColor(),
         { name: 'Champagne', value: 'Champagne', color: '#F7E7CE' },
-    ].filter(opt => isVisible(`Type_${opt.name === 'Brun' ? 'Brown' : opt.name}`));
+    ].filter(opt => isVisible(`Satin Type_${opt.name === 'Brun' ? 'Brown' : opt.name}`));
     if (isSTU) {
         bowMaterialTypes = bowMaterialTypes.filter(opt => opt.name === 'Champagne');
     }
@@ -145,7 +145,7 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, vi
         { name: 'Hvid', value: 'Hvid', color: '#ffffff' },
         { name: 'Sort', value: 'Sort', color: '#000000' },
         { name: 'Rosa', value: 'Rosa', color: '#FFC0CB' },
-    ].filter(opt => isVisible(`Type_${opt.name}`));
+    ].filter(opt => isVisible(`Silk Type_${opt.name}`));
 
     const foerMaterialTypes = ['Viskose', 'Polyester', 'Satin', 'Silke'].filter(opt => isVisible(`Foer_${opt}`));
 
@@ -246,7 +246,7 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, vi
             }
             setSilkeTypes('');
             onOptionChange('Silk Type', '');
-        } else if (selectedFoerMaterial === 'Silk') {
+        } else if (selectedFoerMaterial === 'Silke') {
             if (!selectedsilkeTypes && silkeTypes.length > 0) {
                 setSilkeTypes(silkeTypes[0].value);
             }
@@ -342,7 +342,7 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, vi
                 />
             )}
 
-            {currentSelection === 'Silk' && (
+            {currentSelection === 'Silke' && (
                 <ColorSelector
                     label="Silk Type"
                     currentSelection={selectedsilkeTypes}
