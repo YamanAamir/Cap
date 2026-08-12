@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'react-hot-toast';
-import { getSmsCampaigns, createSmsCampaign, updateSmsCampaign, exportCampaignNonPurchasers } from '../services/admin.service';
-import { Plus, Loader2, MessageSquare, Clock, ChevronDown, ChevronUp, Link as LinkIcon, Send, Download, X, Save, QrCode } from 'lucide-react';
+import { getSmsCampaigns, createSmsCampaign, updateSmsCampaign, exportCampaignNonPurchasers, deleteSmsCampaign } from '../services/admin.service';
+import { Plus, Loader2, MessageSquare, Clock, ChevronDown, ChevronUp, Link as LinkIcon, Send, Download, X, Save, QrCode, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import SmsDispatchLog from '../components/sms/SmsDispatchLog';
 
@@ -25,6 +25,12 @@ const SmsCampaignsPage = () => {
   
   // Save Modal state
   const [saveModal, setSaveModal] = useState({ isOpen: false, campaignId: null, applyToExisting: false, isSaving: false });
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, campaignId: null, isDeleting: false });
+  
+  // Create Form States
+  const [newDiscountEnabled, setNewDiscountEnabled] = useState(false);
+  const [newDiscountType, setNewDiscountType] = useState('PERCENTAGE');
+  const [newDiscountValue, setNewDiscountValue] = useState(10);
 
   const load = async () => {
     setLoading(true);
@@ -66,8 +72,14 @@ const SmsCampaignsPage = () => {
     if (!newName.trim()) return;
     setCreating(true);
     try {
-      await createSmsCampaign({ name: newName.trim(), steps: DEFAULT_STEPS });
+      await createSmsCampaign({ 
+        name: newName.trim(), 
+        steps: DEFAULT_STEPS,
+        discountType: newDiscountEnabled ? newDiscountType : undefined,
+        discountValue: newDiscountEnabled ? parseFloat(newDiscountValue) : undefined
+      });
       setNewName('');
+      setNewDiscountEnabled(false);
       setShowCreate(false);
       load();
     } catch (e) {
@@ -114,13 +126,37 @@ const SmsCampaignsPage = () => {
     setSaveModal(prev => ({ ...prev, isSaving: true }));
     try {
       const draft = draftCampaigns[campaignId];
-      await updateSmsCampaign(campaignId, { steps: draft.steps, slug: draft.slug }, applyToExisting);
+      await updateSmsCampaign(campaignId, { 
+        name: draft.name,
+        steps: draft.steps, 
+        slug: draft.slug,
+        discountType: draft.discountType,
+        discountValue: draft.discountValue 
+      }, applyToExisting);
       toast.success('Campaign updated successfully');
       setSaveModal({ isOpen: false, campaignId: null, applyToExisting: false, isSaving: false });
       load(); // Reload to sync state
     } catch (err) {
       toast.error('Failed to update campaign');
       setSaveModal(prev => ({ ...prev, isSaving: false }));
+    }
+  };
+
+  const handleDeleteClick = (campaignId) => {
+    setDeleteModal({ isOpen: true, campaignId, isDeleting: false });
+  };
+
+  const confirmDelete = async () => {
+    const { campaignId } = deleteModal;
+    setDeleteModal(prev => ({ ...prev, isDeleting: true }));
+    try {
+      await deleteSmsCampaign(campaignId);
+      toast.success('Campaign deleted successfully');
+      setDeleteModal({ isOpen: false, campaignId: null, isDeleting: false });
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete campaign');
+      setDeleteModal(prev => ({ ...prev, isDeleting: false }));
     }
   };
 
@@ -156,25 +192,65 @@ const SmsCampaignsPage = () => {
       {showCreate && (
         <div className="p-6 bg-white border border-slate-200 rounded animate-in slide-in-from-top-2 fade-in duration-300">
           <h3 className="text-sm font-bold text-slate-700 mb-4">Initialize Campaign Workflow</h3>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <MessageSquare className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-              <input 
-                type="text"
-                placeholder="e.g. Summer Discount Series" 
-                value={newName} 
-                onChange={e => setNewName(e.target.value)} 
-                className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                autoFocus
-              />
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <MessageSquare className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <input 
+                  type="text"
+                  placeholder="e.g. Summer Discount Series" 
+                  value={newName} 
+                  onChange={e => setNewName(e.target.value)} 
+                  className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  autoFocus
+                />
+              </div>
+              <button 
+                onClick={handleCreate} 
+                disabled={creating || !newName.trim()} 
+                className="bg-[#1e3a8a] text-white text-xs font-bold px-6 py-2 rounded shadow-sm hover:bg-blue-800 transition-colors w-full sm:w-auto flex items-center justify-center shrink-0"
+              >
+                {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'LAUNCH'}
+              </button>
             </div>
-            <button 
-              onClick={handleCreate} 
-              disabled={creating || !newName.trim()} 
-              className="bg-[#1e3a8a] text-white text-xs font-bold px-6 py-2 rounded shadow-sm hover:bg-blue-800 transition-colors w-full sm:w-auto flex items-center justify-center shrink-0"
-            >
-              {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'LAUNCH'}
-            </button>
+            
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded">
+              <label className="flex items-center gap-2 cursor-pointer mb-3">
+                <input 
+                  type="checkbox" 
+                  checked={newDiscountEnabled}
+                  onChange={(e) => setNewDiscountEnabled(e.target.checked)}
+                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm font-bold text-slate-700">Include Discount Code</span>
+              </label>
+
+              {newDiscountEnabled && (
+                <div className="flex gap-4 items-end animate-in fade-in slide-in-from-top-2">
+                  <div className="flex-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Discount Type</label>
+                    <select 
+                      value={newDiscountType}
+                      onChange={(e) => setNewDiscountType(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded text-sm bg-white focus:outline-none focus:border-blue-500"
+                    >
+                      <option value="PERCENTAGE">Percentage (%)</option>
+                      <option value="AMOUNT">Fixed Amount (DKK)</option>
+                    </select>
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Value</label>
+                    <input 
+                      type="number"
+                      value={newDiscountValue}
+                      onChange={(e) => setNewDiscountValue(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded text-sm bg-white focus:outline-none focus:border-blue-500"
+                      min="0"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -225,6 +301,12 @@ const SmsCampaignsPage = () => {
                 
                 <div className="flex items-center gap-3 mt-3 sm:mt-0" onClick={(e) => e.stopPropagation()}>
                   <button 
+                    onClick={(e) => handleDeleteClick(campaign.id)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-red-200 text-red-600 rounded text-xs font-bold hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 className="h-3 w-3" /> Delete
+                  </button>
+                  <button 
                     onClick={(e) => handleExport(e, campaign.id)}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50 transition-colors"
                   >
@@ -251,15 +333,18 @@ const SmsCampaignsPage = () => {
               {/* Timeline UI for expanded state */}
               {expanded === campaign.id && draftCampaigns[campaign.id] && (
                 <div className="p-6 bg-[#fafafa] border-t border-slate-200">
-                  <div className="mb-6 flex flex-col md:flex-row justify-between gap-4">
-                    <div className="p-3 bg-white border border-slate-200 rounded flex items-start gap-2 max-w-sm">
-                      <CodeIcon className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Available Variables</p>
-                        <p className="font-mono text-slate-700 text-xs">{'{{name}} {{discountCode}} {{expiryDate}}'}</p>
-                      </div>
+                  <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="flex-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Campaign Name</label>
+                      <input 
+                        type="text"
+                        value={draftCampaigns[campaign.id].name || ''}
+                        onChange={(e) => setDraftCampaigns(prev => ({ ...prev, [campaign.id]: { ...prev[campaign.id], name: e.target.value } }))}
+                        className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 bg-white"
+                        placeholder="Campaign Name"
+                      />
                     </div>
-                    <div className="flex-1 max-w-xs">
+                    <div className="flex-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">URL Slug</label>
                       <input 
                         type="text"
@@ -269,6 +354,32 @@ const SmsCampaignsPage = () => {
                         placeholder="e.g. summer-sale"
                       />
                     </div>
+                    <div className="flex-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Discount Type</label>
+                      <select 
+                        value={draftCampaigns[campaign.id].discountType || ''}
+                        onChange={(e) => setDraftCampaigns(prev => ({ ...prev, [campaign.id]: { ...prev[campaign.id], discountType: e.target.value || null } }))}
+                        className="w-full px-3 py-2 border border-slate-200 rounded text-sm bg-white focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="">None</option>
+                        <option value="PERCENTAGE">Percentage (%)</option>
+                        <option value="AMOUNT">Fixed Amount (DKK)</option>
+                      </select>
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Discount Value</label>
+                      <input 
+                        type="number"
+                        value={draftCampaigns[campaign.id].discountValue || ''}
+                        onChange={(e) => setDraftCampaigns(prev => ({ ...prev, [campaign.id]: { ...prev[campaign.id], discountValue: e.target.value ? parseFloat(e.target.value) : null } }))}
+                        className="w-full px-3 py-2 border border-slate-200 rounded text-sm bg-white focus:outline-none focus:border-blue-500 disabled:bg-slate-100"
+                        min="0"
+                        disabled={!draftCampaigns[campaign.id].discountType}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="mb-6 flex justify-between items-center">
                     {hasDraftChanges(campaign.id) && (
                       <div className="flex items-center">
                         <button 
@@ -438,6 +549,49 @@ const SmsCampaignsPage = () => {
               >
                 {saveModal.isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                 Confirm Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Modal */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-red-50">
+              <h3 className="font-bold text-red-800 flex items-center gap-2">
+                <Trash2 className="h-5 w-5" />
+                Delete Campaign
+              </h3>
+              <button 
+                onClick={() => setDeleteModal({ isOpen: false, campaignId: null, isDeleting: false })}
+                className="text-slate-400 hover:bg-red-100 hover:text-red-600 rounded p-1 transition-colors"
+                disabled={deleteModal.isDeleting}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 text-slate-700">
+              <p>Are you sure you want to delete this campaign? This action cannot be undone.</p>
+              <p className="text-sm text-slate-500 mt-2">Note: Campaigns with existing enrollments cannot be deleted. Deactivate them instead.</p>
+            </div>
+
+            <div className="flex justify-end gap-3 p-4 border-t border-slate-100 bg-slate-50">
+              <button 
+                onClick={() => setDeleteModal({ isOpen: false, campaignId: null, isDeleting: false })}
+                className="px-4 py-2 font-bold text-slate-600 hover:bg-slate-200 rounded text-sm transition-colors"
+                disabled={deleteModal.isDeleting}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDelete}
+                className="px-6 py-2 bg-red-600 text-white font-bold rounded shadow-sm hover:bg-red-700 text-sm transition-colors disabled:opacity-50 flex items-center gap-2"
+                disabled={deleteModal.isDeleting}
+              >
+                {deleteModal.isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Delete Campaign'}
               </button>
             </div>
           </div>

@@ -144,7 +144,9 @@ const handleSmsOptOut = async (phone) => {
 };
 
 const registerSmsSignup = async ({ name, phone, email, school, gdprConsent, campaignId }) => {
-  console.log(`\n[SMS] registerSmsSignup called for: ${name} (${phone}) - Campaign: ${campaignId}`);
+  phone = phone.replace(/^\+/, '');
+  const localPhone = phone.length > 8 ? phone.slice(-8) : phone;
+  console.log(`\n[SMS] registerSmsSignup called for: ${name} (${phone}, local: ${localPhone}) - Campaign: ${campaignId}`);
   if (!gdprConsent) {
     console.error('[SMS] GDPR consent missing');
     throw new Error('GDPR consent is required');
@@ -189,21 +191,6 @@ const registerSmsSignup = async ({ name, phone, email, school, gdprConsent, camp
     });
   }
 
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 20);
-
-  const discountCode = await prisma.discountCode.create({
-    data: {
-      code: phone,
-      type: 'PERCENTAGE',
-      value: 10,
-      expiresAt,
-      phoneNumber: phone,
-      customerId: customer.id,
-      source: 'QR',
-    },
-  });
-
   let campaign = null;
   if (campaignId) {
     campaign = await prisma.smsCampaign.findUnique({ where: { id: parseInt(campaignId) } });
@@ -212,12 +199,30 @@ const registerSmsSignup = async ({ name, phone, email, school, gdprConsent, camp
     campaign = await prisma.smsCampaign.findFirst({ where: { isActive: true } });
   }
 
+  let discountCode = null;
+  if (campaign && campaign.discountValue && campaign.discountValue > 0 && campaign.discountType) {
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 20);
+
+    discountCode = await prisma.discountCode.create({
+      data: {
+        code: localPhone,
+        type: campaign.discountType,
+        value: campaign.discountValue,
+        expiresAt,
+        phoneNumber: phone,
+        customerId: customer.id,
+        source: 'QR',
+      },
+    });
+  }
+
   if (campaign) {
     const enrollment = await prisma.smsCampaignEnrollment.create({
       data: {
         campaignId: campaign.id,
         customerId: customer.id,
-        discountCodeId: discountCode.id,
+        discountCodeId: discountCode ? discountCode.id : null,
       },
     });
     await scheduleCampaignMessages(enrollment.id, customer, discountCode);

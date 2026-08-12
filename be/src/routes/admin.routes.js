@@ -36,8 +36,11 @@ router.post('/production/batches/:id/send', admin, adminController.sendProductio
 router.get('/production/logs', admin, adminController.getDispatchLogs);
 
 router.get('/sms/campaigns', admin, adminController.getSmsCampaigns);
+router.get('/sms/campaigns/:slug', admin, adminController.getSmsCampaignBySlug);
 router.post('/sms/campaigns', admin, adminController.createSmsCampaign);
 router.patch('/sms/campaigns/:id', admin, adminController.updateSmsCampaign);
+router.put('/sms/campaigns/:id', admin, adminController.updateSmsCampaign);
+router.delete('/sms/campaigns/:id', admin, adminController.deleteSmsCampaign);
 router.get('/sms/campaigns/:id/export', admin, adminController.exportCampaignNonPurchasers);
 router.get('/sms/messages', admin, adminController.getSmsMessages);
 router.post('/sms/messages/:id/force-send', admin, adminController.forceSendSmsMessage);

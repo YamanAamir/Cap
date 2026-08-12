@@ -68,8 +68,6 @@ const HTX = {
     Trompet: "No"
   },
   STØRRELSE: {
-    "Millimeter tilpasningssæt": "No",
-    "Vælg størrelse": 49.5
   }
 };
 

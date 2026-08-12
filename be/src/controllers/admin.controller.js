@@ -268,22 +268,23 @@ exports.getSmsCampaigns = async (req, res) => {
 
 exports.createSmsCampaign = async (req, res) => {
   try {
-    const { name, steps = [] } = req.body;
+    const { name, steps = [], discountType, discountValue } = req.body;
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') + '-' + Math.floor(Math.random() * 1000);
+
     const campaign = await prisma.smsCampaign.create({
       data: {
         name,
         slug,
+        discountType,
+        discountValue: discountValue !== undefined ? parseFloat(discountValue) : null,
         steps: {
           create: steps.map((s, i) => ({
             dayOffset: s.dayOffset,
             message: s.message,
             sortOrder: s.sortOrder ?? i,
-            isActive: s.isActive !== false,
           })),
         },
       },
-      include: { steps: true },
     });
     res.status(201).json(campaign);
   } catch (err) {
@@ -309,17 +310,19 @@ exports.getSmsCampaignBySlug = async (req, res) => {
 
 exports.updateSmsCampaign = async (req, res) => {
   try {
-    const { name, slug, isActive, steps, applyToExisting } = req.body;
+    const { name, slug, isActive, steps, applyToExisting, discountType, discountValue } = req.body;
     const id = parseInt(req.params.id);
 
-    if (name !== undefined || isActive !== undefined || slug !== undefined) {
+    if (name !== undefined || isActive !== undefined || slug !== undefined || discountType !== undefined || discountValue !== undefined) {
       await prisma.smsCampaign.update({
         where: { id },
         data: { 
           ...(name !== undefined && { name }), 
           ...(isActive !== undefined && { isActive }),
-          ...(slug !== undefined && { slug })
-        },
+          ...(slug !== undefined && { slug }),
+          ...(discountType !== undefined && { discountType }),
+          ...(discountValue !== undefined && { discountValue: discountValue !== null ? parseFloat(discountValue) : null })
+        }
       });
     }
 
@@ -385,6 +388,23 @@ exports.updateSmsCampaign = async (req, res) => {
       include: { steps: { orderBy: { sortOrder: 'asc' } } },
     });
     res.json(campaign);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.deleteSmsCampaign = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    
+    // Check if campaign has enrollments
+    const enrollmentsCount = await prisma.smsCampaignEnrollment.count({ where: { campaignId: id } });
+    if (enrollmentsCount > 0) {
+      return res.status(400).json({ message: 'Cannot delete campaign that has enrollments. Deactivate it instead.' });
+    }
+
+    await prisma.smsCampaign.delete({ where: { id } });
+    res.json({ message: 'Campaign deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

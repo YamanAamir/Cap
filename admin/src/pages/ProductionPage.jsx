@@ -66,7 +66,7 @@ const ProductionPage = () => {
   const handleSelectBatch = (batch) => {
     setSelectedBatch(batch);
     setEmailForm({
-      recipientEmail: batch.recipientEmail || manufacturerEmail || '',
+      recipientEmail: manufacturerEmail || '',
       emailSubject: '',
       emailBody: '',
     });
@@ -286,7 +286,7 @@ const ProductionPage = () => {
                   <div>
                     <h4 className="text-xs font-bold text-slate-600 mb-3 flex items-center justify-between">
                       Generated Payload
-                      <span className="text-[10px] text-slate-400 font-normal">Select attachments to include</span>
+                      <span className="text-[10px] text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded">Check files to attach them in the email</span>
                     </h4>
                     <div className="grid grid-cols-2 gap-4">
                       {selectedBatch.excelFilePath ? (
@@ -357,10 +357,9 @@ const ProductionPage = () => {
                         <span className="w-16 text-xs font-bold text-slate-500">To:</span>
                         <input 
                           type="text"
-                          value={emailForm.recipientEmail} 
-                          onChange={e => setEmailForm({ ...emailForm, recipientEmail: e.target.value })} 
-                          className="flex-1 outline-none text-sm font-medium text-slate-700 bg-transparent" 
-                          disabled={selectedBatch.status === 'SENT'} 
+                          value={manufacturerEmail || emailForm.recipientEmail} 
+                          className="flex-1 outline-none text-sm font-medium text-slate-700 bg-transparent cursor-not-allowed" 
+                          disabled={true} 
                         />
                       </div>
                       <div className="flex items-center border-b border-slate-100 pb-2">
@@ -368,17 +367,15 @@ const ProductionPage = () => {
                         <input 
                           type="text"
                           value={emailForm.emailSubject} 
-                          onChange={e => setEmailForm({ ...emailForm, emailSubject: e.target.value })} 
-                          className="flex-1 outline-none text-sm font-bold text-slate-800 bg-transparent" 
-                          disabled={selectedBatch.status === 'SENT'} 
+                          className="flex-1 outline-none text-sm font-bold text-slate-800 bg-transparent cursor-not-allowed" 
+                          disabled={true} 
                         />
                       </div>
                       <div className="pt-2">
                         <textarea
                           value={emailForm.emailBody}
-                          onChange={e => setEmailForm({ ...emailForm, emailBody: e.target.value })}
-                          className="w-full resize-none outline-none text-sm text-slate-600 min-h-[160px] bg-transparent"
-                          disabled={selectedBatch.status === 'SENT'}
+                          className="w-full resize-none outline-none text-sm text-slate-600 min-h-[160px] bg-transparent cursor-not-allowed"
+                          disabled={true}
                         />
                       </div>
                     </div>

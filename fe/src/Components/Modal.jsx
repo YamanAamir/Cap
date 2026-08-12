@@ -842,35 +842,37 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
         </div>
 
         {/* Discount Code */}
-        <div className="bg-gradient-to-r from-violet-50 to-violet-100/50 rounded-xl p-4 border border-violet-200">
-          <div className="flex items-center mb-3">
-            <Tag className="w-4 h-4 text-violet-600 mr-2" />
-            <h3 className="text-lg font-bold text-gray-800">Rabatkode</h3>
+        {(packageName === 'premium' || packageName === 'luksus') && (
+          <div className="bg-gradient-to-r from-violet-50 to-violet-100/50 rounded-xl p-4 border border-violet-200">
+            <div className="flex items-center mb-3">
+              <Tag className="w-4 h-4 text-violet-600 mr-2" />
+              <h3 className="text-lg font-bold text-gray-800">Rabatkode</h3>
+            </div>
+            <div className="flex gap-2">
+              <input
+                value={discountCodeInput}
+                onChange={(e) => { setDiscountCodeInput(e.target.value.toUpperCase()); setDiscountError(''); }}
+                placeholder="Indtast rabatkode"
+                className="flex-1 px-4 py-2 rounded-lg border border-violet-200 text-sm font-medium uppercase"
+                disabled={!!appliedDiscount}
+              />
+              <button
+                type="button"
+                onClick={handleApplyDiscount}
+                disabled={discountLoading || !!appliedDiscount || !discountCodeInput.trim()}
+                className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-bold hover:bg-violet-700 disabled:opacity-50"
+              >
+                {discountLoading ? '...' : appliedDiscount ? 'Anvendt' : 'Anvend'}
+              </button>
+            </div>
+            {discountError && <p className="text-red-600 text-xs mt-2">{discountError}</p>}
+            {appliedDiscount && (
+              <p className="text-emerald-700 text-sm font-semibold mt-2">
+                Rabat anvendt: −{appliedDiscount.discountAmount?.toFixed(2)} DKK
+              </p>
+            )}
           </div>
-          <div className="flex gap-2">
-            <input
-              value={discountCodeInput}
-              onChange={(e) => { setDiscountCodeInput(e.target.value.toUpperCase()); setDiscountError(''); }}
-              placeholder="Indtast rabatkode"
-              className="flex-1 px-4 py-2 rounded-lg border border-violet-200 text-sm font-medium uppercase"
-              disabled={!!appliedDiscount}
-            />
-            <button
-              type="button"
-              onClick={handleApplyDiscount}
-              disabled={discountLoading || !!appliedDiscount || !discountCodeInput.trim()}
-              className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-bold hover:bg-violet-700 disabled:opacity-50"
-            >
-              {discountLoading ? '...' : appliedDiscount ? 'Anvendt' : 'Anvend'}
-            </button>
-          </div>
-          {discountError && <p className="text-red-600 text-xs mt-2">{discountError}</p>}
-          {appliedDiscount && (
-            <p className="text-emerald-700 text-sm font-semibold mt-2">
-              Rabat anvendt: −{appliedDiscount.discountAmount?.toFixed(2)} DKK
-            </p>
-          )}
-        </div>
+        )}
 
         {/* Product Configuration Summary */}
         <div className="bg-gradient-to-r from-green-50 to-green-100/50 rounded-xl p-4 border border-green-200">

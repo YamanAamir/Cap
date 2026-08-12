@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 
 const Size = ({ selectedOptions = {}, onOptionChange, size, visibilityConfig = {} }) => {
     const isVisible = (key) => visibilityConfig?.['STORRELSE_' + key] !== false;
-    const [selectedSize, setSelectedSize] = useState(selectedOptions['Vælg størrelse'] || 49.5);
-    const [selectedMillimeterAdjustment, setSelectedMillimeterAdjustment] = useState(selectedOptions['Millimeter tilpasningssæt'] || 'No');
+    const [selectedSize, setSelectedSize] = useState(selectedOptions['Vælg størrelse'] || null);
+    const [selectedMillimeterAdjustment, setSelectedMillimeterAdjustment] = useState(selectedOptions['Millimeter tilpasningssæt'] || null);
 
     const sizeCanvasRef = useRef(null);
     const cameraTriggers = useRef({});
@@ -22,7 +22,7 @@ const Size = ({ selectedOptions = {}, onOptionChange, size, visibilityConfig = {
     // ============== IMAGE GENERATE KARNE KA FUNCTION ==============
     const renderSizeImage = (sizeValue) => {
         const canvas = sizeCanvasRef.current;
-        if (!canvas) return;
+        if (!canvas || sizeValue === null) return;
 
         const ctx = canvas.getContext('2d');
         const text = sizeValue.toString();
@@ -63,25 +63,29 @@ const Size = ({ selectedOptions = {}, onOptionChange, size, visibilityConfig = {
     };
 
     useEffect(() => {
-        onOptionChange('Vælg størrelse', selectedSize);
-        if (size) size(true);
-
-        renderSizeImage(selectedSize);
-    }, [selectedSize]);
+        if (selectedSize !== null) {
+            onOptionChange('Vælg størrelse', selectedSize);
+            renderSizeImage(selectedSize);
+        }
+        if (size) size(selectedSize !== null && selectedMillimeterAdjustment !== null);
+    }, [selectedSize, selectedMillimeterAdjustment]);
 
     useEffect(() => {
-        onOptionChange('Millimeter tilpasningssæt', selectedMillimeterAdjustment);
-        const value = selectedMillimeterAdjustment === 'Yes' ? 'yes' : 'no';
-        ['preview-iframe', 'preview-iframe2'].forEach(id => {
-            const iframe = document.getElementById(id);
-            if (iframe?.contentWindow) {
-                iframe.contentWindow.postMessage(`Millimeter:${value}`, "*");
-                if (cameraTriggers.current["size_mm"]) {
-                    iframe.contentWindow.postMessage("size camera", "*");
+        if (selectedMillimeterAdjustment !== null) {
+            onOptionChange('Millimeter tilpasningssæt', selectedMillimeterAdjustment);
+            const value = selectedMillimeterAdjustment === 'Yes' ? 'yes' : 'no';
+            ['preview-iframe', 'preview-iframe2'].forEach(id => {
+                const iframe = document.getElementById(id);
+                if (iframe?.contentWindow) {
+                    iframe.contentWindow.postMessage(`Millimeter:${value}`, "*");
+                    if (cameraTriggers.current["size_mm"]) {
+                        iframe.contentWindow.postMessage("size camera", "*");
+                    }
                 }
-            }
-        });
-        cameraTriggers.current["size_mm"] = true;
+            });
+            cameraTriggers.current["size_mm"] = true;
+        }
+        if (size) size(selectedSize !== null && selectedMillimeterAdjustment !== null);
     }, [selectedMillimeterAdjustment]);
 
     useEffect(() => {

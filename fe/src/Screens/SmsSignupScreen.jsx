@@ -182,17 +182,17 @@ const SmsSignupScreen = () => {
           <div>
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Telefon</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">+</span>
               <input
                 required
                 type="tel"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/[^0-9]/g, '') })}
-                className="w-full pl-8 pr-4 py-3 rounded border border-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-bold text-slate-800 transition-shadow bg-[#fafafa] focus:bg-white"
-                placeholder="45 12 34 56 78"
+                className="w-full px-4 py-3 rounded border border-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-bold text-slate-800 transition-shadow bg-[#fafafa] focus:bg-white"
+                placeholder="F.eks. 4512345678"
                 disabled={loading}
               />
             </div>
+            <p className="text-xs text-slate-500 mt-1.5">Skriv nummer med landekode uden + (f.eks. 4512345678)</p>
           </div>
 
           <label className={`flex items-start gap-3 cursor-pointer p-4 rounded border transition-colors ${
