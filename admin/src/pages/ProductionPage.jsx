@@ -398,8 +398,10 @@ const ProductionPage = () => {
               ) : (
                 <div className="space-y-3">
                   {ordersModal.orders.map(o => {
+                    const details = typeof o.customerDetails === 'string' ? JSON.parse(o.customerDetails) : (o.customerDetails || {});
                     const custName = o.customer ? `${o.customer.firstName || ''} ${o.customer.lastName || ''}`.trim() : null;
-                    const finalName = custName || o.customerName || 'Unknown Customer';
+                    const detailsName = `${details.firstName || ''} ${details.lastName || ''}`.trim();
+                    const finalName = custName || detailsName || o.customerName || 'Unknown Customer';
                     return (
                       <div key={o.id} className="bg-white p-4 rounded-lg border border-slate-200 flex flex-col sm:flex-row sm:justify-between sm:items-center shadow-sm gap-2">
                         <div>
