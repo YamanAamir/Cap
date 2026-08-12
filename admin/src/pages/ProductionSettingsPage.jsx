@@ -11,7 +11,7 @@ const MASTER_TEMPLATE = {
   BETRÆK: ['Farve', 'Kantbånd', 'Stjerner', 'Topkant', 'Flagbånd'],
   SKYGGE: ['Materiale', 'Skyggebånd', 'Skyggegravering Line 1', 'Skyggegravering Line 2', 'Skyggegravering Line 3', 'Type'],
   FOER: ['Farve', 'Foer', 'Sløjfe', 'Svederem', 'Silk Type', 'Satin Type', 'Indvendigt foer billede'],
-  EKSTRABETRÆK: ['Tilvælg'],
+  EKSTRABETRÆK: ['Tilvælg', 'Farve', 'Topkant', 'Kantbånd', 'Stjerner', 'Flagbånd', 'Roset farve', 'Kokarde', 'Emblem', 'Type', 'Extra Top broderi'],
   TILBEHØR: ['Bucketpins', 'Ekstra korkarde', 'Ekstra korkarde Text', 'Flag 1', 'Flag 2', 'Flag 3', 'Fløjte', 'Handsker', 'Huekuglepen', 'Hueæske', 'Luksus champagneglas', 'Lyskugle', 'Premium æske', 'Silkepude', 'Smart Tag', 'Store kuglepen', 'Trompet'],
   STØRRELSE: ['Vælg størrelse', 'Millimeter tilpasningssæt']
 };
