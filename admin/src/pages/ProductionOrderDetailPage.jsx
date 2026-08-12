@@ -55,6 +55,41 @@ const ProductionOrderDetailPage = () => {
       .catch(err => console.error('Error fetching statuses:', err));
   }, [id]);
 
+  useEffect(() => {
+    // Auto-translate to English
+    document.cookie = "googtrans=/da/en; path=/";
+    document.cookie = "googtrans=/da/en; domain=" + document.domain + "; path=/";
+
+    // Inject Google Translate script if not present
+    if (!document.getElementById('google-translate-script')) {
+      const style = document.createElement('style');
+      style.innerHTML = `
+        .goog-te-banner-frame { display: none !important; }
+        .goog-te-combo { display: none !important; }
+        body { top: 0px !important; }
+        #google_translate_element { display: none !important; }
+      `;
+      document.head.appendChild(style);
+
+      const script = document.createElement('script');
+      script.id = 'google-translate-script';
+      script.src = '//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+      script.async = true;
+      document.body.appendChild(script);
+
+      window.googleTranslateElementInit = () => {
+        if (window.google && window.google.translate) {
+          new window.google.translate.TranslateElement({
+            pageLanguage: 'da',
+            includedLanguages: 'en',
+            layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE,
+            autoDisplay: true
+          }, 'google_translate_element');
+        }
+      };
+    }
+  }, []);
+
   const handleStatusUpdate = async () => {
     if (!confirmModal.statusId) return;
     setUpdating(true);
@@ -93,7 +128,7 @@ const ProductionOrderDetailPage = () => {
 
   return (
     <div className="animate-in fade-in duration-500 max-w-[1200px] mx-auto pb-12">
-      
+      <div id="google_translate_element"></div>
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <button
