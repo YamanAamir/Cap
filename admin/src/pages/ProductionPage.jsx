@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   getProductionBatches, generateProductionBatch, sendProductionBatch,
-  getDispatchLogs, getSettings, updateSetting, getProductionBatch
+  getDispatchLogs, getSettings, updateSetting, getProductionBatch, getEmailTemplates
 } from '../services/admin.service';
 import { Loader2, Send, FileSpreadsheet, Archive, CheckCircle2, Factory, Mail, Layers, Settings, X, List } from 'lucide-react';
 import ConfirmModal from '../components/common/ConfirmModal';
@@ -21,13 +21,17 @@ const ProductionPage = () => {
   const [savingSettings, setSavingSettings] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false });
   const [ordersModal, setOrdersModal] = useState({ isOpen: false, loading: false, orders: [] });
+  const [templates, setTemplates] = useState([]);
+  const [sendExcel, setSendExcel] = useState(true);
+  const [sendZip, setSendZip] = useState(true);
 
   const load = async () => {
     setLoading(true);
     try {
-      const [b, l, settings] = await Promise.all([getProductionBatches(), getDispatchLogs(), getSettings()]);
+      const [b, l, settings, tpls] = await Promise.all([getProductionBatches(), getDispatchLogs(), getSettings(), getEmailTemplates()]);
       setBatches(b);
       setLogs(l);
+      setTemplates(tpls);
       const mfg = settings.find(s => s.key === 'manufacturer_email');
       if (mfg?.value?.email) setManufacturerEmail(mfg.value.email);
       const autoExport = settings.find(s => s.key === 'auto_export_days');
@@ -89,7 +93,7 @@ const ProductionPage = () => {
     if (!selectedBatch) return;
     setSending(true);
     try {
-      await sendProductionBatch(selectedBatch.id, emailForm);
+      await sendProductionBatch(selectedBatch.id, { ...emailForm, sendExcel, sendZip });
       toast.success('Production files successfully dispatched to manufacturer!');
       setSelectedBatch(null);
       load();
@@ -97,6 +101,18 @@ const ProductionPage = () => {
     finally { 
       setSending(false);
       setConfirmModal({ isOpen: false });
+    }
+  };
+
+  const handleTemplateChange = (e) => {
+    const templateId = e.target.value;
+    const template = templates.find(t => t.id === parseInt(templateId));
+    if (template) {
+      setEmailForm({
+        ...emailForm,
+        emailSubject: template.subject || emailForm.emailSubject,
+        emailBody: template.body || emailForm.emailBody
+      });
     }
   };
 
@@ -266,17 +282,22 @@ const ProductionPage = () => {
                   
                   {/* Visual Assets Preview */}
                   <div>
-                    <h4 className="text-xs font-bold text-slate-600 mb-3">Generated Payload</h4>
+                    <h4 className="text-xs font-bold text-slate-600 mb-3 flex items-center justify-between">
+                      Generated Payload
+                      <span className="text-[10px] text-slate-400 font-normal">Select attachments to include</span>
+                    </h4>
                     <div className="grid grid-cols-2 gap-4">
                       {selectedBatch.excelFilePath ? (
-                        <a href={`${getBaseUrl()}${selectedBatch.excelFilePath}`} target="_blank" rel="noreferrer"
-                          className="flex items-center p-3 bg-white border border-slate-200 rounded hover:border-green-500 transition-colors">
-                          <FileSpreadsheet className="h-8 w-8 text-green-600 mr-3 shrink-0" />
-                          <div>
-                            <p className="font-bold text-slate-700 text-xs">Manifest.xlsx</p>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">Order Data</p>
+                        <div className={cn("flex items-center justify-between p-3 border rounded transition-colors cursor-pointer", sendExcel ? "bg-white border-green-500" : "bg-slate-50 border-slate-200 opacity-70")} onClick={() => setSendExcel(!sendExcel)}>
+                          <div className="flex items-center">
+                            <FileSpreadsheet className={cn("h-8 w-8 mr-3 shrink-0", sendExcel ? "text-green-600" : "text-slate-400")} />
+                            <div>
+                              <p className="font-bold text-slate-700 text-xs">Manifest.xlsx</p>
+                              <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">Order Data</p>
+                            </div>
                           </div>
-                        </a>
+                          <input type="checkbox" checked={sendExcel} onChange={() => {}} className="h-4 w-4 rounded border-slate-300 text-green-600" />
+                        </div>
                       ) : (
                         <div className="flex items-center p-3 bg-slate-50 border border-slate-200 rounded opacity-60">
                           <FileSpreadsheet className="h-8 w-8 text-slate-400 mr-3" />
@@ -285,14 +306,16 @@ const ProductionPage = () => {
                       )}
                       
                       {selectedBatch.zipFilePath ? (
-                        <a href={`${getBaseUrl()}${selectedBatch.zipFilePath}`} target="_blank" rel="noreferrer"
-                          className="flex items-center p-3 bg-white border border-slate-200 rounded hover:border-blue-500 transition-colors">
-                          <Archive className="h-8 w-8 text-blue-600 mr-3 shrink-0" />
-                          <div>
-                            <p className="font-bold text-slate-700 text-xs">Production_PDFs.zip</p>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">4-View Designs</p>
+                        <div className={cn("flex items-center justify-between p-3 border rounded transition-colors cursor-pointer", sendZip ? "bg-white border-blue-500" : "bg-slate-50 border-slate-200 opacity-70")} onClick={() => setSendZip(!sendZip)}>
+                          <div className="flex items-center">
+                            <Archive className={cn("h-8 w-8 mr-3 shrink-0", sendZip ? "text-blue-600" : "text-slate-400")} />
+                            <div>
+                              <p className="font-bold text-slate-700 text-xs">Production_PDFs.zip</p>
+                              <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">4-View Designs</p>
+                            </div>
                           </div>
-                        </a>
+                          <input type="checkbox" checked={sendZip} onChange={() => {}} className="h-4 w-4 rounded border-slate-300 text-blue-600" />
+                        </div>
                       ) : (
                          <div className="flex items-center p-3 bg-slate-50 border border-slate-200 rounded opacity-60">
                           <Archive className="h-8 w-8 text-slate-400 mr-3" />
@@ -304,8 +327,17 @@ const ProductionPage = () => {
 
                   {/* Email Composer */}
                   <div className="bg-white border border-slate-200 rounded overflow-hidden shadow-sm">
-                    <div className="bg-[#fafafa] border-b border-slate-200 px-4 py-2 flex items-center">
+                    <div className="bg-[#fafafa] border-b border-slate-200 px-4 py-2 flex items-center justify-between">
                       <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Email Dispatcher</span>
+                      <select 
+                        onChange={handleTemplateChange}
+                        className="text-xs bg-white border border-slate-200 rounded px-2 py-1 outline-none font-medium text-slate-700"
+                      >
+                        <option value="">-- Load Email Template --</option>
+                        {templates.map(t => (
+                          <option key={t.id} value={t.id}>{t.name || t.key}</option>
+                        ))}
+                      </select>
                     </div>
                     
                     <div className="p-4 space-y-3">

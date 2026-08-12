@@ -233,8 +233,8 @@ exports.generateProductionBatch = async (req, res) => {
 
 exports.sendProductionBatch = async (req, res) => {
   try {
-    const { recipientEmail, emailSubject, emailBody } = req.body;
-    const batch = await sendProductionBatch(parseInt(req.params.id), req.user.id, { recipientEmail, emailSubject, emailBody });
+    const { recipientEmail, emailSubject, emailBody, sendExcel, sendZip } = req.body;
+    const batch = await sendProductionBatch(parseInt(req.params.id), req.user.id, { recipientEmail, emailSubject, emailBody, sendExcel, sendZip });
     res.json(batch);
   } catch (err) {
     res.status(500).json({ message: err.message });

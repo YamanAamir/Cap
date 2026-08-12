@@ -269,18 +269,21 @@ const sendProductionBatch = async (batchId, adminUserId, overrides = {}) => {
   const recipient = overrides.recipientEmail || batch.recipientEmail;
   const subject = overrides.emailSubject || batch.emailSubject;
   const body = overrides.emailBody || batch.emailBody;
+  
+  const sendExcel = overrides.sendExcel !== undefined ? overrides.sendExcel : true;
+  const sendZip = overrides.sendZip !== undefined ? overrides.sendZip : true;
 
   const attachments = [];
   const path = require('path');
   const fs = require('fs');
 
-  if (batch.excelFilePath) {
+  if (sendExcel && batch.excelFilePath) {
     const excelFull = path.join(__dirname, '../../public', batch.excelFilePath.replace(/^\//, ''));
     if (fs.existsSync(excelFull)) {
       attachments.push({ filename: path.basename(excelFull), path: excelFull });
     }
   }
-  if (batch.zipFilePath) {
+  if (sendZip && batch.zipFilePath) {
     const zipFull = path.join(__dirname, '../../public', batch.zipFilePath.replace(/^\//, ''));
     if (fs.existsSync(zipFull)) {
       attachments.push({ filename: path.basename(zipFull), path: zipFull });
