@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   getProductionBatches, generateProductionBatch, sendProductionBatch,
-  getDispatchLogs, getSettings, updateSetting
+  getDispatchLogs, getSettings, updateSetting, getProductionBatch
 } from '../services/admin.service';
-import { Loader2, Send, FileSpreadsheet, Archive, CheckCircle2, Factory, Mail, Layers, Settings } from 'lucide-react';
+import { Loader2, Send, FileSpreadsheet, Archive, CheckCircle2, Factory, Mail, Layers, Settings, X, List } from 'lucide-react';
 import ConfirmModal from '../components/common/ConfirmModal';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -20,6 +20,7 @@ const ProductionPage = () => {
   const [autoExportDays, setAutoExportDays] = useState('0');
   const [savingSettings, setSavingSettings] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false });
+  const [ordersModal, setOrdersModal] = useState({ isOpen: false, loading: false, orders: [] });
 
   const load = async () => {
     setLoading(true);
@@ -70,6 +71,18 @@ const ProductionPage = () => {
   const handleSendClick = () => {
     if (!selectedBatch) return;
     setConfirmModal({ isOpen: true });
+  };
+
+  const handleViewOrders = async () => {
+    if (!selectedBatch) return;
+    setOrdersModal({ isOpen: true, loading: true, orders: [] });
+    try {
+      const fullBatch = await getProductionBatch(selectedBatch.id);
+      setOrdersModal({ isOpen: true, loading: false, orders: fullBatch.orders || [] });
+    } catch (e) {
+      toast.error('Failed to load orders for this batch');
+      setOrdersModal({ isOpen: false, loading: false, orders: [] });
+    }
   };
 
   const executeSend = async () => {
@@ -211,7 +224,7 @@ const ProductionPage = () => {
                           <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded", b.status === 'SENT' ? 'bg-[#f0f8f1] text-[#2d6a4f]' : 'bg-amber-50 text-amber-700')}>
                             {b.status}
                           </span>
-                          <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{b.orderCount} items</span>
+                          <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{b.orderCount} order{b.orderCount !== 1 ? 's' : ''}</span>
                         </div>
                       </div>
                     </button>
@@ -230,9 +243,14 @@ const ProductionPage = () => {
                 <Send className="h-4 w-4 mr-2 text-slate-400" /> Review & Dispatch
               </h3>
               {selectedBatch && (
-                <span className="text-xs font-bold text-slate-500 bg-slate-200 px-2 py-0.5 rounded">
-                  Batch #{selectedBatch.id}
-                </span>
+                <div className="flex items-center gap-3">
+                  <button onClick={handleViewOrders} className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center bg-blue-50 px-2 py-1 rounded transition-colors">
+                    <List className="w-3 h-3 mr-1" /> View Orders
+                  </button>
+                  <span className="text-xs font-bold text-slate-500 bg-slate-200 px-2 py-0.5 rounded">
+                    Batch #{selectedBatch.id}
+                  </span>
+                </div>
               )}
             </div>
             
@@ -361,6 +379,42 @@ const ProductionPage = () => {
         onConfirm={executeSend}
         onCancel={() => setConfirmModal({ isOpen: false })}
       />
+
+      {/* Orders List Modal */}
+      {ordersModal.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100">
+              <h3 className="font-bold text-slate-800">Batch #{selectedBatch?.id} Orders</h3>
+              <button onClick={() => setOrdersModal({ isOpen: false, loading: false, orders: [] })} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto flex-1 bg-slate-50 custom-scrollbar">
+              {ordersModal.loading ? (
+                <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-blue-600" /></div>
+              ) : ordersModal.orders.length === 0 ? (
+                <div className="text-center py-12 text-slate-500 font-medium text-sm">No orders found in this batch.</div>
+              ) : (
+                <div className="space-y-3">
+                  {ordersModal.orders.map(o => (
+                    <div key={o.id} className="bg-white p-4 rounded-lg border border-slate-200 flex flex-col sm:flex-row sm:justify-between sm:items-center shadow-sm gap-2">
+                      <div>
+                        <p className="font-bold text-sm text-slate-800">Order #{o.id}</p>
+                        <p className="text-xs font-medium text-slate-500 mt-1">{o.customerName || 'Unknown Customer'} <span className="opacity-50">|</span> {o.customerEmail}</p>
+                      </div>
+                      <div className="text-left sm:text-right flex flex-row sm:flex-col items-center sm:items-end gap-3 sm:gap-1">
+                        <p className="text-xs font-bold text-slate-700">{o.totalAmount} DKK</p>
+                        <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded font-bold tracking-wider">{o.status}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
