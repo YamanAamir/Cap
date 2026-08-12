@@ -40,7 +40,8 @@ const ProductionOrderDetailPage = () => {
       
       const pTerms = settings.find(s => s.key === 'PRODUCTION_DISPLAY_TERMS');
       if (pTerms && pTerms.value) {
-        setProductionFilters(pTerms.value);
+        const val = typeof pTerms.value === 'string' ? JSON.parse(pTerms.value) : pTerms.value;
+        setProductionFilters(val);
       }
     } catch (err) {
       toast.error('Failed to load order details');

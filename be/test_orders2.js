@@ -1,7 +1,7 @@
 ﻿const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 async function getOptions() {
-  const orders = await prisma.order.findMany();
+  const orders = await prisma.order.findMany({ orderBy: { createdAt: 'desc' }, take: 20 });
   for (const order of orders) {
       if (order.selectedOptions && Object.keys(order.selectedOptions).length > 2) {
           console.log(JSON.stringify(order.selectedOptions, null, 2));
