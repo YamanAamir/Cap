@@ -39,7 +39,7 @@ const ProductionOrderDetailPage = () => {
       setOrder(data);
       
       const pTerms = settings.find(s => s.key === 'PRODUCTION_DISPLAY_TERMS');
-      if (pTerms && pTerms.value && Array.isArray(pTerms.value)) {
+      if (pTerms && pTerms.value) {
         setProductionFilters(pTerms.value);
       }
     } catch (err) {
