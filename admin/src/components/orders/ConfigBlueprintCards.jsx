@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Settings2, Tag, Check, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -12,6 +12,8 @@ const ConfigBlueprintCards = ({ selectedOptions, productionFilters }) => {
     );
   }
 
+  const isOldFormat = Array.isArray(productionFilters);
+
   // Helper to render values
   const renderValue = (value) => {
     if (typeof value === 'string' || typeof value === 'number') {
@@ -19,7 +21,6 @@ const ConfigBlueprintCards = ({ selectedOptions, productionFilters }) => {
     }
     
     if (typeof value === 'object' && value !== null) {
-      // It might be an object like { name, value, color, img }
       return (
         <div className="flex items-center gap-2 mt-1">
           {value.color && (
@@ -47,15 +48,21 @@ const ConfigBlueprintCards = ({ selectedOptions, productionFilters }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {Object.entries(selectedOptions).map(([category, details], idx) => {
-        // If production filters are provided, check if the category itself is translated
         let displayCategory = category;
         let isCategoryVisible = true;
         
-        if (productionFilters && Array.isArray(productionFilters) && productionFilters.length > 0) {
-          const catFilter = productionFilters.find(f => f.danish.toLowerCase() === category.toLowerCase());
-          if (catFilter) {
-            if (!catFilter.visible) isCategoryVisible = false;
-            if (catFilter.english) displayCategory = catFilter.english;
+        if (productionFilters) {
+          if (!isOldFormat && Object.keys(productionFilters).length > 0) {
+            const catMatch = Object.keys(productionFilters).find(k => k.toLowerCase() === category.toLowerCase());
+            if (catMatch && productionFilters[catMatch].visible === false) {
+              isCategoryVisible = false;
+            }
+          } else if (isOldFormat && productionFilters.length > 0) {
+            const catFilter = productionFilters.find(f => f.danish.toLowerCase() === category.toLowerCase());
+            if (catFilter) {
+              if (!catFilter.visible) isCategoryVisible = false;
+              if (catFilter.english) displayCategory = catFilter.english;
+            }
           }
         }
         
@@ -78,22 +85,35 @@ const ConfigBlueprintCards = ({ selectedOptions, productionFilters }) => {
                   let displayKey = key;
                   let displayValue = value;
                   
-                  // Apply production filters if they exist
-                  if (productionFilters && Array.isArray(productionFilters) && productionFilters.length > 0) {
-                    const filter = productionFilters.find(f => f.danish.toLowerCase() === key.toLowerCase());
-                    if (filter) {
-                      if (!filter.visible) return null; // Hide it completely
-                      if (filter.english) displayKey = filter.english; // Translate it
-                    } else {
-                      // If a filter exists but this key is NOT in it, we hide it by default for production portal
-                      return null;
-                    }
-                    
-                    // Also translate the VALUE if it's a string and a translation exists
-                    if (typeof displayValue === 'string') {
-                      const valFilter = productionFilters.find(f => f.danish.toLowerCase() === displayValue.toLowerCase());
-                      if (valFilter && valFilter.english) {
-                        displayValue = valFilter.english;
+                  if (productionFilters) {
+                    if (!isOldFormat && Object.keys(productionFilters).length > 0) {
+                      const catMatch = Object.keys(productionFilters).find(k => k.toLowerCase() === category.toLowerCase());
+                      if (catMatch && productionFilters[catMatch].fields) {
+                        const fieldMatch = Object.keys(productionFilters[catMatch].fields).find(k => k.toLowerCase() === key.toLowerCase());
+                        if (fieldMatch) {
+                          if (productionFilters[catMatch].fields[fieldMatch] === false) return null;
+                        } else {
+                          // In the new format, if it's not defined in fields, we hide it by default to match old behavior
+                          return null;
+                        }
+                      } else {
+                         // Category match not found in settings, hide fields by default
+                         return null;
+                      }
+                    } else if (isOldFormat && productionFilters.length > 0) {
+                      const filter = productionFilters.find(f => f.danish.toLowerCase() === key.toLowerCase());
+                      if (filter) {
+                        if (!filter.visible) return null;
+                        if (filter.english) displayKey = filter.english;
+                      } else {
+                        return null;
+                      }
+                      
+                      if (typeof displayValue === 'string') {
+                        const valFilter = productionFilters.find(f => f.danish.toLowerCase() === displayValue.toLowerCase());
+                        if (valFilter && valFilter.english) {
+                          displayValue = valFilter.english;
+                        }
                       }
                     }
                   }
