@@ -397,18 +397,21 @@ const ProductionPage = () => {
                 <div className="text-center py-12 text-slate-500 font-medium text-sm">No orders found in this batch.</div>
               ) : (
                 <div className="space-y-3">
-                  {ordersModal.orders.map(o => (
-                    <div key={o.id} className="bg-white p-4 rounded-lg border border-slate-200 flex flex-col sm:flex-row sm:justify-between sm:items-center shadow-sm gap-2">
-                      <div>
-                        <p className="font-bold text-sm text-slate-800">Order #{o.id}</p>
-                        <p className="text-xs font-medium text-slate-500 mt-1">{o.customerName || 'Unknown Customer'} <span className="opacity-50">|</span> {o.customerEmail}</p>
+                  {ordersModal.orders.map(o => {
+                    const custName = o.customer ? `${o.customer.firstName || ''} ${o.customer.lastName || ''}`.trim() : null;
+                    const finalName = custName || o.customerName || 'Unknown Customer';
+                    return (
+                      <div key={o.id} className="bg-white p-4 rounded-lg border border-slate-200 flex flex-col sm:flex-row sm:justify-between sm:items-center shadow-sm gap-2">
+                        <div>
+                          <p className="font-bold text-sm text-slate-800">Order #{o.orderNumber || o.id}</p>
+                          <p className="text-xs font-medium text-slate-500 mt-1">{finalName} <span className="opacity-50">|</span> {o.customerEmail}</p>
+                        </div>
+                        <div className="text-left sm:text-right flex flex-row sm:flex-col items-center sm:items-end gap-3 sm:gap-1">
+                          <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded font-bold tracking-wider">{o.status}</span>
+                        </div>
                       </div>
-                      <div className="text-left sm:text-right flex flex-row sm:flex-col items-center sm:items-end gap-3 sm:gap-1">
-                        <p className="text-xs font-bold text-slate-700">{o.totalAmount} DKK</p>
-                        <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded font-bold tracking-wider">{o.status}</span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

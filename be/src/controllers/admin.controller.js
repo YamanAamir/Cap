@@ -212,7 +212,7 @@ exports.getProductionBatch = async (req, res) => {
   try {
     const batch = await prisma.productionBatch.findUnique({
       where: { id: parseInt(req.params.id) },
-      include: { orders: true, logs: { include: { adminUser: { select: { name: true } } } } },
+      include: { orders: { include: { customer: true } }, logs: { include: { adminUser: { select: { name: true } } } } },
     });
     if (!batch) return res.status(404).json({ message: 'Batch not found' });
     res.json(batch);
