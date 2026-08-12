@@ -23,6 +23,9 @@ const ProductionFactoryPage = () => {
   const [statuses, setStatuses] = useState([]);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, orderId: null, statusId: null });
   const [updatingId, setUpdatingId] = useState(null);
+  const [translateLoading, setTranslateLoading] = useState(() => {
+    return !(document.documentElement.classList.contains('translated-ltr') || document.documentElement.classList.contains('translated-rtl'));
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -63,7 +66,26 @@ const ProductionFactoryPage = () => {
         }
       };
     }
-  }, []);
+
+    if (translateLoading) {
+      const checkTranslate = setInterval(() => {
+        if (document.documentElement.classList.contains('translated-ltr') || document.documentElement.classList.contains('translated-rtl')) {
+          clearInterval(checkTranslate);
+          setTranslateLoading(false);
+        }
+      }, 100);
+
+      const timeout = setTimeout(() => {
+        clearInterval(checkTranslate);
+        setTranslateLoading(false);
+      }, 2000);
+
+      return () => {
+        clearInterval(checkTranslate);
+        clearTimeout(timeout);
+      };
+    }
+  }, [translateLoading]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebounceSearch(search), 500);
@@ -116,8 +138,12 @@ const ProductionFactoryPage = () => {
   }
 
   return (
-    <div className="animate-in fade-in duration-500 max-w-[1400px] mx-auto pb-12">
-      
+    <div className={`animate-in fade-in duration-500 max-w-[1400px] mx-auto pb-12 transition-opacity ${translateLoading ? 'opacity-0' : 'opacity-100'}`}>
+      {translateLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80">
+          <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+        </div>
+      )}
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <div>
            <h2 className="text-xl font-bold text-slate-800">Production Queue</h2>
