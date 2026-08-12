@@ -3,7 +3,7 @@ import {
   getProductionBatches, generateProductionBatch, sendProductionBatch,
   getDispatchLogs, getSettings, updateSetting, getProductionBatch, getEmailTemplates
 } from '../services/admin.service';
-import { Loader2, Send, FileSpreadsheet, Archive, CheckCircle2, Factory, Mail, Layers, Settings, X, List } from 'lucide-react';
+import { Loader2, Send, FileSpreadsheet, Archive, CheckCircle2, Factory, Mail, Layers, Settings, X, List, Download } from 'lucide-react';
 import ConfirmModal from '../components/common/ConfirmModal';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -67,9 +67,11 @@ const ProductionPage = () => {
     setSelectedBatch(batch);
     setEmailForm({
       recipientEmail: batch.recipientEmail || manufacturerEmail || '',
-      emailSubject: batch.emailSubject || '',
-      emailBody: batch.emailBody || '',
+      emailSubject: '',
+      emailBody: '',
     });
+    setSendExcel(true);
+    setSendZip(true);
   };
 
   const handleSendClick = () => {
@@ -296,7 +298,12 @@ const ProductionPage = () => {
                               <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">Order Data</p>
                             </div>
                           </div>
-                          <input type="checkbox" checked={sendExcel} onChange={() => {}} className="h-4 w-4 rounded border-slate-300 text-green-600" />
+                          <div className="flex items-center gap-3">
+                            <a href={`${getBaseUrl()}${selectedBatch.excelFilePath}`} target="_blank" rel="noreferrer" download onClick={e => e.stopPropagation()} className="text-slate-400 hover:text-green-600 transition-colors p-1" title="Download Excel">
+                              <Download className="h-4 w-4" />
+                            </a>
+                            <input type="checkbox" checked={sendExcel} onChange={() => {}} className="h-4 w-4 rounded border-slate-300 text-green-600" />
+                          </div>
                         </div>
                       ) : (
                         <div className="flex items-center p-3 bg-slate-50 border border-slate-200 rounded opacity-60">
@@ -314,7 +321,12 @@ const ProductionPage = () => {
                               <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">4-View Designs</p>
                             </div>
                           </div>
-                          <input type="checkbox" checked={sendZip} onChange={() => {}} className="h-4 w-4 rounded border-slate-300 text-blue-600" />
+                          <div className="flex items-center gap-3">
+                            <a href={`${getBaseUrl()}${selectedBatch.zipFilePath}`} target="_blank" rel="noreferrer" download onClick={e => e.stopPropagation()} className="text-slate-400 hover:text-blue-600 transition-colors p-1" title="Download ZIP">
+                              <Download className="h-4 w-4" />
+                            </a>
+                            <input type="checkbox" checked={sendZip} onChange={() => {}} className="h-4 w-4 rounded border-slate-300 text-blue-600" />
+                          </div>
                         </div>
                       ) : (
                          <div className="flex items-center p-3 bg-slate-50 border border-slate-200 rounded opacity-60">
@@ -375,18 +387,29 @@ const ProductionPage = () => {
                   {/* Action Bar */}
                   <div>
                     {selectedBatch.status !== 'SENT' ? (
-                      <button 
-                        onClick={handleSendClick} 
-                        disabled={sending || !emailForm.recipientEmail} 
-                        className="w-full bg-[#1e3a8a] text-white font-bold py-3.5 rounded shadow-sm hover:bg-blue-800 transition-colors flex justify-center items-center text-sm"
-                      >
-                        {sending ? (
-                          <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                        ) : (
-                          <Send className="h-5 w-5 mr-2" />
+                      <div className="space-y-2">
+                        <button 
+                          onClick={handleSendClick} 
+                          disabled={sending || !emailForm.recipientEmail || !emailForm.emailSubject || !emailForm.emailBody} 
+                          className={cn("w-full text-white font-bold py-3.5 rounded shadow-sm transition-colors flex justify-center items-center text-sm",
+                            (sending || !emailForm.recipientEmail || !emailForm.emailSubject || !emailForm.emailBody) 
+                              ? "bg-slate-300 cursor-not-allowed text-slate-500" 
+                              : "bg-[#1e3a8a] hover:bg-blue-800"
+                          )}
+                        >
+                          {sending ? (
+                            <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                          ) : (
+                            <Send className="h-5 w-5 mr-2" />
+                          )}
+                          {sending ? 'DISPATCHING...' : 'SEND TO MANUFACTURER'}
+                        </button>
+                        {(!emailForm.emailSubject || !emailForm.emailBody) && (
+                          <p className="text-center text-[10px] text-red-500 font-medium bg-red-50 py-1 rounded">
+                            You must load an Email Template or enter a Subject and Body to dispatch.
+                          </p>
                         )}
-                        {sending ? 'DISPATCHING...' : 'SEND TO MANUFACTURER'}
-                      </button>
+                      </div>
                     ) : (
                       <div className="flex items-center gap-2 text-[#2d6a4f] bg-[#f0f8f1] border border-green-200 rounded p-4 justify-center font-bold text-sm">
                         <CheckCircle2 className="h-5 w-5" /> BATCH SUCCESSFULLY DISPATCHED
