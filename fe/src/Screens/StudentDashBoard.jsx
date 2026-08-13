@@ -426,7 +426,7 @@ const StudentDashboard = () => {
     if (isIframeLoaded && isAppReady && program) {
       sendProgramToIframe();
     }
-  }, [program, isIframeLoaded, isAppReady]);
+  }, [program, isIframeLoaded, isAppReady, packageName]);
 
   const sendProgramToIframe = () => {
     // Get iframe by ID
@@ -436,7 +436,14 @@ const StudentDashboard = () => {
       const message = "UDDANNELSESBÅNDMateriale:" + program.toLowerCase() + ":bomuld";
       console.log("Sending message to iframe:", message);
       iframe.contentWindow.postMessage(message, "*");
-      iframe2.contentWindow.postMessage(message, "*");
+      if (iframe2) iframe2.contentWindow.postMessage(message, "*");
+
+      if (packageName === "standard") {
+        const penMsg = "Accessories Huekuglepen:no";
+        console.log("Sending pen message to iframe:", penMsg);
+        iframe.contentWindow.postMessage(penMsg, "*");
+        if (iframe2) iframe2.contentWindow.postMessage(penMsg, "*");
+      }
     } else {
       console.log("Iframe not ready or program not available");
     }
