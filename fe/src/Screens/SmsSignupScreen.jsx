@@ -82,7 +82,7 @@ const SmsSignupScreen = () => {
             </div>
           )}
           <a
-            href="/"
+            href="https://studentlife.dk"
             className="mt-8 flex items-center justify-center gap-2 w-full py-4 bg-[#1e3a8a] text-white font-bold rounded shadow-sm hover:bg-blue-800 transition-colors"
           >
             DESIGN DIN STUDENTERHUE nu <ArrowRight className="h-4 w-4" />
