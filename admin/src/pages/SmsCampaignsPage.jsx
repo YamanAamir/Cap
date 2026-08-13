@@ -31,6 +31,7 @@ const SmsCampaignsPage = () => {
   const [newDiscountEnabled, setNewDiscountEnabled] = useState(false);
   const [newDiscountType, setNewDiscountType] = useState('PERCENTAGE');
   const [newDiscountValue, setNewDiscountValue] = useState(10);
+  const [newDiscountExpiryDays, setNewDiscountExpiryDays] = useState(20);
 
   const load = async () => {
     setLoading(true);
@@ -76,7 +77,8 @@ const SmsCampaignsPage = () => {
         name: newName.trim(), 
         steps: DEFAULT_STEPS,
         discountType: newDiscountEnabled ? newDiscountType : undefined,
-        discountValue: newDiscountEnabled ? parseFloat(newDiscountValue) : undefined
+        discountValue: newDiscountEnabled ? parseFloat(newDiscountValue) : undefined,
+        discountExpiryDays: newDiscountEnabled ? parseInt(newDiscountExpiryDays) : undefined
       });
       setNewName('');
       setNewDiscountEnabled(false);
@@ -114,7 +116,12 @@ const SmsCampaignsPage = () => {
     const original = campaigns.find(c => c.id === campaignId);
     const draft = draftCampaigns[campaignId];
     if (!original || !draft) return false;
-    return JSON.stringify(original.steps) !== JSON.stringify(draft.steps) || original.slug !== draft.slug;
+    return JSON.stringify(original.steps) !== JSON.stringify(draft.steps) || 
+           original.slug !== draft.slug ||
+           original.name !== draft.name ||
+           original.discountType !== draft.discountType ||
+           original.discountValue !== draft.discountValue ||
+           original.discountExpiryDays !== draft.discountExpiryDays;
   };
 
   const handleSaveClick = (campaignId) => {
@@ -131,7 +138,8 @@ const SmsCampaignsPage = () => {
         steps: draft.steps, 
         slug: draft.slug,
         discountType: draft.discountType,
-        discountValue: draft.discountValue 
+        discountValue: draft.discountValue,
+        discountExpiryDays: draft.discountExpiryDays
       }, applyToExisting);
       toast.success('Campaign updated successfully');
       setSaveModal({ isOpen: false, campaignId: null, applyToExisting: false, isSaving: false });
@@ -246,6 +254,17 @@ const SmsCampaignsPage = () => {
                       onChange={(e) => setNewDiscountValue(e.target.value)}
                       className="w-full px-3 py-2 border border-slate-200 rounded text-sm bg-white focus:outline-none focus:border-blue-500"
                       min="0"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Expiry (Days)</label>
+                    <input 
+                      type="number"
+                      value={newDiscountExpiryDays}
+                      onChange={(e) => setNewDiscountExpiryDays(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded text-sm bg-white focus:outline-none focus:border-blue-500"
+                      min="0"
+                      placeholder="e.g. 30"
                     />
                   </div>
                 </div>
@@ -372,6 +391,17 @@ const SmsCampaignsPage = () => {
                         type="number"
                         value={draftCampaigns[campaign.id].discountValue || ''}
                         onChange={(e) => setDraftCampaigns(prev => ({ ...prev, [campaign.id]: { ...prev[campaign.id], discountValue: e.target.value ? parseFloat(e.target.value) : null } }))}
+                        className="w-full px-3 py-2 border border-slate-200 rounded text-sm bg-white focus:outline-none focus:border-blue-500 disabled:bg-slate-100"
+                        min="0"
+                        disabled={!draftCampaigns[campaign.id].discountType}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Expiry (Days)</label>
+                      <input 
+                        type="number"
+                        value={draftCampaigns[campaign.id].discountExpiryDays || ''}
+                        onChange={(e) => setDraftCampaigns(prev => ({ ...prev, [campaign.id]: { ...prev[campaign.id], discountExpiryDays: e.target.value ? parseInt(e.target.value) : null } }))}
                         className="w-full px-3 py-2 border border-slate-200 rounded text-sm bg-white focus:outline-none focus:border-blue-500 disabled:bg-slate-100"
                         min="0"
                         disabled={!draftCampaigns[campaign.id].discountType}

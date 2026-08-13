@@ -201,13 +201,23 @@ const registerSmsSignup = async ({ name, phone, email, school, gdprConsent, camp
 
   let discountCode = null;
   if (campaign && campaign.discountValue && campaign.discountValue > 0 && campaign.discountType) {
+    let expiryDays = 20; // default to 20 days
+    let actualType = campaign.discountType;
+    let isYears = false;
+    
+    if (actualType.includes(':')) {
+      const parts = actualType.split(':');
+      actualType = parts[0];
+      expiryDays = parseInt(parts[1]) || 20;
+    }
+
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 20);
+    expiresAt.setDate(expiresAt.getDate() + expiryDays);
 
     discountCode = await prisma.discountCode.create({
       data: {
         code: localPhone,
-        type: campaign.discountType,
+        type: actualType,
         value: campaign.discountValue,
         expiresAt,
         phoneNumber: phone,

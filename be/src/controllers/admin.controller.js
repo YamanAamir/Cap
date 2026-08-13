@@ -260,7 +260,17 @@ exports.getSmsCampaigns = async (req, res) => {
     const campaigns = await prisma.smsCampaign.findMany({
       include: { steps: { orderBy: { sortOrder: 'asc' } }, _count: { select: { enrollments: true } } },
     });
-    res.json(campaigns);
+    const mapped = campaigns.map(c => {
+      let expiry = 20;
+      let type = c.discountType;
+      if (type && type.includes(':')) {
+        const parts = type.split(':');
+        type = parts[0];
+        expiry = parseInt(parts[1]) || 20;
+      }
+      return { ...c, discountType: type, discountExpiryDays: expiry };
+    });
+    res.json(mapped);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -268,14 +278,19 @@ exports.getSmsCampaigns = async (req, res) => {
 
 exports.createSmsCampaign = async (req, res) => {
   try {
-    const { name, steps = [], discountType, discountValue } = req.body;
+    const { name, steps = [], discountType, discountValue, discountExpiryDays } = req.body;
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') + '-' + Math.floor(Math.random() * 1000);
+
+    let finalType = discountType;
+    if (discountType && discountExpiryDays) {
+      finalType = `${discountType}:${discountExpiryDays}`;
+    }
 
     const campaign = await prisma.smsCampaign.create({
       data: {
         name,
         slug,
-        discountType,
+        discountType: finalType,
         discountValue: discountValue !== undefined ? parseFloat(discountValue) : null,
         steps: {
           create: steps.map((s, i) => ({
@@ -310,17 +325,25 @@ exports.getSmsCampaignBySlug = async (req, res) => {
 
 exports.updateSmsCampaign = async (req, res) => {
   try {
-    const { name, slug, isActive, steps, applyToExisting, discountType, discountValue } = req.body;
+    const { name, slug, isActive, steps, applyToExisting, discountType, discountValue, discountExpiryDays } = req.body;
     const id = parseInt(req.params.id);
 
-    if (name !== undefined || isActive !== undefined || slug !== undefined || discountType !== undefined || discountValue !== undefined) {
+    if (name !== undefined || isActive !== undefined || slug !== undefined || discountType !== undefined || discountValue !== undefined || discountExpiryDays !== undefined) {
+      
+      let finalType = discountType;
+      if (discountType && discountExpiryDays) {
+        finalType = `${discountType}:${discountExpiryDays}`;
+      } else if (discountType) {
+        finalType = `${discountType}:20`; // default fallback if updating just type
+      }
+
       await prisma.smsCampaign.update({
         where: { id },
         data: { 
           ...(name !== undefined && { name }), 
           ...(isActive !== undefined && { isActive }),
           ...(slug !== undefined && { slug }),
-          ...(discountType !== undefined && { discountType }),
+          ...(discountType !== undefined && { discountType: finalType }),
           ...(discountValue !== undefined && { discountValue: discountValue !== null ? parseFloat(discountValue) : null })
         }
       });
