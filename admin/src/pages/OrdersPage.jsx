@@ -16,6 +16,7 @@ const OrdersPage = () => {
   const [order, setOrder] = useState('desc');
   const [debounceSearch, setDebounceSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [installmentFilter, setInstallmentFilter] = useState('all');
   const [statuses, setStatuses] = useState([]);
   const navigate = useNavigate();
 
@@ -44,6 +45,7 @@ const OrdersPage = () => {
         order,
         limit: 20,
         statusId: statusFilter,
+        installment: installmentFilter,
       });
       setData(response);
     } catch (error) {
@@ -56,7 +58,7 @@ const OrdersPage = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [page, debounceSearch, sortBy, order, statusFilter]);
+  }, [page, debounceSearch, sortBy, order, statusFilter, installmentFilter]);
 
   const handleSort = (field) => {
     if (sortBy === field) {
@@ -142,6 +144,19 @@ const OrdersPage = () => {
                 ))}
               </select>
             </div>
+            
+            <div className="relative w-full sm:w-auto">
+              <Filter className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
+              <select
+                value={installmentFilter}
+                onChange={(e) => { setInstallmentFilter(e.target.value); setPage(1); }}
+                className="w-full sm:w-48 pl-9 pr-4 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 bg-white"
+              >
+                <option value="all">All Payment Types</option>
+                <option value="yes">Installments</option>
+                <option value="no">Full Payment</option>
+              </select>
+            </div>
             <button 
               onClick={fetchOrders}
               className={cn("flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 h-9 w-9 rounded border border-slate-200 transition-colors", loading && "opacity-50")}
@@ -182,7 +197,14 @@ const OrdersPage = () => {
               data.orders.map((order) => (
                 <tr key={order.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-4 font-bold text-slate-700">
-                    {order.orderNumber}
+                    <div className="flex items-center gap-2">
+                      <span>{order.orderNumber}</span>
+                      {order.installmentPlanId && (
+                        <span className="bg-emerald-100 text-emerald-700 text-[9px] px-2 py-0.5 rounded uppercase tracking-wider font-bold">
+                          Installment
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-slate-600">
                     {new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

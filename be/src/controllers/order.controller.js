@@ -11,6 +11,7 @@ const getOrders = async (req, res) => {
       order = 'desc',
       status = 'all',
       statusId = 'all',
+      installment = 'all',
       isVisibleToProduction = null,
     } = req.query;
 
@@ -32,6 +33,11 @@ const getOrders = async (req, res) => {
     }
     if (isVisibleToProduction === 'true') {
       where.orderStatus = { isVisibleToProduction: true };
+    }
+    if (installment === 'yes') {
+      where.installmentPlanId = { not: null };
+    } else if (installment === 'no') {
+      where.installmentPlanId = null;
     }
 
     const orderBy = {};
