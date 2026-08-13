@@ -567,7 +567,7 @@ const InstallmentPlansPage = () => {
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">
                         Payment Schedule Rules
                       </span>
-                      <div className="space-y-1.5 max-w-2xl">
+                      <div className="space-y-1.5">
                         <div className="flex items-center justify-between bg-white border border-slate-200 rounded px-4 py-2 text-xs">
                           <div>
                             <span className="font-bold text-slate-800">1. Depositum (at checkout)</span>
@@ -594,7 +594,7 @@ const InstallmentPlansPage = () => {
                       </div>
 
                       {plan.notes && (
-                        <div className="flex items-start gap-2 text-xs text-slate-600 bg-amber-50 border border-amber-200 rounded p-2.5 max-w-2xl">
+                        <div className="flex items-start gap-2 text-xs text-slate-600 bg-amber-50 border border-amber-200 rounded p-2.5">
                           <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
                           <span>{plan.notes}</span>
                         </div>
