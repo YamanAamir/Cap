@@ -199,7 +199,7 @@ const OrdersPage = () => {
                   <td className="px-6 py-4 font-bold text-slate-700">
                     <div className="flex items-center gap-2">
                       <span>{order.orderNumber}</span>
-                      {order.installmentPlanId && (
+                      {order.installmentDetails && (
                         <span className="bg-emerald-100 text-emerald-700 text-[9px] px-2 py-0.5 rounded uppercase tracking-wider font-bold">
                           Installment
                         </span>

@@ -35,9 +35,9 @@ const getOrders = async (req, res) => {
       where.orderStatus = { isVisibleToProduction: true };
     }
     if (installment === 'yes') {
-      where.installmentPlanId = { not: null };
+      where.installmentDetails = { not: null };
     } else if (installment === 'no') {
-      where.installmentPlanId = null;
+      where.installmentDetails = null;
     }
 
     const orderBy = {};
