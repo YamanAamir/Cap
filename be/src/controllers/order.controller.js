@@ -1,4 +1,5 @@
 const prisma = require('../utils/prisma');
+const { Prisma } = require('@prisma/client');
 const { sendCustomerStatusEmail } = require('../services/core.service');
 
 const getOrders = async (req, res) => {
@@ -35,9 +36,9 @@ const getOrders = async (req, res) => {
       where.orderStatus = { isVisibleToProduction: true };
     }
     if (installment === 'yes') {
-      where.installmentDetails = { not: null };
+      where.installmentDetails = { not: Prisma.AnyNull };
     } else if (installment === 'no') {
-      where.installmentDetails = null;
+      where.installmentDetails = { equals: Prisma.AnyNull };
     }
 
     const orderBy = {};
