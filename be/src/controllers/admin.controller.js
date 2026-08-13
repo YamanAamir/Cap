@@ -95,7 +95,7 @@ exports.getOrderStatuses = async (req, res) => {
 
 exports.createOrderStatus = async (req, res) => {
   try {
-    const { name, sortOrder, isInternal, isVisibleToProduction, triggersProduction, color, customerEmailTemplateId } = req.body;
+    const { name, sortOrder, isInternal, isVisibleToProduction, triggersProduction, color, customerEmailTemplateId, isInstallmentTrigger, installmentTriggerIndex } = req.body;
     const slug = slugify(name);
     const status = await prisma.orderStatus.create({
       data: { 
@@ -106,7 +106,9 @@ exports.createOrderStatus = async (req, res) => {
         isVisibleToProduction: isVisibleToProduction !== undefined ? !!isVisibleToProduction : true,
         triggersProduction: !!triggersProduction, 
         color: color || '#6366f1',
-        customerEmailTemplateId: customerEmailTemplateId ? parseInt(customerEmailTemplateId) : null
+        customerEmailTemplateId: customerEmailTemplateId ? parseInt(customerEmailTemplateId) : null,
+        isInstallmentTrigger: !!isInstallmentTrigger,
+        installmentTriggerIndex: isInstallmentTrigger && installmentTriggerIndex !== undefined && installmentTriggerIndex !== '' ? parseInt(installmentTriggerIndex) : null,
       },
       include: { emailTemplate: true }
     });
@@ -118,10 +120,14 @@ exports.createOrderStatus = async (req, res) => {
 
 exports.updateOrderStatus = async (req, res) => {
   try {
-    const { name, sortOrder, isInternal, isVisibleToProduction, triggersProduction, isActive, color, customerEmailTemplateId } = req.body;
+    const { name, sortOrder, isInternal, isVisibleToProduction, triggersProduction, isActive, color, customerEmailTemplateId, isInstallmentTrigger, installmentTriggerIndex } = req.body;
     const data = { sortOrder, isInternal, triggersProduction, isActive, color };
     if (isVisibleToProduction !== undefined) data.isVisibleToProduction = !!isVisibleToProduction;
     if (customerEmailTemplateId !== undefined) data.customerEmailTemplateId = customerEmailTemplateId ? parseInt(customerEmailTemplateId) : null;
+    if (isInstallmentTrigger !== undefined) {
+      data.isInstallmentTrigger = !!isInstallmentTrigger;
+      data.installmentTriggerIndex = data.isInstallmentTrigger && installmentTriggerIndex !== undefined && installmentTriggerIndex !== '' ? parseInt(installmentTriggerIndex) : null;
+    }
     if (name) {
       data.name = name;
       data.slug = slugify(name);

@@ -10,6 +10,7 @@ const OrderStatusesPage = () => {
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ 
     name: '', sortOrder: 0, isInternal: false, isVisibleToProduction: true, triggersProduction: false, color: '#6366f1', customerEmailTemplateId: '', isInstallmentTrigger: false, installmentTriggerIndex: '' 
   });
@@ -29,15 +30,46 @@ const OrderStatusesPage = () => {
 
   useEffect(() => { load(); }, []);
 
-  const handleCreate = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    await createOrderStatus({
+    const payload = {
       ...form,
       installmentTriggerIndex: form.isInstallmentTrigger && form.installmentTriggerIndex !== '' ? parseInt(form.installmentTriggerIndex) : null
-    });
+    };
+    
+    if (editingId) {
+      await updateOrderStatusDef(editingId, payload);
+    } else {
+      await createOrderStatus(payload);
+    }
+    
     setForm({ name: '', sortOrder: statuses.length + 1, isInternal: false, isVisibleToProduction: true, triggersProduction: false, color: '#6366f1', customerEmailTemplateId: '', isInstallmentTrigger: false, installmentTriggerIndex: '' });
+    setEditingId(null);
     setShowForm(false);
     load();
+  };
+
+  const handleEditClick = (status) => {
+    setForm({
+      name: status.name || '',
+      sortOrder: status.sortOrder || 0,
+      isInternal: !!status.isInternal,
+      isVisibleToProduction: !!status.isVisibleToProduction,
+      triggersProduction: !!status.triggersProduction,
+      color: status.color || '#6366f1',
+      customerEmailTemplateId: status.customerEmailTemplateId || '',
+      isInstallmentTrigger: !!status.isInstallmentTrigger,
+      installmentTriggerIndex: status.installmentTriggerIndex !== null && status.installmentTriggerIndex !== undefined ? status.installmentTriggerIndex.toString() : ''
+    });
+    setEditingId(status.id);
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelForm = () => {
+    setForm({ name: '', sortOrder: statuses.length + 1, isInternal: false, isVisibleToProduction: true, triggersProduction: false, color: '#6366f1', customerEmailTemplateId: '', isInstallmentTrigger: false, installmentTriggerIndex: '' });
+    setEditingId(null);
+    setShowForm(false);
   };
 
   const toggleField = async (id, field, current) => {
@@ -113,7 +145,7 @@ const OrderStatusesPage = () => {
           <p className="text-sm text-slate-500">Configure workflow steps, emails, and production visibility.</p>
         </div>
         <button 
-          onClick={() => setShowForm(!showForm)} 
+          onClick={showForm ? handleCancelForm : () => setShowForm(true)} 
           className={cn(
             "flex items-center gap-2 text-xs font-bold px-4 py-2.5 rounded shadow-sm transition-colors",
             showForm ? "bg-slate-200 text-slate-700 hover:bg-slate-300" : "bg-[#7cb342] text-white hover:bg-[#689f38]"
@@ -126,8 +158,8 @@ const OrderStatusesPage = () => {
 
       {showForm && (
         <div className="mb-6 p-6 bg-white border border-slate-200 rounded animate-in slide-in-from-top-2 fade-in duration-300">
-          <h3 className="text-sm font-bold text-slate-700 mb-4">Create Custom Status</h3>
-          <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <h3 className="text-sm font-bold text-slate-700 mb-4">{editingId ? 'Edit Status' : 'Create Custom Status'}</h3>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Status Name</label>
               <input 
@@ -226,7 +258,7 @@ const OrderStatusesPage = () => {
             </div>
             
             <button type="submit" className="md:col-span-2 mt-2 bg-[#1e3a8a] text-white text-xs font-bold px-6 py-3 rounded shadow-sm hover:bg-blue-800 transition-colors">
-              SAVE NEW STATUS
+              {editingId ? 'UPDATE STATUS' : 'SAVE NEW STATUS'}
             </button>
           </form>
         </div>
@@ -331,7 +363,10 @@ const OrderStatusesPage = () => {
                               <span className="hidden lg:inline">Triggers Prod</span>
                             </button>
                             
-                            <button onClick={() => handleDeleteClick(s.id)} className="p-2 ml-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
+                            <button onClick={() => handleEditClick(s)} className="p-2 ml-1 rounded hover:bg-blue-50 text-slate-400 hover:text-blue-500 transition-colors" title="Edit Status">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                            </button>
+                            <button onClick={() => handleDeleteClick(s.id)} className="p-2 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors" title="Delete Status">
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </div>
