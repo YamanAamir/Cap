@@ -110,10 +110,14 @@ const ProductionPage = () => {
     const templateId = e.target.value;
     const template = templates.find(t => t.id === parseInt(templateId));
     if (template) {
+      const orderCount = selectedBatch?.orderCount || 0;
+      const subject = (template.subject || '').replace(/\{\{orderCount\}\}/g, orderCount);
+      const body = (template.body || '').replace(/\{\{orderCount\}\}/g, orderCount);
+      
       setEmailForm({
         ...emailForm,
-        emailSubject: template.subject || emailForm.emailSubject,
-        emailBody: template.body || emailForm.emailBody
+        emailSubject: subject || emailForm.emailSubject,
+        emailBody: body || emailForm.emailBody
       });
     }
   };

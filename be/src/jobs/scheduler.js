@@ -1,10 +1,9 @@
 const cron = require('node-cron');
-const { createProductionBatch, sendProductionBatch, seedDefaults } = require('../services/core.service');
+const { createProductionBatch, sendProductionBatch } = require('../services/core.service');
 const { processPendingSms } = require('../services/sms.service');
 const prisma = require('../utils/prisma');
 
 const startScheduledJobs = () => {
-  seedDefaults().catch((err) => console.error('Seed error:', err.message));
 
   // Daily check for auto-export at 8 AM
   cron.schedule('0 8 * * *', async () => {

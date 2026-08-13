@@ -9,7 +9,6 @@ const admin = [verifyToken, isAdmin];
 const adminOrProduction = [verifyToken, isAdminOrProduction];
 
 router.get('/dashboard/stats', admin, adminController.getStats);
-router.post('/seed', admin, adminController.seedSystem);
 
 router.get('/users', admin, userController.getUsers);
 router.post('/users', admin, userController.createUser);

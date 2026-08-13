@@ -1,6 +1,5 @@
 const {
   getDashboardStats,
-  seedDefaults,
   createProductionBatch,
   sendProductionBatch,
   applyDiscountCode,
@@ -13,15 +12,6 @@ exports.getStats = async (req, res) => {
   try {
     const stats = await getDashboardStats();
     res.json(stats);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-exports.seedSystem = async (req, res) => {
-  try {
-    await seedDefaults();
-    res.json({ message: 'System defaults seeded successfully' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

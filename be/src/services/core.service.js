@@ -82,51 +82,7 @@ StudentLife Production`,
   },
 ];
 
-const seedDefaults = async () => {
-  for (const status of DEFAULT_ORDER_STATUSES) {
-    await prisma.orderStatus.upsert({
-      where: { slug: status.slug },
-      update: status,
-      create: status,
-    });
-  }
 
-  const existingColumnsCount = await prisma.excelColumnConfig.count();
-  if (existingColumnsCount === 0 || existingColumnsCount === 15) {
-    await prisma.excelColumnConfig.deleteMany({});
-    for (const col of DEFAULT_EXCEL_COLUMNS) {
-      await prisma.excelColumnConfig.create({
-        data: { ...col, isVisible: true },
-      });
-    }
-  }
-
-  for (const tpl of DEFAULT_EMAIL_TEMPLATES) {
-    await prisma.emailTemplate.upsert({
-      where: { key: tpl.key },
-      update: { subject: tpl.subject, body: tpl.body },
-      create: tpl,
-    });
-  }
-
-  await prisma.systemSetting.upsert({
-    where: { key: 'manufacturer_email' },
-    update: { value: { email: process.env.MANUFACTURER_EMAIL || 'factory@studentlife.dk' } },
-    create: { key: 'manufacturer_email', value: { email: process.env.MANUFACTURER_EMAIL || 'factory@studentlife.dk' } },
-  });
-
-  await prisma.systemSetting.upsert({
-    where: { key: 'production_status_slug' },
-    update: { value: { slug: 'ready-for-production' } },
-    create: { key: 'production_status_slug', value: { slug: 'ready-for-production' } },
-  });
-
-  await prisma.systemSetting.upsert({
-    where: { key: 'sent_to_manufacturer_slug' },
-    update: { value: { slug: 'sent-to-manufacturer' } },
-    create: { key: 'sent_to_manufacturer_slug', value: { slug: 'sent-to-manufacturer' } },
-  });
-};
 
 const upsertCustomerFromOrder = async (customerDetails, email) => {
   const name = `${customerDetails?.firstName || ''} ${customerDetails?.lastName || ''}`.trim() || customerDetails?.name || 'Customer';
@@ -458,7 +414,7 @@ const getDashboardStats = async () => {
 };
 
 module.exports = {
-  seedDefaults,
+  
   upsertCustomerFromOrder,
   getStatusBySlug,
   applyDiscountCode,
