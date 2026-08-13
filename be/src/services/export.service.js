@@ -4,8 +4,35 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const archiver = require('archiver');
 const { extractOrderField } = require('../utils/helpers');
+const { translate } = require('@vitalets/google-translate-api');
 
 const EXPORTS_DIR = path.join(__dirname, '../../public/exports');
+
+const translationCache = new Map();
+
+const STANDARD_FIELDS = new Set([
+  'orderId', 'orderNumber', 'orderDate', 'createdAt', 'updatedAt',
+  'customerId', 'customerName', 'customerEmail', 'customerPhone',
+  'customerAddress', 'customerCity', 'customerPostalCode',
+  'customerDeliveryCountry', 'schoolName', 'deliveryType',
+  'totalPrice', 'currency', 'packageName', 'program',
+  'status', 'paymentStatus', 'paymentIntentId', 'discountCode', 'discountAmount'
+]);
+
+const translateText = async (text) => {
+  if (!text || typeof text !== 'string' || text === 'x') return text;
+  if (translationCache.has(text)) return translationCache.get(text);
+  
+  try {
+    const res = await translate(text, { to: 'en' });
+    translationCache.set(text, res.text);
+    return res.text;
+  } catch (error) {
+    console.error('Translation error for', text, ':', error.message);
+    translationCache.set(text, text); // prevent retrying on failure
+    return text;
+  }
+};
 
 const ensureExportsDir = () => {
   if (!fs.existsSync(EXPORTS_DIR)) {
@@ -36,7 +63,13 @@ const generateExcelFile = async (orders, columns, batchId) => {
   for (const order of orders) {
     const row = {};
     for (const col of visibleColumns) {
-      row[col.fieldKey] = extractOrderField(order, col.fieldKey);
+      let val = extractOrderField(order, col.fieldKey);
+      
+      if (!STANDARD_FIELDS.has(col.fieldKey) && typeof val === 'string' && val.trim() !== '') {
+        val = await translateText(val);
+      }
+      
+      row[col.fieldKey] = val;
     }
     sheet.addRow(row);
   }
