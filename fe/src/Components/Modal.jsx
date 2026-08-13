@@ -14,7 +14,7 @@ const stripePromise = loadStripe("pk_test_51S0HgS2ZnQzLDaK40M9tlj1n72wtQNsUNhG98
 
 import { getBaseUrl } from '../services/marketing.api';
 
-const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfiguring, packageName, program }) => {
+const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfiguring, packageName, program, installmentPlan }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
@@ -25,6 +25,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
   const [discountLoading, setDiscountLoading] = useState(false);
   const [priceConfig, setPriceConfig] = useState(null);
   const [deliverySettings, setDeliverySettings] = useState({ "Denmark": 79, "Grønland": 348 });
+  const [paymentMethod, setPaymentMethod] = useState('full'); // 'full' | 'installment'
 
   const [customerDetails, setCustomerDetails] = useState({
     firstName: '',
@@ -360,18 +361,30 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       console.warn('Cap image capture failed:', err);
     }
 
+    const downPaymentAmount = installmentPlan ? parseFloat(((finalPrice * (installmentPlan.downPaymentPercent || 0)) / 100).toFixed(2)) : 0;
+    const calculatedInstallments = (installmentPlan?.installments || []).map(r => ({
+      ...r,
+      amount: parseFloat(((finalPrice * (r.percent || 0)) / 100).toFixed(2))
+    }));
+
     const orderData = {
       customerDetails,
       selectedOptions: buildFilteredOptions(selectedOptions),
       totalPrice: finalPrice,
       currency: "DKK",
       orderDate,
-      orderNumber: `CAP-${orderDate}`,
+      orderNumber: `CAP-${Date.now()}`,
       email: customerDetails.email,
       packageName: packageName,
       program: program,
       capImages: Object.keys(capImages).length > 0 ? capImages : null,
       discountCode: appliedDiscount?.discount?.code || null,
+      installmentPlanId: paymentMethod === 'installment' && installmentPlan ? installmentPlan.id : null,
+      installmentDetails: paymentMethod === 'installment' && installmentPlan ? {
+        ...installmentPlan,
+        downPayment: downPaymentAmount,
+        installments: calculatedInstallments,
+      } : null,
       liningPhoto:
         (typeof selectedOptions.FOER?.['Indvendigt foer billede'] === 'string' &&
           selectedOptions.FOER['Indvendigt foer billede'].startsWith('data:image')
@@ -380,25 +393,35 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
     };
 
     try {
-      // 1️⃣ Send order + email
-      // const response = await fetch(
-      //   // "http://localhost:5000/api/sendEmail/capconfigurator",
-      //   "https://new-capbackend.vercel.app/api/sendEmail/capconfigurator",
-      //   {
-      //     method: "POST",
-      //     headers: {
-      //       "Content-Type": "application/json",
-      //     },
-      //     body: JSON.stringify(orderData),
-      //   }
-      // );
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || getBaseUrl();
 
-      // if (!response.ok) {
-      //   throw new Error("Failed to submit order");
-      // }
+      if (paymentMethod === 'installment' && installmentPlan) {
+        // Direct installment order placement
+        const res = await fetch(`${baseUrl}/sendEmail/create-installment-order`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(orderData),
+        });
 
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-      const stripeRes = await fetch(`${baseUrl}/api/sendEmail/create-checkout-session`, {
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.message || "Kunne ikke oprette afdragsordre");
+        }
+
+        pushEvent('checkout_completed', {
+          value: orderData.totalPrice || 0,
+          currency: 'DKK',
+          package: orderData.packageName,
+          payment_type: 'installment'
+        }, 'gradcap_configurator');
+
+        setIsLoading(false);
+        setOrderComplete(true);
+        return;
+      }
+
+      // Standard Stripe Checkout Flow
+      const stripeRes = await fetch(`${baseUrl}/sendEmail/create-checkout-session`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderData),
@@ -422,8 +445,8 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
 
     } catch (error) {
       console.error("Error during checkout:", error);
+      alert(error.message || "Der opstod en fejl under ordren. Prøv venligst igen.");
       setIsLoading(false);
-      // optional: show error UI
     }
   };
 
@@ -854,9 +877,103 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
               </p>
             </div>
           )}
-
-
         </div>
+
+        {/* Payment Method Selector (if installment plan available) */}
+        {installmentPlan && (() => {
+          const downPaymentAmount = parseFloat(((finalPrice * (installmentPlan.downPaymentPercent || 0)) / 100).toFixed(2));
+          const calculatedInstallments = (installmentPlan.installments || []).map(r => ({
+            ...r,
+            amount: parseFloat(((finalPrice * (r.percent || 0)) / 100).toFixed(2))
+          }));
+
+          return (
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <CreditCard className="w-4 h-4 text-emerald-700 mr-2" />
+                  <h3 className="text-lg font-bold text-gray-800">Vælg betalingsmåde</h3>
+                </div>
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded bg-emerald-600 text-white uppercase tracking-wider">
+                  Afdragsordning tilgængelig
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Full Payment Card */}
+                <div
+                  onClick={() => setPaymentMethod('full')}
+                  className={`p-3.5 rounded-lg border-2 cursor-pointer transition-all ${
+                    paymentMethod === 'full'
+                      ? 'border-emerald-600 bg-white shadow-md'
+                      : 'border-emerald-200 bg-emerald-50/50 hover:bg-white'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-bold text-gray-900 text-sm">Betal fuld pris</span>
+                    <input
+                      type="radio"
+                      name="paymentMethodChoice"
+                      checked={paymentMethod === 'full'}
+                      onChange={() => setPaymentMethod('full')}
+                      className="h-4 w-4 text-emerald-600"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-600">Betal det fulde beløb nu via kort / MobilePay</p>
+                  <p className="text-base font-extrabold text-emerald-700 mt-2">{finalPrice} DKK</p>
+                </div>
+
+                {/* Installment Plan Card */}
+                <div
+                  onClick={() => setPaymentMethod('installment')}
+                  className={`p-3.5 rounded-lg border-2 cursor-pointer transition-all ${
+                    paymentMethod === 'installment'
+                      ? 'border-emerald-600 bg-white shadow-md'
+                      : 'border-emerald-200 bg-emerald-50/50 hover:bg-white'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="font-bold text-gray-900 text-sm">Afdragsordning</span>
+                    <input
+                      type="radio"
+                      name="paymentMethodChoice"
+                      checked={paymentMethod === 'installment'}
+                      onChange={() => setPaymentMethod('installment')}
+                      className="h-4 w-4 text-emerald-600"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-600">{installmentPlan.name}</p>
+                  <p className="text-base font-extrabold text-emerald-700 mt-2">
+                    Første betaling ({installmentPlan.downPaymentPercent}%): {downPaymentAmount} DKK
+                  </p>
+                </div>
+              </div>
+
+              {/* Installment Details Breakdown */}
+              {paymentMethod === 'installment' && (
+                <div className="mt-3 p-3 bg-white rounded-lg border border-emerald-200 text-xs space-y-2">
+                  <p className="font-bold text-gray-800 border-b border-gray-100 pb-1">
+                    Betalingsplan oversigt:
+                  </p>
+                  <div className="flex justify-between font-semibold text-emerald-800">
+                    <span>1. betaling ({installmentPlan.downPaymentPercent}% ved bestilling):</span>
+                    <span>{downPaymentAmount} DKK</span>
+                  </div>
+                  {calculatedInstallments.map((rate, rIdx) => (
+                    <div key={rIdx} className="flex justify-between text-gray-700">
+                      <span>{rate.label || `${rIdx + 2}. rate`} ({rate.percent}% - {rate.dueLabel || 'Forfald'}):</span>
+                      <span className="font-semibold">{rate.amount} DKK</span>
+                    </div>
+                  ))}
+                  <div className="pt-1.5 border-t border-emerald-100 flex justify-between font-bold text-gray-900 text-sm">
+                    <span>Samlet ordreværdi:</span>
+                    <span className="text-emerald-700">{finalPrice} DKK</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Discount Code */}
         {(packageName === 'premium' || packageName === 'luksus') && (

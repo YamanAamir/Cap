@@ -185,6 +185,7 @@ const StudentDashboard = () => {
 
   const [dynamicConfig, setDynamicConfig] = useState(null);
   const [configLoading, setConfigLoading] = useState(true);
+  const [installmentPlans, setInstallmentPlans] = useState([]);
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -200,8 +201,26 @@ const StudentDashboard = () => {
         setConfigLoading(false);
       }
     };
+    const fetchInstallmentPlans = async () => {
+      try {
+        const res = await fetch(`${getBaseUrl()}/marketing/installment-plans`);
+        if (res.ok) {
+          const data = await res.json();
+          setInstallmentPlans(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch installment plans:', err);
+      }
+    };
     fetchConfig();
+    fetchInstallmentPlans();
   }, []);
+
+  const matchingInstallmentPlan = installmentPlans.find(plan => {
+    const progMatch = plan.program === 'all' || (plan.program || '').toLowerCase() === (program || '').toLowerCase();
+    const tierMatch = plan.packageTier === 'all' || (plan.packageTier || '').toLowerCase() === (packageName || 'standard').toLowerCase();
+    return progMatch && tierMatch;
+  });
 
   const prevPackageKeyRef = useRef(null);
 
@@ -962,6 +981,16 @@ const StudentDashboard = () => {
 
             {/* Desktop Footer (Moved here to be inside Config Panel) */}
             <div className="p-6 bg-white border-t border-slate-200">
+              {matchingInstallmentPlan && (
+                <div className="mb-3 px-3.5 py-2 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg flex items-center justify-between text-xs">
+                  <span className="font-bold text-emerald-800 flex items-center gap-1.5">
+                    <span className="text-sm">⚡</span> Afdragsordning tilgængelig
+                  </span>
+                  <span className="font-bold text-emerald-700">
+                    Første betaling ({matchingInstallmentPlan.downPaymentPercent}%): {((calculateTotalPrice() * (matchingInstallmentPlan.downPaymentPercent || 0)) / 100).toFixed(2)} kr.
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between items-center mb-1">
                 <span className="text-sm font-semibold text-slate-600 uppercase tracking-wider">
                   Pris
@@ -1357,6 +1386,16 @@ const StudentDashboard = () => {
 
           {/* Fixed Footer - Always visible at bottom */}
           <div className="bg-white/70 backdrop-blur-sm border-t border-green-600 p-4 flex-shrink-0">
+            {matchingInstallmentPlan && (
+              <div className="mb-2.5 px-3 py-1.5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg flex items-center justify-between text-xs">
+                <span className="font-bold text-emerald-800 flex items-center gap-1">
+                  <span className="text-sm">⚡</span> Afdragsordning tilgængelig
+                </span>
+                <span className="font-semibold text-emerald-700">
+                  Første betaling ({matchingInstallmentPlan.downPaymentPercent}%): {((calculateTotalPrice() * (matchingInstallmentPlan.downPaymentPercent || 0)) / 100).toFixed(2)} kr.
+                </span>
+              </div>
+            )}
             <div className="flex justify-between items-center mb-3">
               <span className="text-sm font-medium text-slate-600">
                 Samlet pris
@@ -1394,6 +1433,7 @@ const StudentDashboard = () => {
         price={calculateTotalPrice().toFixed(2)}
         packageName={packageName}
         program={program} visibilityConfig={visibilityConfig}
+        installmentPlan={matchingInstallmentPlan}
       />
     </div >
   );

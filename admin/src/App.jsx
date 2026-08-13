@@ -21,6 +21,8 @@ import ProductionSettingsPage from './pages/ProductionSettingsPage';
 import ProductionFactoryPage from './pages/ProductionFactoryPage';
 import ProductionOrderDetailPage from './pages/ProductionOrderDetailPage';
 import ExcelTemplatesPage from './pages/ExcelTemplatesPage';
+import InstallmentPlansPage from './pages/InstallmentPlansPage';
+
 
 function App() {
   return (
@@ -52,6 +54,8 @@ function App() {
             <Route path="excel-templates" element={<ExcelTemplatesPage />} />
             <Route path="production" element={<ProductionPage />} />
             <Route path="discounts" element={<DiscountCodesPage />} />
+            <Route path="installments" element={<InstallmentPlansPage />} />
+
             <Route path="statuses" element={<OrderStatusesPage />} />
             <Route path="sms" element={<SmsCampaignsPage />} />
             <Route path="excel" element={<ExcelConfigPage />} />

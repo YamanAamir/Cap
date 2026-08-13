@@ -204,8 +204,17 @@ const OrdersPage = () => {
                       {order.orderStatus?.name || order.status?.replace(/_/g, ' ') || 'Unknown'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right font-bold text-slate-800">
-                    {new Intl.NumberFormat('da-DK', { style: 'currency', currency: order.currency || 'DKK' }).format(order.totalPrice)}
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex flex-col items-end gap-1">
+                      <span className="font-bold text-slate-800">
+                        {new Intl.NumberFormat('da-DK', { style: 'currency', currency: order.currency || 'DKK' }).format(order.totalPrice)}
+                      </span>
+                      {order.installmentPlanId && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700 tracking-wide">
+                          AFDRAG
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-center flex items-center justify-center gap-2">
                     <button 

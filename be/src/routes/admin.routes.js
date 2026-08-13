@@ -3,7 +3,9 @@ const router = express.Router();
 const adminController = require('../controllers/admin.controller');
 const userController = require('../controllers/user.controller');
 const settingsController = require('../controllers/settings.controller');
+const installmentController = require('../controllers/installment.controller');
 const { verifyToken, isAdmin, isAdminOrProduction } = require('../middleware/auth.middleware');
+
 
 const admin = [verifyToken, isAdmin];
 const adminOrProduction = [verifyToken, isAdminOrProduction];
@@ -60,5 +62,11 @@ router.put('/settings', admin, adminController.updateSetting);
 // Configurator Settings
 router.get('/settings/configurator', admin, settingsController.getConfiguratorSettings);
 router.put('/settings/configurator', admin, settingsController.updateConfiguratorSettings);
+
+// Installment Plans
+router.get('/installment-plans', admin, installmentController.getInstallmentPlans);
+router.post('/installment-plans', admin, installmentController.createInstallmentPlan);
+router.put('/installment-plans/:id', admin, installmentController.updateInstallmentPlan);
+router.delete('/installment-plans/:id', admin, installmentController.deleteInstallmentPlan);
 
 module.exports = router;

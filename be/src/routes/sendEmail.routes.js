@@ -1,14 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { workflowStatusChange,sendCapEmail, stripePayment, getSessionDetails,stripeWebhook } = require('../controllers/sendEmail.controller');
+const { workflowStatusChange, sendCapEmail, stripePayment, getSessionDetails, stripeWebhook, createInstallmentOrder } = require('../controllers/sendEmail.controller');
 // const upload = require('../middlewares/uploadOrderFiles');
 // const { authenticate } = require('../middlewares/auth.middleware');
-
-
 
 router.put('/workflow/:id', workflowStatusChange);
 router.post('/capconfigurator', sendCapEmail);
 router.post('/create-checkout-session', stripePayment);
+router.post('/create-installment-order', createInstallmentOrder);
 router.get('/checkout-session', getSessionDetails);
 
 

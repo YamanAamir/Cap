@@ -88,6 +88,10 @@ model Order {
   productionBatchId Int?
   productionBatch  ProductionBatch? @relation(fields: [productionBatchId], references: [id])
 
+  installmentPlanId  Int?
+  installmentPlan    InstallmentPlan? @relation(fields: [installmentPlanId], references: [id])
+  installmentDetails Json?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -222,4 +226,18 @@ model TempOrder {
   id        String   @id @default(uuid())
   orderData Json
   createdAt DateTime @default(now())
+}
+
+model InstallmentPlan {
+  id                  Int      @id @default(autoincrement())
+  name                String
+  program             String   // "STX" | "HHX" | ... | "all"
+  packageTier         String   // "standard" | "luksus" | "premium" | "all"
+  isActive            Boolean  @default(true)
+  downPaymentPercent  Float    // % of total price e.g. 35 means 35%
+  installments        Json     // [{ label: String, dueLabel: String, percent: Float }]
+  notes               String?  @db.Text
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  orders              Order[]
 }

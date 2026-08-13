@@ -51,3 +51,9 @@ export const deleteEmailTemplate = (id) => api.delete(`/admin/email-templates/${
 // Settings
 export const getSettings = () => api.get('/admin/settings').then(r => r.data);
 export const updateSetting = (key, value) => api.put('/admin/settings', { key, value }).then(r => r.data);
+
+// Installment Plans
+export const getInstallmentPlans = () => api.get('/admin/installment-plans').then(r => r.data);
+export const createInstallmentPlan = (data) => api.post('/admin/installment-plans', data).then(r => r.data);
+export const updateInstallmentPlan = (id, data) => api.put(`/admin/installment-plans/${id}`, data).then(r => r.data);
+export const deleteInstallmentPlan = (id) => api.delete(`/admin/installment-plans/${id}`).then(r => r.data);

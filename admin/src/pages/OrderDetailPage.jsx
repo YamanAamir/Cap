@@ -5,7 +5,7 @@ import { getOrderStatuses } from '../services/admin.service';
 import {
   ChevronLeft, Loader2, User, Mail, Package, Calendar,
   MapPin, Phone, School, Truck, Settings2,
-  AlertCircle, Code, CheckCircle2, Tag, ImageIcon, ChevronRight, X
+  AlertCircle, Code, CheckCircle2, Tag, ImageIcon, ChevronRight, X, CreditCard
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ConfigBlueprintCards from '../components/orders/ConfigBlueprintCards';
@@ -302,6 +302,45 @@ const OrderDetailPage = () => {
                 <span className="text-[10px] font-bold uppercase text-slate-500 tracking-widest block mb-1">Affiliation</span>
                 <p className="font-bold text-sm text-slate-800">{order.program || 'N/A'}</p>
               </div>
+              {(order.installmentPlanId || order.installmentDetails) && (() => {
+                const planDetails = order.installmentDetails || order.installmentPlan || {};
+                const totalVal = parseFloat(order.totalPrice || 0);
+                const dpVal = planDetails.downPayment !== undefined 
+                  ? planDetails.downPayment 
+                  : (totalVal * (planDetails.downPaymentPercent || 0) / 100).toFixed(2);
+                const rates = Array.isArray(planDetails.installments) ? planDetails.installments : [];
+
+                return (
+                  <div className="bg-indigo-50/70 border border-indigo-200 rounded p-4.5 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase text-indigo-700 tracking-widest flex items-center gap-1.5">
+                        <CreditCard className="h-3.5 w-3.5 text-indigo-600" /> Afdragsordning
+                      </span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-extrabold bg-indigo-600 text-white uppercase tracking-wider">
+                        AFDRAG
+                      </span>
+                    </div>
+                    <p className="font-bold text-sm text-slate-800">
+                      {planDetails.name || 'Afdragsplan'}
+                    </p>
+                    <div className="text-xs space-y-1.5 text-slate-600 pt-1 border-t border-indigo-100">
+                      <div className="flex justify-between">
+                        <span>Depositum (1. betaling {planDetails.downPaymentPercent ? `${planDetails.downPaymentPercent}%` : ''}):</span>
+                        <span className="font-bold text-slate-800">{dpVal} DKK</span>
+                      </div>
+                      {rates.map((rate, rIdx) => {
+                        const rAmt = rate.amount !== undefined ? rate.amount : (totalVal * (rate.percent || 0) / 100).toFixed(2);
+                        return (
+                          <div key={rIdx} className="flex justify-between text-slate-600">
+                            <span>{rate.label || `${rIdx + 2}. rate`} ({rate.percent ? `${rate.percent}% - ` : ''}{rate.dueLabel || 'Forfald'}):</span>
+                            <span className="font-bold text-slate-800">{rAmt} DKK</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
 

@@ -47,7 +47,9 @@ const getOrders = async (req, res) => {
           orderStatus: true,
           customer: true,
           discountCode: true,
+          installmentPlan: true,
         },
+
       }),
       prisma.order.count({ where }),
     ]);
@@ -77,7 +79,9 @@ const getOrderById = async (req, res) => {
         customer: true,
         discountCode: true,
         productionBatch: true,
+        installmentPlan: true,
       },
+
     });
 
     if (!order) {

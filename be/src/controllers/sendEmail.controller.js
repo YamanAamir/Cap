@@ -3686,6 +3686,8 @@ const stripeWebhook = async (req, res) => {
           capImages: orderData.capImages || null,
           discountCodeId: orderData.discountRecord?.id || null,
           discountAmount: orderData.discountAmount,
+          installmentPlanId: orderData.installmentPlanId ? parseInt(orderData.installmentPlanId) : null,
+          installmentDetails: orderData.installmentDetails || null,
         },
       });
 
@@ -3778,6 +3780,98 @@ const emailTester = async (req, res) => {
 };
 
 
+const createInstallmentOrder = async (req, res) => {
+  try {
+    const {
+      customerDetails,
+      selectedOptions,
+      totalPrice,
+      currency = 'DKK',
+      orderDate,
+      orderNumber,
+      email,
+      packageName,
+      program,
+      capImages,
+      installmentPlanId,
+      installmentDetails,
+    } = req.body;
+
+    if (!email || !customerDetails) {
+      return res.status(400).json({ message: 'Customer details and email are required.' });
+    }
+
+    // Find or create customer
+    let customer = await prisma.customer.findUnique({ where: { email } });
+    if (!customer) {
+      customer = await prisma.customer.create({
+        data: {
+          name: `${customerDetails.firstName || ''} ${customerDetails.lastName || ''}`.trim() || email,
+          email,
+          phone: customerDetails.phone || null,
+          school: customerDetails.Skolenavn || null,
+        },
+      });
+    }
+
+    const defaultStatus = await prisma.orderStatus.findFirst({ where: { isActive: true } });
+
+    const order = await prisma.order.create({
+      data: {
+        orderNumber: orderNumber || `CAP-${Date.now()}`,
+        customerEmail: email,
+        customerDetails,
+        selectedOptions,
+        totalPrice: parseFloat(totalPrice) || 0,
+        currency,
+        orderDate: orderDate ? new Date(orderDate) : new Date(),
+        status: defaultStatus ? defaultStatus.name.toUpperCase().replace(/\s+/g, '_') : 'PENDING',
+        statusId: defaultStatus?.id || null,
+        packageName: packageName || null,
+        program: program || null,
+        customerId: customer.id,
+        capImages: capImages || null,
+        installmentPlanId: installmentPlanId ? parseInt(installmentPlanId) : null,
+        installmentDetails: installmentDetails || null,
+      },
+    });
+
+    // Send confirmation email
+    try {
+      await sendCapEmail(
+        {
+          body: {
+            customerDetails: order.customerDetails,
+            selectedOptions: order.selectedOptions,
+            totalPrice: order.totalPrice,
+            currency: order.currency,
+            orderNumber: order.orderNumber,
+            orderDate: order.orderDate,
+            email: order.customerEmail,
+            packageName: order.packageName,
+            program: order.program,
+            capImages: order.capImages,
+            installmentDetails: order.installmentDetails,
+          },
+        },
+        { status: () => ({ json: () => { } }) }
+      );
+    } catch (emailErr) {
+      console.error("Installment order email trigger failed:", emailErr);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Afdragsordre oprettet succesfuldt",
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+    });
+  } catch (err) {
+    console.error("Error creating installment order:", err);
+    res.status(500).json({ message: err.message || "Failed to create installment order" });
+  }
+};
+
 module.exports = {
-  workflowStatusChange, sendCapEmail, stripePayment, getSessionDetails, stripeWebhook, emailTester
+  workflowStatusChange, sendCapEmail, stripePayment, getSessionDetails, stripeWebhook, emailTester, createInstallmentOrder
 };
