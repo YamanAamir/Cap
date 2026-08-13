@@ -402,6 +402,26 @@ exports.updateSmsCampaign = async (req, res) => {
           if (newMessages.length > 0) {
             await prisma.smsMessage.createMany({ data: newMessages });
           }
+          
+          if (discountType !== undefined || discountValue !== undefined) {
+            const customerIds = enrollments.map(e => e.customerId);
+            let actualType = discountType;
+            if (discountType && discountType.includes(':')) {
+              actualType = discountType.split(':')[0];
+            }
+            if (customerIds.length > 0) {
+              await prisma.discountCode.updateMany({
+                where: {
+                  customerId: { in: customerIds },
+                  usedAt: null,
+                },
+                data: {
+                  ...(actualType !== undefined && { type: actualType }),
+                  ...(discountValue !== undefined && { value: discountValue !== null ? parseFloat(discountValue) : null })
+                }
+              });
+            }
+          }
         }
       }
     }

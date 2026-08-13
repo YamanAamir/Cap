@@ -162,8 +162,6 @@ const getStatusBySlug = async (slug) => {
 const applyDiscountCode = async (code, phone, orderTotal) => {
   const discount = await prisma.discountCode.findUnique({ where: { code: code.toUpperCase() } });
 
-  console.log(discount);
-
   if (!discount || !discount.isActive) {
     throw new Error('Invalid discount code');
   }

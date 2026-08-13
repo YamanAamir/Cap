@@ -9,7 +9,7 @@ const SmsSignupScreen = () => {
   const [loadingCampaign, setLoadingCampaign] = useState(true);
   const [campaignError, setCampaignError] = useState(false);
   
-  const [form, setForm] = useState({ name: '', email: '', phone: '', school: '', gdprConsent: false });
+  const [form, setForm] = useState({ name: '', email: '', countryCode: '', phone: '', school: '', gdprConsent: false });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
@@ -40,7 +40,8 @@ const SmsSignupScreen = () => {
       const data = await submitSmsSignup({
         name: form.name,
         email: form.email,
-        phone: form.phone,
+        phone: form.countryCode + form.phone,
+        localPhone: form.phone,
         school: form.school,
         gdprConsent: form.gdprConsent,
         campaignId: campaign.id,
@@ -181,18 +182,32 @@ const SmsSignupScreen = () => {
 
           <div>
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Telefon</label>
-            <div className="relative">
-              <input
-                required
-                type="tel"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/[^0-9]/g, '') })}
-                className="w-full px-4 py-3 rounded border border-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-bold text-slate-800 transition-shadow bg-[#fafafa] focus:bg-white"
-                placeholder="F.eks. 4512345678"
-                disabled={loading}
-              />
+            <div className="flex gap-2">
+              <div className="relative w-24 shrink-0">
+                <span className="absolute left-3 top-3 font-bold text-slate-400">+</span>
+                <input
+                  required
+                  type="tel"
+                  value={form.countryCode}
+                  onChange={(e) => setForm({ ...form, countryCode: e.target.value.replace(/[^0-9]/g, '') })}
+                  className="w-full pl-7 pr-3 py-3 rounded border border-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-bold text-slate-800 transition-shadow bg-[#fafafa] focus:bg-white"
+                  placeholder="45"
+                  disabled={loading}
+                />
+              </div>
+              <div className="relative flex-1">
+                <input
+                  required
+                  type="tel"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/[^0-9]/g, '') })}
+                  className="w-full px-4 py-3 rounded border border-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-bold text-slate-800 transition-shadow bg-[#fafafa] focus:bg-white"
+                  placeholder="12345678"
+                  disabled={loading}
+                />
+              </div>
             </div>
-            <p className="text-xs text-slate-500 mt-1.5">Skriv nummer med landekode uden + (f.eks. 4512345678)</p>
+            <p className="text-xs text-slate-500 mt-1.5">Indtast landekode og telefonnummer</p>
           </div>
 
           <label className={`flex items-start gap-3 cursor-pointer p-4 rounded border transition-colors ${

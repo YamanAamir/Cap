@@ -30,6 +30,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
     firstName: '',
     lastName: '',
     email: '',
+    countryCode: '',
     phone: '',
     Skolenavn: '',
     address: '',
@@ -310,12 +311,13 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
     if (!discountCodeInput.trim()) return;
     setDiscountLoading(true);
     setDiscountError('');
-    try {
-      const result = await validateDiscountCode({
-        code: discountCodeInput.trim(),
-        phone: customerDetails.phone,
-        totalPrice: basePrice,
-      });
+      try {
+        const fullPhone = customerDetails.countryCode + customerDetails.phone;
+        const result = await validateDiscountCode({
+          code: discountCodeInput.trim(),
+          phone: fullPhone,
+          totalPrice: basePrice,
+        });
       setAppliedDiscount(result);
     } catch (err) {
       setAppliedDiscount(null);
@@ -435,6 +437,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       lastName: '',
       email: '',
       phone: '',
+      countryCode: '',
       Skolenavn: '',
       address: '',
       city: '',
@@ -663,22 +666,36 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
                 />
               </div>
 
-              {/* Phone */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Telefonnr. *
-                </label>
-                <input
-                  ref={refs.phone}
-                  name="phone"
-                  type="tel"
-                  value={customerDetails.phone || ""}
-                  onChange={(e) => handleInputChange("phone", e.target.value)}
-                  onKeyPress={(e) => handleKeyPress(e, "phone")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
-                  placeholder="Indtast dit tlf nr."
-                />
-              </div>
+                {/* Phone */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Telefonnr. *
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="relative w-20 shrink-0">
+                      <span className="absolute left-2.5 top-2.5 font-bold text-gray-400">+</span>
+                      <input
+                        type="tel"
+                        value={customerDetails.countryCode || ""}
+                        onChange={(e) => handleInputChange("countryCode", e.target.value.replace(/[^0-9]/g, ''))}
+                        className="w-full pl-6 pr-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
+                        placeholder="45"
+                      />
+                    </div>
+                    <div className="relative flex-1">
+                      <input
+                        ref={refs.phone}
+                        name="phone"
+                        type="tel"
+                        value={customerDetails.phone || ""}
+                        onChange={(e) => handleInputChange("phone", e.target.value.replace(/[^0-9]/g, ''))}
+                        onKeyPress={(e) => handleKeyPress(e, "phone")}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
+                        placeholder="Indtast dit tlf nr."
+                      />
+                    </div>
+                  </div>
+                </div>
 
               {/* Address */}
               <div>
@@ -799,10 +816,10 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
                 <span className="font-medium text-gray-700">Email:</span>{" "}
                 {customerDetails.email}
               </p>
-              <p className="text-sm">
-                <span className="font-medium text-gray-700">Telefonnr.:</span>{" "}
-                {customerDetails.phone}
-              </p>
+                <p className="text-sm">
+                  <span className="font-medium text-gray-700">Telefonnr.:</span>{" "}
+                  {customerDetails.countryCode ? `+${customerDetails.countryCode}` : ''} {customerDetails.phone}
+                </p>
               {customerDetails.Skolenavn && (
                 <p className="text-sm">
                   <span className="font-medium text-gray-700">Skole navn:</span>{" "}

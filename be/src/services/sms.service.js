@@ -143,9 +143,9 @@ const handleSmsOptOut = async (phone) => {
   return true;
 };
 
-const registerSmsSignup = async ({ name, phone, email, school, gdprConsent, campaignId }) => {
+const registerSmsSignup = async ({ name, phone, email, school, gdprConsent, campaignId, localPhone: providedLocalPhone }) => {
   phone = phone.replace(/^\+/, '');
-  const localPhone = phone.length > 8 ? phone.slice(-8) : phone;
+  const localPhone = providedLocalPhone ? providedLocalPhone.replace(/^\+/, '') : (phone.length > 8 ? phone.slice(-8) : phone);
   console.log(`\n[SMS] registerSmsSignup called for: ${name} (${phone}, local: ${localPhone}) - Campaign: ${campaignId}`);
   if (!gdprConsent) {
     console.error('[SMS] GDPR consent missing');
