@@ -138,7 +138,11 @@ const updateOrderStatus = async (req, res) => {
       if (updatedOrder.installmentDetails && updatedOrder.installmentDetails.installments && updatedOrder.installmentDetails.installments[idx]) {
         const installment = updatedOrder.installmentDetails.installments[idx];
         if (installment.status !== 'Paid') {
-          const rawUrl = process.env.VITE_API_BASE_URL || 'http://localhost:5000';
+          // Use API_BASE_URL from env, or dynamically generate it from the incoming request headers
+          const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+          const host = req.headers['x-forwarded-host'] || req.get('host');
+          const rawUrl = process.env.API_BASE_URL || process.env.VITE_API_BASE_URL || `${protocol}://${host}`;
+          
           const apiRoot = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl.replace(/\/$/, '')}/api`;
           const paymentLink = `${apiRoot}/sendEmail/pay-installment?orderId=${updatedOrder.id}&installmentIndex=${idx}`;
           
