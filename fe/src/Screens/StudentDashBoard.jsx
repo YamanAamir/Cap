@@ -387,6 +387,9 @@ const StudentDashboard = () => {
 
     ///zee///
     const deliveryFee = getDeliveryFee();
+    if (packageName === "premium") {
+      return iniialPrice + deliveryFee;
+    }
     return total + iniialPrice + deliveryFee;
     ///zee///
   };
@@ -986,8 +989,8 @@ const StudentDashboard = () => {
                   <span className="font-bold text-emerald-800 flex items-center gap-1.5">
                     <span className="text-sm">⚡</span> Afdragsordning tilgængelig
                   </span>
-                  <span className="font-bold text-emerald-700">
-                    Første betaling ({matchingInstallmentPlan.downPaymentPercent}%): {((calculateTotalPrice() * (matchingInstallmentPlan.downPaymentPercent || 0)) / 100).toFixed(2)} kr.
+                  <span className="text-sm font-semibold text-emerald-700">
+                    Første betaling: {matchingInstallmentPlan.downPaymentAmount || 399} kr.
                   </span>
                 </div>
               )}
@@ -995,8 +998,9 @@ const StudentDashboard = () => {
                 <span className="text-sm font-semibold text-slate-600 uppercase tracking-wider">
                   Pris
                 </span>
-                <span className="text-xl font-bold text-slate-900">
+                <span className="text-xl font-bold text-slate-900 flex items-center">
                   {calculateTotalPrice().toFixed(2)} DKK
+                  {packageName === 'premium' && <span className="text-sm text-green-600 ml-1">(Inclusive)</span>}
                 </span>
               </div>
               <div className="flex justify-between items-center mb-6">
@@ -1392,7 +1396,7 @@ const StudentDashboard = () => {
                   <span className="text-sm">⚡</span> Afdragsordning tilgængelig
                 </span>
                 <span className="font-semibold text-emerald-700">
-                  Første betaling ({matchingInstallmentPlan.downPaymentPercent}%): {((calculateTotalPrice() * (matchingInstallmentPlan.downPaymentPercent || 0)) / 100).toFixed(2)} kr.
+                  Første betaling: {matchingInstallmentPlan.downPaymentAmount || 399} kr.
                 </span>
               </div>
             )}
@@ -1401,8 +1405,9 @@ const StudentDashboard = () => {
                 Samlet pris
               </span>
               <div className="text-right">
-                <div className="text-xl font-bold text-slate-900">
+                <div className="text-xl font-bold text-slate-900 flex items-center justify-end">
                   {calculateTotalPrice().toFixed(2)} DKK
+                  {packageName === 'premium' && <span className="text-sm text-green-600 ml-1">(Inclusive)</span>}
                 </div>
                 <div className="text-xs text-slate-500">
 

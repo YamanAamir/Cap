@@ -3544,6 +3544,8 @@ const stripePayment = async (req, res) => {
     program,
     capImages,
     discountCode,
+    isInstallment,
+    installmentPlanId,
   } = req.body;
 
   try {
@@ -3578,9 +3580,27 @@ const stripePayment = async (req, res) => {
         customerId: customer.id,
         finalPrice,
         discountRecord,
-        discountAmount
+        discountAmount,
+        installmentPlanId
       })})
     `;
+
+    let stripeChargeAmount = finalPrice;
+    
+    if (isInstallment) {
+      if (installmentPlanId) {
+        const plan = await prisma.installmentPlan.findUnique({
+          where: { id: installmentPlanId }
+        });
+        if (plan && plan.downPaymentAmount != null) {
+          stripeChargeAmount = plan.downPaymentAmount;
+        } else {
+          stripeChargeAmount = 399; // Fallback
+        }
+      } else {
+        stripeChargeAmount = 399; // Fallback
+      }
+    }
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -3593,9 +3613,9 @@ const stripePayment = async (req, res) => {
           price_data: {
             currency: "dkk",
             product_data: {
-              name: `Cap Order : ${orderNumber}`,
+              name: isInstallment ? `Cap Order (1st Installment) : ${orderNumber}` : `Cap Order : ${orderNumber}`,
             },
-            unit_amount: Math.round(finalPrice * 100),
+            unit_amount: Math.round(stripeChargeAmount * 100),
           },
           quantity: 1,
         },
@@ -3608,6 +3628,59 @@ const stripePayment = async (req, res) => {
     res.json({ id: session.id });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+const payInstallment = async (req, res) => {
+  const { orderId, installmentIndex } = req.query;
+
+  try {
+    const order = await prisma.order.findUnique({ where: { id: parseInt(orderId) } });
+    if (!order || !order.installmentDetails) {
+      return res.status(404).send('Ordrer eller afdragsordning ikke fundet.');
+    }
+
+    const idx = parseInt(installmentIndex);
+    const installment = order.installmentDetails.installments[idx];
+    
+    if (!installment) {
+      return res.status(404).send('Rate ikke fundet.');
+    }
+
+    if (installment.status === 'Paid') {
+      return res.status(400).send('Denne rate er allerede betalt.');
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      customer_email: order.customerEmail,
+      metadata: {
+        type: 'installment_payment',
+        orderId: order.id.toString(),
+        installmentIndex: idx.toString()
+      },
+      line_items: [
+        {
+          price_data: {
+            currency: "dkk",
+            product_data: {
+              name: `Cap Order : ${order.orderNumber} - ${installment.label}`,
+            },
+            unit_amount: Math.round(installment.amount * 100),
+          },
+          quantity: 1,
+        },
+      ],
+      mode: "payment",
+      locale: "da",
+      success_url: `https://shop.studentlife.dk/thankyou/?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: "https://elipsestudio.com/devstudentlife/cancel",
+    });
+
+    res.redirect(303, session.url);
+  } catch (err) {
+    console.error("Error creating installment payment session:", err);
+    res.status(500).send("Der opstod en fejl.");
   }
 };
 
@@ -3652,76 +3725,140 @@ const stripeWebhook = async (req, res) => {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
 
+    if (session.metadata.type === 'installment_payment') {
+      try {
+        const orderId = parseInt(session.metadata.orderId);
+        const installmentIndex = parseInt(session.metadata.installmentIndex);
+
+        const order = await prisma.order.findUnique({ where: { id: orderId } });
+        if (order && order.installmentDetails) {
+          let details = order.installmentDetails;
+          if (details.installments && details.installments[installmentIndex]) {
+            details.installments[installmentIndex].status = 'Paid';
+            details.installments[installmentIndex].paidAt = new Date().toISOString();
+
+            await prisma.order.update({
+              where: { id: orderId },
+              data: { installmentDetails: details }
+            });
+            console.log(`✅ Installment ${installmentIndex + 1} paid for order ${orderId}`);
+          }
+        }
+      } catch (err) {
+        console.error("❌ Error updating installment payment:", err.message);
+      }
+      return res.json({ received: true });
+    }
+
     const tempOrderId = session.metadata.tempOrderId;
 
-    try {
-      const tempOrders = await prisma.$queryRaw`SELECT * FROM TempOrder WHERE id = ${tempOrderId}`;
-      if (!tempOrders || tempOrders.length === 0) {
-        console.log("❌ TempOrder not found");
-        return res.json({ received: true });
-      }
+    if (tempOrderId) {
+      try {
+        const tempOrders = await prisma.$queryRaw`SELECT * FROM TempOrder WHERE id = ${tempOrderId}`;
+        if (!tempOrders || tempOrders.length === 0) {
+          console.log("❌ TempOrder not found");
+          return res.json({ received: true });
+        }
 
-      const tempOrder = tempOrders[0];
-      let orderData = tempOrder.orderData;
-      if (typeof orderData === 'string') {
-        orderData = JSON.parse(orderData);
-      }
+        const tempOrder = tempOrders[0];
+        let orderData = tempOrder.orderData;
+        if (typeof orderData === 'string') {
+          orderData = JSON.parse(orderData);
+        }
 
-      const paidStatus = await prisma.orderStatus.findUnique({ where: { slug: 'paid' } });
-      
-      const order = await prisma.order.create({
-        data: {
-          customerDetails: orderData.customerDetails,
-          selectedOptions: orderData.selectedOptions,
-          totalPrice: orderData.finalPrice,
-          currency: orderData.currency,
-          orderNumber: orderData.orderNumber,
-          orderDate: orderData.orderDate,
-          customerEmail: orderData.email,
-          status: paidStatus ? paidStatus.name.toUpperCase().replace(/\s+/g, '_') : 'PAID',
-          statusId: paidStatus?.id || null,
-          packageName: orderData.packageName,
-          program: orderData.program,
-          customerId: orderData.customerId,
-          capImages: orderData.capImages || null,
-          discountCodeId: orderData.discountRecord?.id || null,
-          discountAmount: orderData.discountAmount,
-          installmentPlanId: orderData.installmentPlanId ? parseInt(orderData.installmentPlanId) : null,
-          installmentDetails: orderData.installmentDetails || null,
-        },
-      });
+        const paidStatus = await prisma.orderStatus.findUnique({ where: { slug: 'paid' } });
+        
+        let finalInstallmentDetails = null;
+        if (orderData.isInstallment && orderData.installmentPlanId) {
+          const plan = await prisma.installmentPlan.findUnique({
+            where: { id: orderData.installmentPlanId }
+          });
+          if (plan) {
+            const downPayment = plan.downPaymentAmount || 399;
+            const remainingAmount = Math.max(0, orderData.finalPrice - downPayment);
+            const installmentRows = plan.installments || [];
+            const installmentCount = installmentRows.length;
+            const installmentAmount = installmentCount > 0 ? (remainingAmount / installmentCount).toFixed(2) : 0;
+            
+            const generatedInstallments = [
+              {
+                amount: downPayment,
+                label: "1. betaling (ved bestilling)",
+                status: 'Paid',
+                paidAt: new Date().toISOString()
+              }
+            ];
+            
+            for (let i = 0; i < installmentCount; i++) {
+              generatedInstallments.push({
+                amount: parseFloat(installmentAmount),
+                label: installmentRows[i].label || `${i + 2}. rate`,
+                status: 'Pending',
+                paidAt: null
+              });
+            }
 
-      if (orderData.discountRecord) {
-        await prisma.discountCode.update({
-          where: { id: orderData.discountRecord.id },
-          data: { usedAt: new Date(), usedByOrderId: order.id },
-        });
-      }
-
-      await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${tempOrderId}`;
-
-      await sendCapEmail(
-        {
-          body: {
-            customerDetails: order.customerDetails,
-            selectedOptions: order.selectedOptions,
-            totalPrice: order.totalPrice,
-            currency: order.currency,
-            orderNumber: order.orderNumber,
-            orderDate: order.orderDate,
-            email: order.customerEmail,
-            packageName: order.packageName,
-            program: order.program,
-            capImages: order.capImages,
+            finalInstallmentDetails = {
+              downPayment,
+              installments: generatedInstallments
+            };
           }
-        },
-        { status: () => ({ json: () => { } }) }
-      );
+        }
 
-      console.log("✅ Email sent");
+        const order = await prisma.order.create({
+          data: {
+            customerDetails: orderData.customerDetails,
+            selectedOptions: orderData.selectedOptions,
+            totalPrice: orderData.finalPrice,
+            currency: orderData.currency,
+            orderNumber: orderData.orderNumber,
+            orderDate: orderData.orderDate,
+            customerEmail: orderData.email,
+            status: paidStatus ? paidStatus.name.toUpperCase().replace(/\s+/g, '_') : 'PAID',
+            statusId: paidStatus?.id || null,
+            packageName: orderData.packageName,
+            program: orderData.program,
+            customerId: orderData.customerId,
+            capImages: orderData.capImages || null,
+            discountCodeId: orderData.discountRecord?.id || null,
+            discountAmount: orderData.discountAmount,
+            installmentDetails: finalInstallmentDetails,
+          },
+        });
 
-    } catch (err) {
-      console.error("❌ Email error:", err.message);
+        if (orderData.discountRecord) {
+          await prisma.discountCode.update({
+            where: { id: orderData.discountRecord.id },
+            data: { usedAt: new Date(), usedByOrderId: order.id },
+          });
+        }
+
+        await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${tempOrderId}`;
+
+        await sendCapEmail(
+          {
+            body: {
+              customerDetails: order.customerDetails,
+              selectedOptions: order.selectedOptions,
+              totalPrice: order.totalPrice,
+              currency: order.currency,
+              orderNumber: order.orderNumber,
+              orderDate: order.orderDate,
+              email: order.customerEmail,
+              packageName: order.packageName,
+              program: order.program,
+              capImages: order.capImages,
+              installmentDetails: order.installmentDetails,
+            }
+          },
+          { status: () => ({ json: () => { } }) }
+        );
+
+        console.log("✅ Email sent");
+
+      } catch (err) {
+        console.error("❌ Email error:", err.message);
+      }
     }
   }
 
@@ -3873,5 +4010,5 @@ const createInstallmentOrder = async (req, res) => {
 };
 
 module.exports = {
-  workflowStatusChange, sendCapEmail, stripePayment, getSessionDetails, stripeWebhook, emailTester, createInstallmentOrder
+  workflowStatusChange, sendCapEmail, stripePayment, getSessionDetails, stripeWebhook, emailTester, createInstallmentOrder, payInstallment
 };

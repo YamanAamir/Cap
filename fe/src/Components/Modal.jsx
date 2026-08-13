@@ -156,7 +156,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
     return () => document.removeEventListener("click", handleClick);
   }, [currentStep]); // Re-run when step changes
 
-  const [orderDate, setOrderDate] = useState(`CAP-${Date.now().toString()}`);
+  const [orderDate] = useState(`CAP-${Date.now()}`);
 
   if (!isOpen) return null;
 
@@ -168,15 +168,20 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
   // Function to calculate total price
 
 
-  // Function to format values for display
   const formatValue = (value, section, key) => {
     let displayValue = '';
     let price = 0;
+    let standardPrice = 0;
+    
+    const standardConfig = priceConfig?.['standard'] || {};
 
     if (typeof value === 'object' && value.name) {
       displayValue = value.name;
       if (currentPriceConfig[section] && currentPriceConfig[section][key] && currentPriceConfig[section][key][value.name] !== undefined) {
         price = currentPriceConfig[section][key][value.name];
+      }
+      if (standardConfig[section] && standardConfig[section][key] && standardConfig[section][key][value.name] !== undefined) {
+        standardPrice = standardConfig[section][key][value.name];
       }
     } else if (typeof value === 'string') {
       if (value.startsWith('data:image')) {
@@ -186,11 +191,17 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
         if (currentPriceConfig[section] && currentPriceConfig[section][key] && currentPriceConfig[section][key][value] !== undefined) {
           price = currentPriceConfig[section][key][value];
         }
+        if (standardConfig[section] && standardConfig[section][key] && standardConfig[section][key][value] !== undefined) {
+          standardPrice = standardConfig[section][key][value];
+        }
       }
     } else if (typeof value === 'number') {
       displayValue = value.toString();
       if (currentPriceConfig[section] && currentPriceConfig[section][key] && currentPriceConfig[section][key][value.toString()] !== undefined) {
         price = currentPriceConfig[section][key][value.toString()];
+      }
+      if (standardConfig[section] && standardConfig[section][key] && standardConfig[section][key][value.toString()] !== undefined) {
+        standardPrice = standardConfig[section][key][value.toString()];
       }
     }
 
@@ -198,7 +209,9 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       return 'Ikke valgt';
     }
 
-    if (price > 0) {
+    if (packageName === 'premium' && (price > 0 || standardPrice > 0)) {
+      return `${displayValue} (Inclusive)`;
+    } else if (price > 0 && packageName !== 'premium') {
       return `${displayValue} (+${price} DKK)`;
     }
 
@@ -345,7 +358,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
     return Object.fromEntries(
       Object.entries(selectedOptions).map(([category, options]) => {
         return [category, filterOptions(options)];
-      }).filter(([_, filtered]) => Object.keys(filtered).length > 0) // remove empty categories
+      }).filter(([, filtered]) => Object.keys(filtered).length > 0) // remove empty categories
     );
   };
 
@@ -361,11 +374,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       console.warn('Cap image capture failed:', err);
     }
 
-    const downPaymentAmount = installmentPlan ? parseFloat(((finalPrice * (installmentPlan.downPaymentPercent || 0)) / 100).toFixed(2)) : 0;
-    const calculatedInstallments = (installmentPlan?.installments || []).map(r => ({
-      ...r,
-      amount: parseFloat(((finalPrice * (r.percent || 0)) / 100).toFixed(2))
-    }));
+    const isInstallment = paymentMethod === 'installment' && !!installmentPlan;
 
     const orderData = {
       customerDetails,
@@ -379,12 +388,9 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       program: program,
       capImages: Object.keys(capImages).length > 0 ? capImages : null,
       discountCode: appliedDiscount?.discount?.code || null,
-      installmentPlanId: paymentMethod === 'installment' && installmentPlan ? installmentPlan.id : null,
-      installmentDetails: paymentMethod === 'installment' && installmentPlan ? {
-        ...installmentPlan,
-        downPayment: downPaymentAmount,
-        installments: calculatedInstallments,
-      } : null,
+      isInstallment: isInstallment,
+      installmentPlanId: isInstallment ? installmentPlan.id : null,
+      installmentDetails: null, // Handled dynamically by backend now
       liningPhoto:
         (typeof selectedOptions.FOER?.['Indvendigt foer billede'] === 'string' &&
           selectedOptions.FOER['Indvendigt foer billede'].startsWith('data:image')
@@ -396,41 +402,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       const rawUrl = import.meta.env.VITE_API_BASE_URL || getBaseUrl();
       const apiRoot = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl.replace(/\/$/, '')}/api`;
 
-      if (paymentMethod === 'installment' && installmentPlan) {
-        // Direct installment order placement
-        const res = await fetch(`${apiRoot}/sendEmail/create-installment-order`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(orderData),
-        });
-
-        const contentType = res.headers.get("content-type");
-        let resData = {};
-        if (contentType && contentType.includes("application/json")) {
-          resData = await res.json();
-        } else {
-          const text = await res.text();
-          console.error("Non-JSON server response:", res.status, text);
-          throw new Error(`Kunne ikke forbinde til serveren (${res.status}). Prøv venligst igen.`);
-        }
-
-        if (!res.ok) {
-          throw new Error(resData.message || "Kunne ikke oprette afdragsordre");
-        }
-
-        pushEvent('checkout_completed', {
-          value: orderData.totalPrice || 0,
-          currency: 'DKK',
-          package: orderData.packageName,
-          payment_type: 'installment'
-        }, 'gradcap_configurator');
-
-        setIsLoading(false);
-        setOrderComplete(true);
-        return;
-      }
-
-      // Standard Stripe Checkout Flow
+      // Standard Stripe Checkout Flow (Handles both full and installments now)
       const stripeRes = await fetch(`${apiRoot}/sendEmail/create-checkout-session`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -497,7 +469,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       <div className="space-y-6">
         {console.log(selectedOptions)
         }
-        {Object.entries(selectedOptions).map(([category, options], categoryIndex) => {
+        {Object.entries(selectedOptions).map(([category, options]) => {
           const filteredOptions = filterOptions(options);
 
           if (Object.keys(filteredOptions).length === 0) return null;
@@ -899,13 +871,12 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
           )}
         </div>
 
-        {/* Payment Method Selector (if installment plan available) */}
+        {/* Payment Method Selector */}
         {installmentPlan && (() => {
-          const downPaymentAmount = parseFloat(((finalPrice * (installmentPlan.downPaymentPercent || 0)) / 100).toFixed(2));
-          const calculatedInstallments = (installmentPlan.installments || []).map(r => ({
-            ...r,
-            amount: parseFloat(((finalPrice * (r.percent || 0)) / 100).toFixed(2))
-          }));
+          const downPaymentAmount = installmentPlan.downPaymentAmount || 399;
+          const remainingAmount = Math.max(0, finalPrice - downPaymentAmount);
+          const installmentsCount = installmentPlan.installments?.length || 0;
+          const installmentAmount = installmentsCount > 0 ? (remainingAmount / installmentsCount).toFixed(2) : 0;
 
           return (
             <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 border border-emerald-200 space-y-3">
@@ -930,8 +901,8 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-gray-900 text-sm">Betal fuld pris</span>
-                    <input
+                     <span className="font-bold text-gray-900 text-sm">Betal fuld pris</span>
+                     <input
                       type="radio"
                       name="paymentMethodChoice"
                       checked={paymentMethod === 'full'}
@@ -939,7 +910,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
                       className="h-4 w-4 text-emerald-600"
                     />
                   </div>
-                  <p className="text-xs text-gray-600">Betal det fulde beløb nu via kort / MobilePay</p>
+                  <p className="text-xs text-gray-600">Betal det fulde beløb nu</p>
                   <p className="text-base font-extrabold text-emerald-700 mt-2">{finalPrice} DKK</p>
                 </div>
 
@@ -962,9 +933,9 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
                       className="h-4 w-4 text-emerald-600"
                     />
                   </div>
-                  <p className="text-xs text-gray-600">{installmentPlan.name}</p>
+                  <p className="text-xs text-gray-600">Del betalingen op i {installmentsCount + 1} bider</p>
                   <p className="text-base font-extrabold text-emerald-700 mt-2">
-                    Første betaling ({installmentPlan.downPaymentPercent}%): {downPaymentAmount} DKK
+                    Første betaling (Depositum): {downPaymentAmount} DKK
                   </p>
                 </div>
               </div>
@@ -976,16 +947,16 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
                     Betalingsplan oversigt:
                   </p>
                   <div className="flex justify-between font-semibold text-emerald-800">
-                    <span>1. betaling ({installmentPlan.downPaymentPercent}% ved bestilling):</span>
+                    <span>1. betaling (ved bestilling):</span>
                     <span>{downPaymentAmount} DKK</span>
                   </div>
-                  {calculatedInstallments.map((rate, rIdx) => (
-                    <div key={rIdx} className="flex justify-between text-gray-700">
-                      <span>{rate.label || `${rIdx + 2}. rate`} ({rate.percent}% - {rate.dueLabel || 'Forfald'}):</span>
-                      <span className="font-semibold">{rate.amount} DKK</span>
+                  {installmentPlan.installments?.map((row, index) => (
+                    <div key={index} className="flex justify-between text-gray-700">
+                      <span>{row.label || `${index + 2}. rate`}{row.dueLabel ? ` (${row.dueLabel})` : ''}:</span>
+                      <span className="font-semibold">{installmentAmount} DKK</span>
                     </div>
                   ))}
-                  <div className="pt-1.5 border-t border-emerald-100 flex justify-between font-bold text-gray-900 text-sm">
+                  <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-gray-100">
                     <span>Samlet ordreværdi:</span>
                     <span className="text-emerald-700">{finalPrice} DKK</span>
                   </div>
@@ -1254,9 +1225,13 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
             <div className="bg-gradient-to-r from-green-50 to-green-100/50 rounded-xl p-4 mb-4 border border-green-200">
               <div className="flex justify-between items-center">
                 <div>
-                  <span className="text-base font-bold text-gray-900">Din pris</span>
+                  <span className="text-base font-bold text-gray-900">
+                    {paymentMethod === 'installment' && !!installmentPlan ? 'At betale nu' : 'Din pris'}
+                  </span>
                   <p className="text-gray-600 text-xs mt-1">
-                    Inkluderet forsendelse og gebyr ({deliverySettings[country] || 79} DKK)
+                    {paymentMethod === 'installment' && !!installmentPlan 
+                      ? '1. betaling (ved bestilling)' 
+                      : `Inkluderet forsendelse og gebyr (${deliverySettings[country] || 79} DKK)`}
                   </p>
                   {appliedDiscount && (
                     <p className="text-violet-600 text-xs mt-1 font-semibold">
@@ -1266,7 +1241,9 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
                 </div>
                 <div className="text-right">
                   <span className="text-2xl font-bold bg-gradient-to-r from-green-600 to-green-700 bg-clip-text text-transparent">
-                    {finalPrice}
+                    {paymentMethod === 'installment' && !!installmentPlan 
+                      ? (installmentPlan.downPaymentAmount || 399).toFixed(2)
+                      : finalPrice}
                   </span>
 
                   <span className="text-base font-semibold text-green-600 ml-1">DKK</span>

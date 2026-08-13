@@ -335,6 +335,31 @@ const sendCustomerStatusEmail = async (orderId, emailTemplateId) => {
   }
 };
 
+const sendOrderEmail = async (to, subject, htmlBody) => {
+  const nodemailer = require('nodemailer');
+  const transporter = nodemailer.createTransport({
+    host: 'smtp.simply.com',
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to,
+      subject,
+      html: htmlBody,
+    });
+  } catch (error) {
+    console.error('Failed to send order email:', error);
+    throw error;
+  }
+};
+
 const getDashboardStats = async () => {
   const productionSetting = await prisma.systemSetting.findUnique({ where: { key: 'production_status_slug' } });
   const slug = productionSetting?.value?.slug || 'ready-for-production';
@@ -424,4 +449,5 @@ module.exports = {
   generateDiscountCode,
   slugify,
   sendCustomerStatusEmail,
+  sendOrderEmail,
 };

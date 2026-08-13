@@ -133,6 +133,32 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
+    if (newOrderStatus && newOrderStatus.isInstallmentTrigger && newOrderStatus.installmentTriggerIndex !== null) {
+      const idx = newOrderStatus.installmentTriggerIndex;
+      if (updatedOrder.installmentDetails && updatedOrder.installmentDetails.installments && updatedOrder.installmentDetails.installments[idx]) {
+        const installment = updatedOrder.installmentDetails.installments[idx];
+        if (installment.status !== 'Paid') {
+          const rawUrl = process.env.VITE_API_BASE_URL || 'http://localhost:5000';
+          const apiRoot = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl.replace(/\/$/, '')}/api`;
+          const paymentLink = `${apiRoot}/sendEmail/pay-installment?orderId=${updatedOrder.id}&installmentIndex=${idx}`;
+          
+          const subject = `Din næste rate for ordre ${updatedOrder.orderNumber} er klar til betaling`;
+          const body = `
+            <h2>Hej ${updatedOrder.customerDetails?.firstName || ''},</h2>
+            <p>Din næste rate (<strong>${installment.label}</strong>) på <strong>${installment.amount} DKK</strong> er nu klar til at blive betalt.</p>
+            <p>Klik på linket nedenfor for at fuldføre betalingen sikkert via Stripe:</p>
+            <p><a href="${paymentLink}" style="display:inline-block; padding:10px 20px; background-color:#16a34a; color:#fff; text-decoration:none; border-radius:5px; font-weight:bold;">Betal nu</a></p>
+            <p>Tak fordi du handler hos os!</p>
+          `;
+          
+          const { sendOrderEmail } = require('../services/core.service');
+          sendOrderEmail(updatedOrder.customerEmail, subject, body).catch(err => {
+            console.error('Failed to send installment payment email:', err);
+          });
+        }
+      }
+    }
+
     res.status(200).json(updatedOrder);
   } catch (error) {
     res.status(500).json({ message: 'Error updating order status' });

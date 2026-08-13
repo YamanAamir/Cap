@@ -11,7 +11,7 @@ const OrderStatusesPage = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ 
-    name: '', sortOrder: 0, isInternal: false, isVisibleToProduction: true, triggersProduction: false, color: '#6366f1', customerEmailTemplateId: '' 
+    name: '', sortOrder: 0, isInternal: false, isVisibleToProduction: true, triggersProduction: false, color: '#6366f1', customerEmailTemplateId: '', isInstallmentTrigger: false, installmentTriggerIndex: '' 
   });
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
   const [isDeleting, setIsDeleting] = useState(false);
@@ -31,8 +31,11 @@ const OrderStatusesPage = () => {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    await createOrderStatus(form);
-    setForm({ name: '', sortOrder: statuses.length + 1, isInternal: false, isVisibleToProduction: true, triggersProduction: false, color: '#6366f1', customerEmailTemplateId: '' });
+    await createOrderStatus({
+      ...form,
+      installmentTriggerIndex: form.isInstallmentTrigger && form.installmentTriggerIndex !== '' ? parseInt(form.installmentTriggerIndex) : null
+    });
+    setForm({ name: '', sortOrder: statuses.length + 1, isInternal: false, isVisibleToProduction: true, triggersProduction: false, color: '#6366f1', customerEmailTemplateId: '', isInstallmentTrigger: false, installmentTriggerIndex: '' });
     setShowForm(false);
     load();
   };
@@ -192,6 +195,35 @@ const OrderStatusesPage = () => {
                 </label>
               </div>
             </div>
+
+            <div className="md:col-span-2 mt-2">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 block">Installment Triggers</label>
+              <div className="flex flex-col md:flex-row gap-3 items-center">
+                <label className="flex-1 flex items-center justify-between p-3 rounded border border-emerald-200 bg-emerald-50 cursor-pointer hover:bg-emerald-100 transition-colors w-full">
+                  <div className="flex items-center gap-2">
+                    <div>
+                      <p className="text-xs font-bold text-emerald-900">Trigger Installment Email</p>
+                      <p className="text-[10px] text-emerald-700">Sends payment link</p>
+                    </div>
+                  </div>
+                  <input type="checkbox" checked={form.isInstallmentTrigger} onChange={e => setForm({ ...form, isInstallmentTrigger: e.target.checked })} className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500" />
+                </label>
+                
+                {form.isInstallmentTrigger && (
+                  <div className="flex-1 w-full">
+                    <select
+                      value={form.installmentTriggerIndex}
+                      onChange={e => setForm({ ...form, installmentTriggerIndex: e.target.value })}
+                      className="w-full p-3 border border-emerald-200 rounded text-sm focus:outline-none focus:border-emerald-500 font-bold text-emerald-700 bg-white"
+                    >
+                      <option value="">Select Installment to trigger</option>
+                      <option value="1">2nd Installment</option>
+                      <option value="2">3rd Installment (Final)</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+            </div>
             
             <button type="submit" className="md:col-span-2 mt-2 bg-[#1e3a8a] text-white text-xs font-bold px-6 py-3 rounded shadow-sm hover:bg-blue-800 transition-colors">
               SAVE NEW STATUS
@@ -247,10 +279,15 @@ const OrderStatusesPage = () => {
                             
                             <div className="min-w-[150px]">
                               <span className="text-sm font-bold text-slate-800 block">{s.name}</span>
-                              <div className="flex gap-2 mt-1">
+                              <div className="flex gap-2 mt-1 flex-wrap">
                                 {s.isInternal && (
                                   <span className="bg-slate-800 text-white text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex items-center gap-1">
                                     <EyeOff className="h-2.5 w-2.5" /> Customer Hidden
+                                  </span>
+                                )}
+                                {s.isInstallmentTrigger && (
+                                  <span className="bg-emerald-600 text-white text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded flex items-center gap-1">
+                                    Installment Link ({s.installmentTriggerIndex === 1 ? '2nd' : '3rd'})
                                   </span>
                                 )}
                               </div>

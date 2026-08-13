@@ -19,21 +19,21 @@ const PROGRAMS = [
   'pædagog', 'pau', 'ernæringsassisten', 'STU', 'Landmand',
 ];
 
-const TIERS = ['standard', 'luksus', 'premium'];
+const TIERS = ['luksus', 'premium'];
 
 const PREVIEW_PRICE = 2500;
 
-const emptyRow = () => ({ label: '', dueLabel: '', percent: '' });
+const emptyRow = () => ({ label: '', dueLabel: '' });
 
 const emptyForm = () => ({
   name: '',
   program: 'STX',
   packageTier: 'luksus',
   isActive: true,
-  downPaymentPercent: '34',
+  downPaymentAmount: '399',
   installments: [
-    { label: 'Rate 2', dueLabel: '2 months after order', percent: '33' },
-    { label: 'Rate 3', dueLabel: 'Before delivery (Month 5)', percent: '33' }
+    { label: 'Rate 2', dueLabel: '2 months after order' },
+    { label: 'Rate 3', dueLabel: 'Before delivery (Month 5)' }
   ],
   notes: '',
 });
@@ -41,12 +41,9 @@ const emptyForm = () => ({
 const formatDKK = (val) =>
   new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK', maximumFractionDigits: 0 }).format(val || 0);
 
-const calcAmount = (percent, price) => ((parseFloat(percent) || 0) / 100) * price;
-
-const totalPercent = (form) => {
-  const down = parseFloat(form.downPaymentPercent) || 0;
-  const rows = form.installments.reduce((s, r) => s + (parseFloat(r.percent) || 0), 0);
-  return down + rows;
+const calcAmount = (totalPrice, downPayment, numInstallments) => {
+  const remaining = Math.max(0, totalPrice - downPayment);
+  return numInstallments > 0 ? remaining / numInstallments : 0;
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -61,12 +58,11 @@ const PlanModal = ({ plan, onClose, onSaved }) => {
           program: plan.program,
           packageTier: plan.packageTier,
           isActive: plan.isActive,
-          downPaymentPercent: String(plan.downPaymentPercent),
+          downPaymentAmount: String(plan.downPaymentAmount || 399),
           installments: Array.isArray(plan.installments) && plan.installments.length
             ? plan.installments.map(r => ({
                 label: r.label || '',
                 dueLabel: r.dueLabel || '',
-                percent: String(r.percent || ''),
               }))
             : [emptyRow()],
           notes: plan.notes || '',
@@ -89,79 +85,23 @@ const PlanModal = ({ plan, onClose, onSaved }) => {
   const removeRow = (idx) =>
     setForm(prev => ({ ...prev, installments: prev.installments.filter((_, i) => i !== idx) }));
 
-  // Preset Template Applicator
-  const applyPreset = (count) => {
-    if (count === 3) {
-      setForm(prev => ({
-        ...prev,
-        downPaymentPercent: '34',
-        installments: [
-          { label: '2. rate', dueLabel: '2 months after ordering', percent: '33' },
-          { label: '3. rate (final)', dueLabel: 'Before delivery (Month 5)', percent: '33' }
-        ]
-      }));
-    } else if (count === 4) {
-      setForm(prev => ({
-        ...prev,
-        downPaymentPercent: '25',
-        installments: [
-          { label: '2. rate', dueLabel: '1 month after ordering', percent: '25' },
-          { label: '3. rate', dueLabel: '3 months after ordering', percent: '25' },
-          { label: '4. rate (final)', dueLabel: 'Before delivery (Month 5)', percent: '25' }
-        ]
-      }));
-    } else if (count === 5) {
-      setForm(prev => ({
-        ...prev,
-        downPaymentPercent: '20',
-        installments: [
-          { label: '2. rate', dueLabel: 'Month 2', percent: '20' },
-          { label: '3. rate', dueLabel: 'Month 3', percent: '20' },
-          { label: '4. rate', dueLabel: 'Month 4', percent: '20' },
-          { label: '5. rate (final)', dueLabel: 'Before delivery (Month 5)', percent: '20' }
-        ]
-      }));
-    }
-    toast.success(`${count}-payment plan preset applied`);
-  };
-
-  // Auto balance remaining percentage across installment rows
-  const autoBalance = () => {
-    const down = parseFloat(form.downPaymentPercent) || 0;
-    const remaining = 100 - down;
-    if (remaining <= 0) return toast.error('Down payment must be less than 100%');
-    if (form.installments.length === 0) return;
-
-    const share = Math.floor((remaining / form.installments.length) * 10) / 10;
-    let sum = share * form.installments.length;
-    let diff = Math.round((remaining - sum) * 10) / 10;
-
-    const newRows = form.installments.map((r, idx) => ({
-      ...r,
-      percent: String(idx === form.installments.length - 1 ? (share + diff).toFixed(1) : share.toFixed(1))
-    }));
-
-    setForm(prev => ({ ...prev, installments: newRows }));
-    toast.success('Remaining percentage evenly distributed');
-  };
-
-  const usedPercent = totalPercent(form);
-  const remaining = 100 - usedPercent;
-  const percentOk = Math.abs(usedPercent - 100) <= 0.01;
+  const downPayment = parseFloat(form.downPaymentAmount) || 0;
+  const numInstallments = form.installments.length;
+  const splitAmount = calcAmount(previewPrice, downPayment, numInstallments);
 
   const handleSave = async () => {
     if (!form.name.trim()) return toast.error('Please enter a plan name');
-    if (!form.downPaymentPercent) return toast.error('Please enter down payment %');
-    if (!percentOk) return toast.error(`Total percentages must equal 100%. Currently: ${usedPercent.toFixed(1)}%`);
+    if (!form.downPaymentAmount) return toast.error('Please enter a down payment amount');
 
     setSaving(true);
     try {
       const payload = {
         ...form,
-        downPaymentPercent: parseFloat(form.downPaymentPercent),
-        installments: form.installments
-          .filter(r => r.label.trim())
-          .map(r => ({ label: r.label, dueLabel: r.dueLabel, percent: parseFloat(r.percent) || 0 })),
+        downPaymentAmount: parseFloat(form.downPaymentAmount) || 399,
+        installments: form.installments.map(r => ({
+          label: r.label,
+          dueLabel: r.dueLabel,
+        }))
       };
       if (isEdit) {
         await updateInstallmentPlan(plan.id, payload);
@@ -193,7 +133,7 @@ const PlanModal = ({ plan, onClose, onSaved }) => {
                 {isEdit ? 'Edit Installment Plan' : 'Create New Installment Plan'}
               </h2>
               <p className="text-xs text-slate-500 font-bold mt-0.5">
-                Dynamic percentage-based payment plan for students
+                Dynamic equal-split payment plan for students
               </p>
             </div>
           </div>
@@ -204,42 +144,6 @@ const PlanModal = ({ plan, onClose, onSaved }) => {
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-
-          {/* Quick Preset Selector */}
-          <div className="bg-[#f0f4f8] p-3.5 rounded border border-slate-200">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                Quick Presets (1-Click Setup):
-              </span>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => applyPreset(3)}
-                className="py-2 px-3 bg-white hover:bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-700 transition-all text-center"
-              >
-                3 Payments
-                <span className="block text-[10px] font-normal text-slate-500">34% / 33% / 33%</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => applyPreset(4)}
-                className="py-2 px-3 bg-white hover:bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-700 transition-all text-center"
-              >
-                4 Payments
-                <span className="block text-[10px] font-normal text-slate-500">25% × 4</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => applyPreset(5)}
-                className="py-2 px-3 bg-white hover:bg-slate-50 border border-slate-200 rounded text-xs font-bold text-slate-700 transition-all text-center"
-              >
-                5 Payments
-                <span className="block text-[10px] font-normal text-slate-500">20% × 5 (5 Months)</span>
-              </button>
-            </div>
-          </div>
 
           {/* Name & Target Program/Tier */}
           <div className="space-y-4">
@@ -311,27 +215,26 @@ const PlanModal = ({ plan, onClose, onSaved }) => {
             </div>
           </div>
 
-          {/* 1st Payment (Down Payment %) */}
+          {/* 1st Payment (Down Payment Amount) */}
           <div className="bg-white border border-slate-200 rounded p-4 space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
                 1st Payment (Down Payment @ Checkout) *
               </label>
               <span className="text-xs font-bold text-[#1e3a8a]">
-                = {formatDKK(calcAmount(form.downPaymentPercent, previewPrice))}
+                = {formatDKK(downPayment)}
               </span>
             </div>
             <div className="relative">
               <input
                 type="number"
-                min="1"
-                max="99"
-                value={form.downPaymentPercent}
-                onChange={e => set('downPaymentPercent', e.target.value)}
-                placeholder="35"
-                className="w-full pl-4 pr-10 py-2 border border-slate-200 rounded text-base font-bold text-slate-800 focus:outline-none focus:border-blue-500"
+                min="0"
+                value={form.downPaymentAmount}
+                onChange={e => set('downPaymentAmount', e.target.value)}
+                placeholder="399"
+                className="w-full pl-4 pr-12 py-2 border border-slate-200 rounded text-base font-bold text-slate-800 focus:outline-none focus:border-blue-500"
               />
-              <span className="absolute right-3.5 top-2.5 text-slate-400 font-bold">%</span>
+              <span className="absolute right-3.5 top-2.5 text-slate-400 font-bold">DKK</span>
             </div>
             <p className="text-[11px] text-slate-500 font-bold">Student pays this initial deposit when placing order.</p>
           </div>
@@ -340,17 +243,9 @@ const PlanModal = ({ plan, onClose, onSaved }) => {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                Subsequent Installments
+                Subsequent Installments (Equally Divided)
               </label>
               <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={autoBalance}
-                  className="flex items-center gap-1 text-xs font-bold text-amber-800 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1 rounded transition-colors"
-                  title="Auto balance remaining % equally"
-                >
-                  <Wand2 className="h-3 w-3" /> Auto Balance ({remaining.toFixed(0)}%)
-                </button>
                 <button
                   type="button"
                   onClick={addRow}
@@ -376,21 +271,9 @@ const PlanModal = ({ plan, onClose, onSaved }) => {
                     placeholder="e.g. 2 months after order (or Month 5)"
                     className="flex-1 w-full px-3 py-1.5 border border-slate-200 rounded text-xs bg-white focus:outline-none focus:border-blue-400"
                   />
-                  <div className="flex items-center gap-2 w-full sm:w-auto justify-between">
-                    <div className="relative w-20">
-                      <input
-                        type="number"
-                        min="0"
-                        max="99"
-                        value={row.percent}
-                        onChange={e => setRow(idx, 'percent', e.target.value)}
-                        placeholder="0"
-                        className="w-full pl-2.5 pr-6 py-1.5 border border-slate-200 rounded text-xs font-bold bg-white focus:outline-none focus:border-blue-400 text-right"
-                      />
-                      <span className="absolute right-2 top-1.5 text-slate-400 text-[10px] font-bold">%</span>
-                    </div>
+                  <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                     <span className="text-xs font-bold text-[#1e3a8a] min-w-[70px] text-right">
-                      {formatDKK(calcAmount(row.percent, previewPrice))}
+                      {formatDKK(splitAmount)}
                     </span>
                     <button
                       type="button"
@@ -406,38 +289,6 @@ const PlanModal = ({ plan, onClose, onSaved }) => {
             </div>
           </div>
 
-          {/* Percentage Total Progress Status */}
-          <div className="bg-[#fafafa] border border-slate-200 rounded p-4 space-y-2">
-            <div className="flex items-center justify-between text-xs font-bold">
-              <span className="text-slate-700">Total Percentage Allocated:</span>
-              <span className={cn(
-                'px-2 py-0.5 rounded text-xs font-bold',
-                percentOk ? 'bg-green-600 text-white' : remaining > 0 ? 'bg-amber-500 text-white' : 'bg-red-500 text-white'
-              )}>
-                {usedPercent.toFixed(1)}% / 100%
-              </span>
-            </div>
-
-            <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-              <div
-                className={cn(
-                  'h-full rounded-full transition-all duration-300',
-                  percentOk ? 'bg-green-600' : usedPercent > 100 ? 'bg-red-500' : 'bg-amber-400'
-                )}
-                style={{ width: `${Math.min(usedPercent, 100)}%` }}
-              />
-            </div>
-
-            {!percentOk && (
-              <p className="text-xs text-amber-700 font-bold flex items-center gap-1 pt-1">
-                <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                {remaining > 0
-                  ? `Need ${remaining.toFixed(1)}% more to reach 100%. Click "Auto Balance" above!`
-                  : `Over by ${Math.abs(remaining).toFixed(1)}%. Total must be exactly 100%.`}
-              </p>
-            )}
-          </div>
-
           {/* Visual Schedule Preview */}
           <div className="bg-[#1e3a8a] text-white rounded p-4 space-y-3 border border-blue-900">
             <div className="flex items-center justify-between border-b border-blue-800 pb-2">
@@ -445,7 +296,7 @@ const PlanModal = ({ plan, onClose, onSaved }) => {
                 <Check className="h-3.5 w-3.5 text-green-400" /> Payment Schedule Preview ({previewPrice} DKK order)
               </span>
               <span className="text-xs font-bold text-green-400">
-                Total: {formatDKK(calcAmount(usedPercent, previewPrice))}
+                Total: {formatDKK(previewPrice)}
               </span>
             </div>
 
@@ -456,8 +307,8 @@ const PlanModal = ({ plan, onClose, onSaved }) => {
                   <span className="text-[10px] text-blue-200 block">Immediate payment</span>
                 </div>
                 <div className="text-right">
-                  <span className="font-bold text-amber-300 text-sm">{form.downPaymentPercent || 0}%</span>
-                  <span className="text-[11px] text-blue-100 block">{formatDKK(calcAmount(form.downPaymentPercent, previewPrice))}</span>
+                  <span className="font-bold text-amber-300 text-sm">Fixed</span>
+                  <span className="text-[11px] text-blue-100 block">{formatDKK(downPayment)}</span>
                 </div>
               </div>
 
@@ -468,8 +319,8 @@ const PlanModal = ({ plan, onClose, onSaved }) => {
                     <span className="text-[10px] text-blue-200 block">{r.dueLabel || 'Due date'}</span>
                   </div>
                   <div className="text-right">
-                    <span className="font-bold text-blue-200 text-sm">{r.percent || 0}%</span>
-                    <span className="text-[11px] text-blue-100 block">{formatDKK(calcAmount(r.percent, previewPrice))}</span>
+                    <span className="font-bold text-blue-200 text-sm">Split</span>
+                    <span className="text-[11px] text-blue-100 block">{formatDKK(splitAmount)}</span>
                   </div>
                 </div>
               ))}
@@ -515,7 +366,7 @@ const PlanModal = ({ plan, onClose, onSaved }) => {
         {/* Footer Actions */}
         <div className="px-6 py-4 border-t border-slate-200 bg-[#fafafa] flex items-center justify-between">
           <span className="text-xs font-bold text-slate-500">
-            {percentOk ? '✅ Ready to save' : '⚠️ Fix percentages to save'}
+            Ready to save
           </span>
           <div className="flex gap-3">
             <button
@@ -526,7 +377,7 @@ const PlanModal = ({ plan, onClose, onSaved }) => {
             </button>
             <button
               onClick={handleSave}
-              disabled={saving || !percentOk}
+              disabled={saving}
               className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded shadow-sm uppercase tracking-wider transition-all disabled:opacity-40"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
@@ -603,7 +454,7 @@ const InstallmentPlansPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-800">Installment Plans</h2>
-          <p className="text-sm text-slate-500">Configure percentage-based payment plans for students</p>
+          <p className="text-sm text-slate-500">Configure equal-split payment plans for students</p>
         </div>
         <button
           onClick={() => setModal({ open: true, plan: null })}
@@ -621,7 +472,7 @@ const InstallmentPlansPage = () => {
             <CreditCard className="h-8 w-8 text-[#1e3a8a]" />
           </div>
           <p className="font-bold text-slate-800 text-base mb-1">No Installment Plans Configured</p>
-          <p className="text-sm text-slate-500 mb-6 max-w-md mx-auto">Create your first percentage-based installment plan to allow students to pay in easy rates.</p>
+          <p className="text-sm text-slate-500 mb-6 max-w-md mx-auto">Create your first installment plan to allow students to pay in easy rates.</p>
           <button
             onClick={() => setModal({ open: true, plan: null })}
             className="inline-flex items-center gap-2 text-white bg-[#1e3a8a] hover:bg-blue-900 text-xs font-bold px-5 py-2.5 rounded shadow-sm uppercase tracking-wider transition-colors"
@@ -671,9 +522,9 @@ const InstallmentPlansPage = () => {
                       </div>
                     </div>
 
-                    {/* Down Payment % */}
+                    {/* Down Payment */}
                     <div className="col-span-3">
-                      <span className="text-sm font-bold text-slate-800">{plan.downPaymentPercent}%</span>
+                      <span className="text-sm font-bold text-slate-800">{formatDKK(plan.downPaymentAmount || 399)}</span>
                       <span className="text-xs text-slate-500 block font-normal">Paid at checkout</span>
                     </div>
 
@@ -714,7 +565,7 @@ const InstallmentPlansPage = () => {
                   {isExpanded && (
                     <div className="bg-[#fafafa] px-6 py-4 border-t border-slate-100 space-y-3">
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">
-                        Payment Schedule (% of student's total price)
+                        Payment Schedule Rules
                       </span>
                       <div className="space-y-1.5 max-w-2xl">
                         <div className="flex items-center justify-between bg-white border border-slate-200 rounded px-4 py-2 text-xs">
@@ -723,8 +574,8 @@ const InstallmentPlansPage = () => {
                             <span className="text-slate-400 block text-[10px]">Immediate payment</span>
                           </div>
                           <div className="text-right">
-                            <span className="font-bold text-[#1e3a8a] text-sm">{plan.downPaymentPercent}%</span>
-                            <span className="text-[10px] text-slate-400 block">e.g. {Math.round(plan.downPaymentPercent / 100 * 2500)} DKK on 2.500 order</span>
+                            <span className="font-bold text-[#1e3a8a] text-sm">Fixed</span>
+                            <span className="text-[10px] text-slate-400 block">{formatDKK(plan.downPaymentAmount || 399)}</span>
                           </div>
                         </div>
 
@@ -735,8 +586,8 @@ const InstallmentPlansPage = () => {
                               {row.dueLabel && <span className="text-slate-400 block text-[10px]">{row.dueLabel}</span>}
                             </div>
                             <div className="text-right">
-                              <span className="font-bold text-slate-800 text-sm">{row.percent}%</span>
-                              <span className="text-[10px] text-slate-400 block">e.g. {Math.round((row.percent || 0) / 100 * 2500)} DKK on 2.500 order</span>
+                              <span className="font-bold text-slate-800 text-sm">Equal Split</span>
+                              <span className="text-[10px] text-slate-400 block">Remaining amount divided evenly</span>
                             </div>
                           </div>
                         ))}

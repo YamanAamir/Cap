@@ -298,6 +298,31 @@ const OrderDetailPage = () => {
                 <span className="text-[10px] font-bold uppercase text-slate-500 tracking-widest block mb-1">Tier</span>
                 <p className="font-bold text-sm text-slate-800">{order.packageName || 'Standard Issue'}</p>
               </div>
+
+              {order.installmentDetails && order.installmentDetails.installments && (
+                <div className="bg-white rounded p-3 border border-emerald-200 mt-4">
+                  <span className="text-[10px] font-bold uppercase text-emerald-600 tracking-widest block mb-2 flex items-center gap-1">
+                    <CreditCard className="h-3 w-3" /> Installment History
+                  </span>
+                  <div className="space-y-2">
+                    {order.installmentDetails.installments.map((inst, i) => (
+                      <div key={i} className="flex justify-between items-center text-sm border-b border-slate-100 last:border-0 pb-2 last:pb-0">
+                        <div>
+                          <p className="font-bold text-slate-700">{inst.label}</p>
+                          <p className="text-xs text-slate-500">{inst.paidAt ? new Date(inst.paidAt).toLocaleDateString() : 'Pending'}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-slate-900">{inst.amount} DKK</p>
+                          <span className={cn("text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded", inst.status === 'Paid' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700")}>
+                            {inst.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="bg-white rounded p-3 border border-slate-200">
                 <span className="text-[10px] font-bold uppercase text-slate-500 tracking-widest block mb-1">Affiliation</span>
                 <p className="font-bold text-sm text-slate-800">{order.program || 'N/A'}</p>

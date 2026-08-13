@@ -24,7 +24,8 @@ exports.getPublicInstallmentPlans = async (req, res) => {
         name: true,
         program: true,
         packageTier: true,
-        downPaymentPercent: true,
+        packageTier: true,
+        downPaymentAmount: true,
         installments: true,
         notes: true,
       },
@@ -38,18 +39,13 @@ exports.getPublicInstallmentPlans = async (req, res) => {
 // ─── Admin: create plan ───────────────────────────────────────────────────────
 exports.createInstallmentPlan = async (req, res) => {
   try {
-    const { name, program, packageTier, isActive, downPaymentPercent, installments, notes } = req.body;
+    const { name, program, packageTier, isActive, downPaymentAmount, installments, notes } = req.body;
 
-    if (!name || !program || !packageTier || downPaymentPercent === undefined) {
-      return res.status(400).json({ message: 'name, program, packageTier, and downPaymentPercent are required.' });
+    if (!name || !program || !packageTier || downPaymentAmount === undefined) {
+      return res.status(400).json({ message: 'name, program, packageTier, and downPaymentAmount are required.' });
     }
 
-    // Validate total percent = 100
     const rows = Array.isArray(installments) ? installments : [];
-    const totalPercent = parseFloat(downPaymentPercent) + rows.reduce((s, r) => s + (parseFloat(r.percent) || 0), 0);
-    if (Math.abs(totalPercent - 100) > 0.01) {
-      return res.status(400).json({ message: `Total percentages must equal 100%. Currently: ${totalPercent.toFixed(1)}%` });
-    }
 
     const plan = await prisma.installmentPlan.create({
       data: {
@@ -57,7 +53,7 @@ exports.createInstallmentPlan = async (req, res) => {
         program,
         packageTier,
         isActive: isActive !== undefined ? Boolean(isActive) : true,
-        downPaymentPercent: parseFloat(downPaymentPercent),
+        downPaymentAmount: parseFloat(downPaymentAmount),
         installments: rows,
         notes: notes || null,
       },
@@ -72,16 +68,7 @@ exports.createInstallmentPlan = async (req, res) => {
 exports.updateInstallmentPlan = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, program, packageTier, isActive, downPaymentPercent, installments, notes } = req.body;
-
-    // Validate total percent if both fields provided
-    if (downPaymentPercent !== undefined && installments !== undefined) {
-      const rows = Array.isArray(installments) ? installments : [];
-      const totalPercent = parseFloat(downPaymentPercent) + rows.reduce((s, r) => s + (parseFloat(r.percent) || 0), 0);
-      if (Math.abs(totalPercent - 100) > 0.01) {
-        return res.status(400).json({ message: `Total percentages must equal 100%. Currently: ${totalPercent.toFixed(1)}%` });
-      }
-    }
+    const { name, program, packageTier, isActive, downPaymentAmount, installments, notes } = req.body;
 
     const plan = await prisma.installmentPlan.update({
       where: { id: parseInt(id) },
@@ -90,7 +77,7 @@ exports.updateInstallmentPlan = async (req, res) => {
         ...(program !== undefined && { program }),
         ...(packageTier !== undefined && { packageTier }),
         ...(isActive !== undefined && { isActive: Boolean(isActive) }),
-        ...(downPaymentPercent !== undefined && { downPaymentPercent: parseFloat(downPaymentPercent) }),
+        ...(downPaymentAmount !== undefined && { downPaymentAmount: parseFloat(downPaymentAmount) }),
         ...(installments !== undefined && { installments }),
         ...(notes !== undefined && { notes }),
       },
