@@ -393,19 +393,29 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
     };
 
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL || getBaseUrl();
+      const rawUrl = import.meta.env.VITE_API_BASE_URL || getBaseUrl();
+      const apiRoot = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl.replace(/\/$/, '')}/api`;
 
       if (paymentMethod === 'installment' && installmentPlan) {
         // Direct installment order placement
-        const res = await fetch(`${baseUrl}/sendEmail/create-installment-order`, {
+        const res = await fetch(`${apiRoot}/sendEmail/create-installment-order`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(orderData),
         });
 
+        const contentType = res.headers.get("content-type");
+        let resData = {};
+        if (contentType && contentType.includes("application/json")) {
+          resData = await res.json();
+        } else {
+          const text = await res.text();
+          console.error("Non-JSON server response:", res.status, text);
+          throw new Error(`Kunne ikke forbinde til serveren (${res.status}). Prøv venligst igen.`);
+        }
+
         if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(errData.message || "Kunne ikke oprette afdragsordre");
+          throw new Error(resData.message || "Kunne ikke oprette afdragsordre");
         }
 
         pushEvent('checkout_completed', {
@@ -421,17 +431,27 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       }
 
       // Standard Stripe Checkout Flow
-      const stripeRes = await fetch(`${baseUrl}/sendEmail/create-checkout-session`, {
+      const stripeRes = await fetch(`${apiRoot}/sendEmail/create-checkout-session`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderData),
       });
 
-      if (!stripeRes.ok) {
-        throw new Error("Failed to create Stripe checkout session");
+      const stripeContentType = stripeRes.headers.get("content-type");
+      let stripeData = {};
+      if (stripeContentType && stripeContentType.includes("application/json")) {
+        stripeData = await stripeRes.json();
+      } else {
+        const text = await stripeRes.text();
+        console.error("Non-JSON Stripe response:", stripeRes.status, text);
+        throw new Error(`Kunne ikke starte betaling (${stripeRes.status}).`);
       }
 
-      const { id: sessionId } = await stripeRes.json();
+      if (!stripeRes.ok) {
+        throw new Error(stripeData.message || "Failed to create Stripe checkout session");
+      }
+
+      const { id: sessionId } = stripeData;
       const stripe = await stripePromise;
 
       pushEvent('checkout_started', {
