@@ -216,7 +216,7 @@ const StudentDashboard = () => {
     fetchInstallmentPlans();
   }, []);
 
-  const matchingInstallmentPlan = installmentPlans.find(plan => {
+  const matchingInstallmentPlan = packageName === 'standard' ? undefined : installmentPlans.find(plan => {
     const progMatch = plan.program === 'all' || (plan.program || '').toLowerCase() === (program || '').toLowerCase();
     const tierMatch = plan.packageTier === 'all' || (plan.packageTier || '').toLowerCase() === (packageName || 'standard').toLowerCase();
     return progMatch && tierMatch;

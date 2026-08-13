@@ -555,6 +555,7 @@ const ConfiguratorSettingsPage = () => {
                       <h3 className="text-xl font-bold text-gray-800 capitalize">
                         {category.replace(/([A-Z])/g, ' $1').trim()}
                       </h3>
+                      {/*
                       <button
                         title={`Toggle visibility for all ${category}`}
                         onClick={() => {
@@ -565,6 +566,7 @@ const ConfiguratorSettingsPage = () => {
                       >
                         {config.programOptionVisibility?.[activeProgram]?.[category] !== false ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5 text-red-500" />}
                       </button>
+                      */}
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
@@ -574,6 +576,7 @@ const ConfiguratorSettingsPage = () => {
                             <h4 className="font-semibold text-gray-700 capitalize">
                               {groupName}
                             </h4>
+                            {/*
                             <button
                               title={`Toggle visibility for ${groupName}`}
                               onClick={() => {
@@ -585,6 +588,7 @@ const ConfiguratorSettingsPage = () => {
                             >
                               {config.programOptionVisibility?.[activeProgram]?.[`${category}_${groupName}`] !== false ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4 text-red-500" />}
                             </button>
+                            */}
                           </div>
                           <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
                             {Object.entries(items).map(([itemName, price]) => {
@@ -594,6 +598,7 @@ const ConfiguratorSettingsPage = () => {
                               return (
                                 <div key={itemName} className={`flex justify-between items-center p-2 rounded border ${isHidden ? 'bg-gray-100 border-gray-200 opacity-60' : 'bg-white border-gray-100'}`}>
                                   <div className="flex items-center w-1/2 truncate pr-2">
+                                    {/*
                                     <button
                                       title={`Toggle visibility for ${displayLabel}`}
                                       onClick={() => {
@@ -603,6 +608,7 @@ const ConfiguratorSettingsPage = () => {
                                     >
                                       {isHidden ? <EyeOff className="w-4 h-4 text-red-500" /> : <Eye className="w-4 h-4" />}
                                     </button>
+                                    */}
                                     <span className={`text-sm font-medium truncate ${isHidden ? 'text-gray-400 line-through' : 'text-gray-700'}`} title={displayLabel}>
                                       {displayLabel}
                                     </span>
