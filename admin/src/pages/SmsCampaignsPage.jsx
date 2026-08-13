@@ -103,12 +103,30 @@ const SmsCampaignsPage = () => {
 
   const addDraftStep = (campaignId) => {
     setDraftCampaigns(prev => {
-      const updated = { ...prev };
-      const steps = [...updated[campaignId].steps];
+      const steps = [...prev[campaignId].steps];
       const maxDay = steps.length > 0 ? Math.max(...steps.map(s => s.dayOffset)) : 0;
       steps.push({ dayOffset: maxDay + 5, message: '' });
-      updated[campaignId].steps = steps;
-      return updated;
+      return {
+        ...prev,
+        [campaignId]: {
+          ...prev[campaignId],
+          steps: steps
+        }
+      };
+    });
+  };
+
+  const removeDraftStep = (campaignId, index) => {
+    setDraftCampaigns(prev => {
+      const steps = [...prev[campaignId].steps];
+      steps.splice(index, 1);
+      return {
+        ...prev,
+        [campaignId]: {
+          ...prev[campaignId],
+          steps: steps
+        }
+      };
     });
   };
 
@@ -122,6 +140,16 @@ const SmsCampaignsPage = () => {
            original.discountType !== draft.discountType ||
            original.discountValue !== draft.discountValue ||
            original.discountExpiryDays !== draft.discountExpiryDays;
+  };
+
+  const clearDraftChanges = (campaignId) => {
+    const original = campaigns.find(c => c.id === campaignId);
+    if (original) {
+      setDraftCampaigns(prev => ({
+        ...prev,
+        [campaignId]: JSON.parse(JSON.stringify(original))
+      }));
+    }
   };
 
   const handleSaveClick = (campaignId) => {
@@ -143,7 +171,9 @@ const SmsCampaignsPage = () => {
       }, applyToExisting);
       toast.success('Campaign updated successfully');
       setSaveModal({ isOpen: false, campaignId: null, applyToExisting: false, isSaving: false });
-      load(); // Reload to sync state
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
     } catch (err) {
       toast.error('Failed to update campaign');
       setSaveModal(prev => ({ ...prev, isSaving: false }));
@@ -437,12 +467,18 @@ const SmsCampaignsPage = () => {
                   
                   <div className="mb-6 flex justify-between items-center">
                     {hasDraftChanges(campaign.id) && (
-                      <div className="flex items-center">
+                      <div className="flex items-center gap-3">
                         <button 
                           onClick={() => handleSaveClick(campaign.id)}
                           className="bg-blue-600 text-white px-4 py-2 rounded text-xs font-bold hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
                         >
                           <Save className="w-4 h-4" /> Save Changes
+                        </button>
+                        <button 
+                          onClick={() => clearDraftChanges(campaign.id)}
+                          className="bg-slate-100 text-slate-600 px-4 py-2 rounded text-xs font-bold hover:bg-slate-200 transition-colors flex items-center gap-2 shadow-sm"
+                        >
+                          <X className="w-4 h-4" /> Discard
                         </button>
                       </div>
                     )}
@@ -483,7 +519,14 @@ const SmsCampaignsPage = () => {
                                 onChange={e => updateDraftStep(campaign.id, i, 'message', e.target.value)}
                                 className="w-full rounded border border-slate-200 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-blue-500 min-h-[80px] resize-y"
                               />
-                              <div className="flex justify-end mt-1">
+                              <div className="flex justify-between mt-1 items-center">
+                                <button
+                                  onClick={() => removeDraftStep(campaign.id, i)}
+                                  className="text-red-500 hover:text-red-700 transition-colors"
+                                  title="Delete Step"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
                                 <span className="text-[10px] font-bold text-slate-400">
                                   {step.message.length} chars ({Math.ceil(step.message.length / 160)} SMS)
                                </span>
