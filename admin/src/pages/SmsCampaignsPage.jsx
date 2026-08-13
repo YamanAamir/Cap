@@ -154,6 +154,32 @@ const SmsCampaignsPage = () => {
     setDeleteModal({ isOpen: true, campaignId, isDeleting: false });
   };
 
+  const handleDownloadQR = () => {
+    const svg = document.getElementById("campaign-qr-code");
+    if (!svg) return;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+    
+    img.onload = () => {
+      canvas.width = 1080;
+      canvas.height = 1080;
+      ctx.fillStyle = "white";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 40, 40, 1000, 1000); // 40px padding
+      const pngFile = canvas.toDataURL("image/png", 1.0);
+      const downloadLink = document.createElement("a");
+      const campaign = campaigns.find(c => c.id === showQrModal);
+      const safeName = campaign ? campaign.name.replace(/[^a-zA-Z0-9]/g, '_') : showQrModal;
+      downloadLink.download = `QR_Code_${safeName}.png`;
+      downloadLink.href = pngFile;
+      downloadLink.click();
+    };
+    
+    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+  };
+
   const confirmDelete = async () => {
     const { campaignId } = deleteModal;
     setDeleteModal(prev => ({ ...prev, isDeleting: true }));
@@ -643,18 +669,27 @@ const SmsCampaignsPage = () => {
             
             <div className="p-4 bg-white border-2 border-slate-200 rounded-xl">
               <QRCodeSVG 
+                id="campaign-qr-code"
                 value={`${import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'}/sms-signup/${campaigns.find(c => c.id === showQrModal)?.slug || ''}`}
                 size={220}
                 level="M"
               />
             </div>
             
-            <button 
-              className="mt-8 w-full bg-[#1e3a8a] text-white py-3 rounded-lg font-bold text-sm tracking-wide hover:bg-blue-900 transition-colors"
-              onClick={() => setShowQrModal(null)}
-            >
-              DONE
-            </button>
+            <div className="mt-8 w-full flex gap-3">
+              <button 
+                className="flex-1 bg-slate-100 text-slate-700 py-3 rounded-lg font-bold text-sm tracking-wide hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                onClick={() => setShowQrModal(null)}
+              >
+                CLOSE
+              </button>
+              <button 
+                className="flex-1 bg-[#1e3a8a] text-white py-3 rounded-lg font-bold text-sm tracking-wide hover:bg-blue-900 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                onClick={handleDownloadQR}
+              >
+                <Download className="w-4 h-4" /> DOWNLOAD
+              </button>
+            </div>
           </div>
         </div>
       )}
