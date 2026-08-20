@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+﻿import React, { useState, useCallback, useRef, useEffect } from "react";
 import { getBaseUrl } from "../services/marketing.api";
 import img1 from "../assets/menuCapPics/1.webp";
 import img2 from "../assets/menuCapPics/2.webp";
@@ -216,7 +216,7 @@ const StudentDashboard = () => {
     fetchInstallmentPlans();
   }, []);
 
-  const matchingInstallmentPlan = packageName === 'standard' ? undefined : installmentPlans.find(plan => {
+  const matchingInstallmentPlan = (packageName === 'standard' || packageName === 'basichue' || searchParams.get("installment") !== 'yes') ? undefined : installmentPlans.find(plan => {
     const progMatch = plan.program === 'all' || (plan.program || '').toLowerCase() === (program || '').toLowerCase();
     const tierMatch = plan.packageTier === 'all' || (plan.packageTier || '').toLowerCase() === (packageName || 'standard').toLowerCase();
     return progMatch && tierMatch;
@@ -379,8 +379,25 @@ const StudentDashboard = () => {
       const hasSurcharge = programsWithSurcharge.includes(program?.toLowerCase());
 
       if (packageName === "standard") iniialPrice = 449;
+      else if (packageName === "basichue") iniialPrice = 179;
       else if (packageName === "luksus") iniialPrice = hasSurcharge ? 1595 : 995;
       else if (packageName === "premium") iniialPrice = hasSurcharge ? 2450 : 1850;
+    }
+
+    if (packageName === "basichue") {
+      const front = selectedOptions["UDDANNELSESBA.ND"]?.['Broderi foran'] || '';
+      const name = selectedOptions.BRODERI?.['Navne broderi'] || '';
+      const school = selectedOptions.BRODERI?.['Skolebroderi'] || '';
+      
+      if (front.trim() !== '' && name.trim() !== '' && school.trim() !== '') {
+        let frontPrice = 0, namePrice = 0, schoolPrice = 0;
+        
+        if (prices["UDDANNELSESBA.ND"] && prices["UDDANNELSESBA.ND"]['Broderi foran']) frontPrice = calcTextPrice(front, prices["UDDANNELSESBA.ND"]['Broderi foran']);
+        if (prices.BRODERI && prices.BRODERI['Navne broderi']) namePrice = calcTextPrice(name, prices.BRODERI['Navne broderi']);
+        if (prices.BRODERI && prices.BRODERI['Skolebroderi']) schoolPrice = calcTextPrice(school, prices.BRODERI['Skolebroderi']);
+        
+        total = total - frontPrice - namePrice - schoolPrice + 220;
+      }
     }
 
     ////////////////////////////////////zee///////////////////////////////////////
@@ -438,7 +455,7 @@ const StudentDashboard = () => {
       iframe.contentWindow.postMessage(message, "*");
       if (iframe2) iframe2.contentWindow.postMessage(message, "*");
 
-      if (packageName === "standard") {
+      if (packageName === "standard" || packageName === "basichue") {
         const penMsg = "Accessories Huekuglepen:no";
         console.log("Sending pen message to iframe:", penMsg);
         iframe.contentWindow.postMessage(penMsg, "*");
@@ -900,7 +917,7 @@ const StudentDashboard = () => {
                   onOptionChange={(key, value) =>
                     handleOptionChange("KOKARDE", key, value)
                   }
-                  program={program} visibilityConfig={visibilityConfig}
+                  program={program} visibilityConfig={visibilityConfig} pakke={packageName}
                   changeCurrentEmblem={setGlobalEmblem}
                 />
               )}
@@ -910,9 +927,8 @@ const StudentDashboard = () => {
                   onOptionChange={(key, value) =>
                     handleOptionChange("UDDANNELSESBÅND", key, value)
                   }
-                  program={program} visibilityConfig={visibilityConfig}
+                  program={program} visibilityConfig={visibilityConfig} pakke={packageName}
                   currentEmblem={globalEmblem}
-                  pakke={packageName}
                 />
               )}
               {activeMenu === "BRODERI" && (
@@ -931,7 +947,7 @@ const StudentDashboard = () => {
                   onOptionChange={(key, value) =>
                     handleOptionChange("BETRÆK", key, value)
                   }
-                  program={program} visibilityConfig={visibilityConfig}
+                  program={program} visibilityConfig={visibilityConfig} pakke={packageName}
                   currentEmblem={globalEmblem}
                 />
               )}
@@ -941,7 +957,7 @@ const StudentDashboard = () => {
                     onOptionChange={(key, value) =>
                       handleOptionChange("SKYGGE", key, value)
                     }
-                    program={program} visibilityConfig={visibilityConfig}
+                    program={program} visibilityConfig={visibilityConfig} pakke={packageName}
                   />
               )}
               {activeMenu === "FOER" && (
@@ -951,7 +967,7 @@ const StudentDashboard = () => {
                     handleOptionChange("FOER", key, value)
                   }
                   currentEmblem={globalEmblem}
-                  program={program} visibilityConfig={visibilityConfig}
+                  program={program} visibilityConfig={visibilityConfig} pakke={packageName}
                 />
               )}
               {activeMenu === "EKSTRABETRÆK" && (
@@ -961,9 +977,8 @@ const StudentDashboard = () => {
                     handleOptionChange("EKSTRABETRÆK", key, value)
                   }
                   currentEmblem={globalEmblem}
-                  program={program} visibilityConfig={visibilityConfig}
+                  program={program} visibilityConfig={visibilityConfig} pakke={packageName}
                   priceReset={setExtraCoverReset}
-                  pakke={packageName}
                 />
               )}
               {activeMenu === "TILBEHØR" && (
@@ -1301,7 +1316,7 @@ const StudentDashboard = () => {
                       onOptionChange={(key, value) =>
                         handleOptionChange("KOKARDE", key, value)
                       }
-                      program={program} visibilityConfig={visibilityConfig}
+                      program={program} visibilityConfig={visibilityConfig} pakke={packageName}
                       changeCurrentEmblem={setGlobalEmblem}
                     />
                   )}
@@ -1311,9 +1326,8 @@ const StudentDashboard = () => {
                       onOptionChange={(key, value) =>
                         handleOptionChange("UDDANNELSESBÅND", key, value)
                       }
-                      program={program} visibilityConfig={visibilityConfig}
+                      program={program} visibilityConfig={visibilityConfig} pakke={packageName}
                       currentEmblem={globalEmblem}
-                      pakke={packageName}
                     />
                   )}
                   {activeMenu === "BRODERI" && (
@@ -1332,7 +1346,7 @@ const StudentDashboard = () => {
                       onOptionChange={(key, value) =>
                         handleOptionChange("BETRÆK", key, value)
                       }
-                      program={program} visibilityConfig={visibilityConfig}
+                      program={program} visibilityConfig={visibilityConfig} pakke={packageName}
                       currentEmblem={globalEmblem}
                     />
                   )}
@@ -1342,7 +1356,7 @@ const StudentDashboard = () => {
                     onOptionChange={(key, value) =>
                       handleOptionChange("SKYGGE", key, value)
                     }
-                    program={program} visibilityConfig={visibilityConfig}
+                    program={program} visibilityConfig={visibilityConfig} pakke={packageName}
                   />
                   )}
                   {activeMenu === "FOER" && (
@@ -1352,7 +1366,7 @@ const StudentDashboard = () => {
                         handleOptionChange("FOER", key, value)
                       }
                       currentEmblem={globalEmblem}
-                      program={program} visibilityConfig={visibilityConfig}
+                      program={program} visibilityConfig={visibilityConfig} pakke={packageName}
                     />
                   )}
                   {activeMenu === "EKSTRABETRÆK" && (
@@ -1385,7 +1399,7 @@ const StudentDashboard = () => {
                         handleOptionChange("STØRRELSE", key, value)
                       }
                       size={setSizeFlag}
-                      visibilityConfig={visibilityConfig}
+                      visibilityConfig={visibilityConfig} pakke={packageName}
                     />
                   )}
                 </div>
@@ -1444,7 +1458,7 @@ const StudentDashboard = () => {
         selectedOptions={selectedOptions}
         price={calculateTotalPrice().toFixed(2)}
         packageName={packageName}
-        program={program} visibilityConfig={visibilityConfig}
+        program={program} visibilityConfig={visibilityConfig} pakke={packageName}
         installmentPlan={matchingInstallmentPlan}
       />
     </div >

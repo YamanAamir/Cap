@@ -1,21 +1,30 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import img1 from '../assets/shadeimages/glimmer.webp';
 import img2 from '../assets/shadeimages/none.webp';
 import img3 from '../assets/shadeimages/shade.webp';
 
-const Shade = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig = {} }) => {
+const Shade = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig = {}, pakke }) => {
     const isVisible = (key) => visibilityConfig?.['SKYGGE_' + key] !== false;
-    const getDefaultShadeType = () => 'Mat';
+    const getDefaultShadeType = () => pakke === 'basichue' ? 'Shiny' : 'Mat';
     const getDefaultMaterialType = () => 'Uden kant';
     const getDefaultShadowTapeColor = () => 'INGEN';
     const cameraTriggers = useRef({});
 
-    const [selectedShadeType, setSelectedShadeType] = useState(selectedOptions.Type || getDefaultShadeType());
+    const [selectedShadeType, setSelectedShadeType] = useState(
+        pakke === 'basichue' ? 'Shiny' : (selectedOptions.Type || getDefaultShadeType())
+    );
     const [selectedMaterialType, setSelectedMaterialType] = useState(selectedOptions.Materiale || getDefaultMaterialType());
     const [selectedShadowTapeColor, setSelectedShadowTapeColor] = useState(selectedOptions.Skyggebånd || getDefaultShadowTapeColor());
     const [engravingLine1, setEngravingLine1] = useState(selectedOptions['Skyggegravering Line 1'] || '');
     const [engravingLine2, setEngravingLine2] = useState(selectedOptions['Skyggegravering Line 2'] || '');
     const [engravingLine3, setEngravingLine3] = useState(selectedOptions['Skyggegravering Line 3'] || '');
+
+    useEffect(() => {
+        const allowed = (pakke === 'basichue') ? ['Shiny', 'Blank'] : null;
+        if (allowed && !allowed.includes(selectedShadeType)) {
+            setSelectedShadeType('Shiny');
+        }
+    }, [selectedShadeType, pakke]);
 
     const canvasLine1Ref = useRef(document.createElement('canvas'));
     const canvasLine2Ref = useRef(document.createElement('canvas'));
@@ -321,6 +330,11 @@ const Shade = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig
         const allowedSTUShade = ['Mat', 'Shiny', 'Glimmer', 'Blank']; // Including 'Mat' and 'Blank' for safety
         shadeTypeOptions = shadeTypeOptions.filter(opt => allowedSTUShade.includes(opt.name));
     }
+    
+    if (pakke === 'basichue') {
+        const allowedBudgetShade = ['Shiny', 'Blank'];
+        shadeTypeOptions = shadeTypeOptions.filter(opt => allowedBudgetShade.includes(opt.name));
+    }
     if (isLandmand) {
         const allowedShade = ['Mat', 'Shiny', 'Glimmer', 'Blank'];
         shadeTypeOptions = shadeTypeOptions.filter(opt => allowedShade.includes(opt.name));
@@ -393,11 +407,14 @@ const Shade = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig
 
             <Selector label="Type" currentSelection={selectedShadeType} onSelectionChange={setSelectedShadeType} options={shadeTypeOptions} />
 
-            {selectedShadeType !== 'Glimmer' && selectedShadeType !== 'Shimmer' && (
-                <TypeSelector label="Materiale" currentSelection={selectedMaterialType} onSelectionChange={setSelectedMaterialType} options={getMaterialOptions()} />
+            {pakke !== 'basichue' && (
+                <>
+                    {selectedShadeType !== 'Glimmer' && selectedShadeType !== 'Shimmer' && (
+                        <TypeSelector label="Materiale" currentSelection={selectedMaterialType} onSelectionChange={setSelectedMaterialType} options={getMaterialOptions()} />
+                    )}
+                    <Selector label="Skyggebånd" currentSelection={selectedShadowTapeColor} onSelectionChange={setSelectedShadowTapeColor} options={shadowTapeColorOptions} />
+                </>
             )}
-
-            <Selector label="Skyggebånd" currentSelection={selectedShadowTapeColor} onSelectionChange={setSelectedShadowTapeColor} options={shadowTapeColorOptions} />
 
             <div className="bg-white/70 border border-white/50 rounded-2xl mt-6">
                 <div className="flex items-center justify-between mb-4">

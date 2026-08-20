@@ -3569,6 +3569,29 @@ const stripePayment = async (req, res) => {
       finalPrice = result.finalPrice;
     }
 
+    let stripeChargeAmount = finalPrice;
+    let validatedIsInstallment = false;
+
+    if (isInstallment) {
+      if (installmentPlanId) {
+        const plan = await prisma.installmentPlan.findUnique({
+          where: { id: installmentPlanId }
+        });
+        if (plan && plan.isActive) {
+          const progMatch = plan.program === 'all' || (plan.program || '').toLowerCase() === (program || '').toLowerCase();
+          const tierMatch = plan.packageTier === 'all' || (plan.packageTier || '').toLowerCase() === (packageName || 'standard').toLowerCase();
+          if (progMatch && tierMatch) {
+            validatedIsInstallment = true;
+            stripeChargeAmount = plan.downPaymentAmount != null ? plan.downPaymentAmount : 399;
+          }
+        }
+      }
+      
+      if (!validatedIsInstallment) {
+        throw new Error("Den valgte pakke understøtter ikke afdragsordning, eller den er deaktiveret.");
+      }
+    }
+
     const { v4: uuidv4 } = require('uuid');
     const tempOrderId = uuidv4();
     
@@ -3577,30 +3600,14 @@ const stripePayment = async (req, res) => {
       INSERT INTO TempOrder (id, orderData) 
       VALUES (${tempOrderId}, ${JSON.stringify({
         ...req.body,
+        isInstallment: validatedIsInstallment,
         customerId: customer.id,
         finalPrice,
         discountRecord,
         discountAmount,
-        installmentPlanId
+        installmentPlanId: validatedIsInstallment ? installmentPlanId : null
       })})
     `;
-
-    let stripeChargeAmount = finalPrice;
-    
-    if (isInstallment) {
-      if (installmentPlanId) {
-        const plan = await prisma.installmentPlan.findUnique({
-          where: { id: installmentPlanId }
-        });
-        if (plan && plan.downPaymentAmount != null) {
-          stripeChargeAmount = plan.downPaymentAmount;
-        } else {
-          stripeChargeAmount = 399; // Fallback
-        }
-      } else {
-        stripeChargeAmount = 399; // Fallback
-      }
-    }
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],

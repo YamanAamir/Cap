@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Save, Loader2, AlertCircle, Search, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -81,6 +81,67 @@ function isRelevantForProgram(item, activeProgram, groupName) {
   return true;
 }
 
+function isRelevantForTier(item, activeTier, groupName, category) {
+  if (activeTier !== 'basichue') return true;
+  const itemLower = item.toLowerCase();
+  const groupLower = groupName ? groupName.toLowerCase() : '';
+  const catLower = category ? category.toLowerCase() : '';
+
+  if (catLower === 'kokarde') {
+    if (groupLower === 'kokarde' && itemLower === 'flag') return false;
+    const flagTypes = [
+      'kurdistan', 'irak', 'iran', 'somalia', 'somaliland', 'palæstina', 
+      'libanon', 'afghanistan', 'albanien', 'serbien', 'bosnien', 
+      'danmark', 'grønland', 'marokko', 'pakistan', 'tyrkiet', 'sweden'
+    ];
+    if (groupLower === 'type' && flagTypes.includes(itemLower)) return false;
+    
+    if (groupLower === 'roset farve') {
+      const allowedColors = ['#7f1d1d', '#1e3a8a', '#dc2626', 'rød', 'euxred'];
+      if (!allowedColors.includes(itemLower)) return false;
+    }
+  }
+  if (catLower === 'uddannelsesbånd') {
+    if (groupLower === 'huebånd' && ['stu', 'grøn', 'sort'].includes(itemLower)) return false;
+    if (groupLower === 'materiale' && itemLower !== 'bomuld') return false;
+    if (groupLower === 'hagerem' && !['mat', 'shiny'].includes(itemLower)) return false;
+    if (groupLower === 'år' && !['ingen', '2025', '2026'].includes(itemLower)) return false;
+  }
+  if (catLower === 'tilbehør') {
+    if (groupLower === 'hueæske' && itemLower !== 'standard') return false;
+  }
+  if (catLower === 'broderi') {
+    if (groupLower === 'top broderi') return false;
+  }
+  if (catLower === 'betræk') {
+    if (groupLower === 'farve' && itemLower !== 'hvid') return false;
+    if (groupLower === 'topkant') return false;
+    if (groupLower === 'kantbånd') return false;
+    if (groupLower === 'flagbånd') return false;
+    if (groupLower === 'stjerner') return false;
+  }
+  if (catLower === 'skygge') {
+    if (groupLower === 'type' && !['shiny', 'blank'].includes(itemLower)) return false;
+    if (groupLower === 'materiale' && itemLower !== 'uden kant') return false;
+    if (groupLower === 'skyggebånd' && itemLower !== 'ingen') return false;
+  }
+  if (catLower === 'foer') {
+    if (groupLower === 'svederem' && itemLower !== 'kunstlæder') return false;
+    if (groupLower === 'foer' && itemLower !== 'polyester') return false;
+    if (groupLower === 'sløjfe') return false;
+    if (groupLower === 'type') return false;
+  }
+  if (catLower === 'ekstrabetræk') {
+    if (groupLower === 'farve' && itemLower !== 'hvid') return false;
+    if (groupLower === 'topkant') return false;
+    if (groupLower === 'kantbånd') return false;
+    if (groupLower === 'flagbånd') return false;
+    if (groupLower === 'stjerner') return false;
+    if (['roset farve', 'kokarde', 'emblem', 'type'].includes(groupLower)) return false;
+  }
+  return true;
+}
+
 const ConfiguratorSettingsPage = () => {
   const [config, setConfig] = useState(null);
   const [originalConfigStr, setOriginalConfigStr] = useState(null);
@@ -97,6 +158,13 @@ const ConfiguratorSettingsPage = () => {
   useEffect(() => {
     fetchSettings();
   }, []);
+
+  useEffect(() => {
+    const allowedPrograms = ['STX', 'HHX', 'HTX', 'HF', 'EUD', 'EUX'];
+    if (activeTier === 'basichue' && !allowedPrograms.includes(activeProgram)) {
+      setActiveTier('standard');
+    }
+  }, [activeProgram, activeTier]);
 
   const fetchSettings = async () => {
     try {
@@ -362,16 +430,25 @@ const ConfiguratorSettingsPage = () => {
 
           {/* Pricing Config Area */}
           <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="flex border-b border-gray-200 bg-gray-50">
-              {['standard', 'premium', 'luksus'].map(tier => (
-                <button
-                  key={tier}
-                  onClick={() => setActiveTier(tier)}
-                  className={`flex-1 py-4 text-center font-bold capitalize transition-colors ${activeTier === tier ? 'bg-white text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-                >
-                  {tier} Package
-                </button>
-              ))}
+            <div className="flex border-b border-gray-200 bg-gray-50 flex-wrap">
+              {Object.keys(config.priceConfig || {})
+                .filter(tier => {
+                  if (tier === 'basichue') {
+                    const allowedPrograms = ['STX', 'HHX', 'HTX', 'HF', 'EUD', 'EUX'];
+                    return allowedPrograms.includes(activeProgram);
+                  }
+                  return true;
+                })
+                .map(tier => (
+                  <button
+                    key={tier}
+                    onClick={() => setActiveTier(tier)}
+                    className={`flex-1 py-4 text-center font-bold capitalize transition-colors min-w-[100px] ${activeTier === tier ? 'bg-white text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+                  >
+                    {tier} Package
+                  </button>
+                ))
+              }
             </div>
             
             <div className="p-6">
@@ -539,6 +616,7 @@ const ConfiguratorSettingsPage = () => {
                 const filteredGroups = Object.entries(optionsGroups || {}).map(([groupName, items]) => {
                   const filteredItems = Object.entries(items || {}).filter(([itemName]) => {
                     if (!isRelevantForProgram(itemName, activeProgram, groupName)) return false;
+                    if (!isRelevantForTier(itemName, activeTier, groupName, category)) return false;
                     const displayLabel = LABEL_MAP[itemName] || itemName;
                     if (searchTerm && !displayLabel.toLowerCase().includes(searchTerm.toLowerCase())) return false;
                     return true;

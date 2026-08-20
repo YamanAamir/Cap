@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { buildLiningExportDataUrl } from '../utils/liningCanvas';
 import LiningPhotoEditor from './LiningPhotoEditor';
 
@@ -21,10 +21,10 @@ const preserveConfigPanelScroll = (fn) => {
     });
 };
 
-const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, visibilityConfig = {} }) => {
+const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, visibilityConfig = {}, pakke }) => {
     // ====================== Default Values ======================
     const isVisible = (key) => visibilityConfig?.['FOER_' + key] !== false;
-    const getDefaultKokardeMaterial = () => 'Læder';
+    const getDefaultKokardeMaterial = () => pakke === 'basichue' ? 'Kunstlæder' : 'Læder';
     const getDefaultKokardeColor = () => 'Hvid';
     const getDefaultBowColor = () => 'Hvid';
     const getDefaultFoerMaterial = () => 'Polyester';
@@ -46,7 +46,7 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, vi
     // ====================== State ======================
     const cameraTriggers = useRef({});
     const [selectedKokardeMaterial, setSelectedKokardeMaterial] = useState(
-        selectedOptions.Svederem || getDefaultKokardeMaterial()
+        pakke === 'basichue' ? 'Kunstlæder' : (selectedOptions.Svederem || getDefaultKokardeMaterial())
     );
     const [selectedKokardeColor, setSelectedKokardeColor] = useState(
         selectedOptions.Farve || getDefaultKokardeColor()
@@ -105,6 +105,9 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, vi
     if (isSTU || isLandmand) {
         filteredKokardeMaterials = kokardeMaterialTypes.slice(0, 2);
     }
+    if (pakke === 'basichue') {
+        filteredKokardeMaterials = kokardeMaterialTypes.filter(opt => opt === 'Kunstlæder');
+    }
 
     // ====================== Emblem & Colors ======================
     const getCurrentEmblem = () => {
@@ -147,7 +150,10 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, vi
         { name: 'Rosa', value: 'Rosa', color: '#FFC0CB' },
     ].filter(opt => isVisible(`Silk Type_${opt.name}`));
 
-    const foerMaterialTypes = ['Viskose', 'Polyester', 'Satin', 'Silke'].filter(opt => isVisible(`Foer_${opt}`));
+    let foerMaterialTypes = ['Viskose', 'Polyester', 'Satin', 'Silke'].filter(opt => isVisible(`Foer_${opt}`));
+    if (pakke === 'basichue') {
+        foerMaterialTypes = foerMaterialTypes.filter(opt => opt === 'Polyester');
+    }
 
     // ====================== Helper: Always send message ======================
     const sendMessage = (message) => {
@@ -264,6 +270,9 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, vi
 
     // Kokarde Color options according to material
     const getKokardeColorOptions = (material) => {
+        if (pakke === 'basichue' && material === 'Kunstlæder') {
+            return [{ name: 'Hvid', value: 'Hvid', color: '#ffffff' }];
+        }
         let opts = [];
         switch (material) {
             case 'Læder': opts = [{ name: 'Hvid', value: 'Hvid', color: '#ffffff' }, { name: 'Sort', value: 'Sort', color: '#000000' }]; break;
@@ -534,26 +543,30 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, vi
                     disabled={false}
                 />
 
-                <ColorSelector
-                    label="Sløjfe"
-                    currentSelection={selectedBowColor}
-                    onSelectionChange={setSelectedBowColor}
-                    colorOptions={bowColorOptions}
-                />
+                {pakke !== 'basichue' && (
+                    <>
+                        <ColorSelector
+                            label="Sløjfe"
+                            currentSelection={selectedBowColor}
+                            onSelectionChange={setSelectedBowColor}
+                            colorOptions={bowColorOptions}
+                        />
 
-                <LiningPhotoEditor
-                    label="Billede til Indvendig Foer"
-                    disabled={false}
-                    liningPhotos={liningPhotos}
-                    imageObjects={imageObjects}
-                    selectedPhotoId={selectedPhotoId}
-                    onSelectPhoto={setSelectedPhotoId}
-                    onUpload={handlePhotoUpload}
-                    onRemove={handleRemovePhoto}
-                    onUpdatePhoto={updatePhotoProps}
-                    onAdjustStart={beginLiningInteraction}
-                    onAdjustEnd={endLiningInteraction}
-                />
+                        <LiningPhotoEditor
+                            label="Billede til Indvendig Foer"
+                            disabled={false}
+                            liningPhotos={liningPhotos}
+                            imageObjects={imageObjects}
+                            selectedPhotoId={selectedPhotoId}
+                            onSelectPhoto={setSelectedPhotoId}
+                            onUpload={handlePhotoUpload}
+                            onRemove={handleRemovePhoto}
+                            onUpdatePhoto={updatePhotoProps}
+                            onAdjustStart={beginLiningInteraction}
+                            onAdjustEnd={endLiningInteraction}
+                        />
+                    </>
+                )}
             </div>
         </>
     );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import ForExtraCover from './ForExtraCover';
 
 const ExtraCover = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, priceReset, pakke, visibilityConfig = {} }) => {
@@ -20,10 +20,13 @@ const ExtraCover = ({ selectedOptions = {}, onOptionChange, currentEmblem, progr
         { name: 'No', value: 'No', icon: '❌' },
     ].filter(opt => isVisible(`Tilvalg_${opt.value}`));
 
-    const hatbandColorOptions = [
+    let hatbandColorOptions = [
         { name: 'Hvid', value: '#ffffffff' },
         { name: 'Sort', value: '#000001' },
     ];
+    if (pakke === 'basichue') {
+        hatbandColorOptions = hatbandColorOptions.filter(opt => opt.name === 'Hvid');
+    }
 
     const buttonMaterialMATTypes = ['Standard', 'Kantbånd', 'Flagbånd'];
     const buttonMaterialBLANKTypes = ['Ingen', 'Skolebroderi'];

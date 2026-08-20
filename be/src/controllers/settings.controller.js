@@ -15,6 +15,7 @@ const DEFAULT_CONFIG = {
     return {
       ...acc,
       [p]: {
+        "basichue": 179,
         "standard": 449,
         "luksus": hasSurcharge ? 1595 : 995,
         "premium": hasSurcharge ? 2450 : 1850
@@ -520,6 +521,65 @@ const DEFAULT_CONFIG = {
           "Yes": 39,
           "No": 0
         }
+      }
+    },
+    "basichue": {
+      "KOKARDE": {
+        "Roset farve": { "#7F1D1D": 0, "#1E3A8A": 0, "#DC2626": 0, "PSort": 0, "SosuSort": 0, "EuxRed": 0, "Rød": 0 },
+        "Kokarde": { "Signature": 0, "Prestige": 0, "Stjernetegn": 0, "Flag": 0 },
+        "Emblem": { "Guld": 0, "Sølv": 0 },
+        "Type": { "Kurdistan": 0, "Irak": 0, "Iran": 0, "Somalia": 0, "Somaliland": 0, "Palæstina": 0, "Libanon": 0, "Afghanistan": 0, "Albanien": 0, "Serbien": 0, "Bosnien": 0, "Danmark": 0, "Grønland": 0, "Marokko": 0, "Pakistan": 0, "Tyrkiet": 0 }
+      },
+      "UDDANNELSESBÅND": {
+        "Huebånd": { "EUX": 0, "STU": 0, "Grøn": 0, "Sort": 0 },
+        "Materiale": { "BOMULD": 0 },
+        "Hagerem": { "Mat": 0 },
+        "Broderi farve": { "Guld": 0, "Sølv": 0, "EUX": 0, "Hvid": 0, "Sort": 0 },
+        "Knap farve": { "Guld": 0, "Sølv": 0 },
+        "Broderi foran": { "base": 99, "perChar": 0 }
+      },
+      "BRODERI": {
+        "Broderifarve": { "Guld": 0, "Sølv": 0, "STX": 0, "WHITE": 0, "BLACK": 0 },
+        "Navne broderi": { "base": 99, "perChar": 0 },
+        "Skolebroderi farve": { "Hvid": 0, "Sort": 0, "Guld": 0, "Sølv": 0 },
+        "Skolebroderi": { "base": 99, "perChar": 0 }
+      },
+      "BETRÆK": {
+        "Farve": { "Hvid": 0 }
+      },
+      "SKYGGE": {
+        "Type": { "Mat": 0 },
+        "Materiale": { "Uden kant": 0 },
+        "Skyggebånd": { "INGEN": 0 }
+      },
+      "FOER": {
+        "Svederem": { "Kunstlæder": 0 },
+        "Farve": { "Hvid": 0, "Sort": 0 },
+        "Sløjfe": { "Hvid": 0, "Sort": 0 },
+        "Foer": { "Polyester": 0 }
+      },
+      "EKSTRABETRÆK": {
+        "Tilvælg": { "Yes": 0, "No": 0 },
+        "Farve": { "Hvid": 0 }
+      },
+      "TILBEHØR": {
+        "Hueæske": { "Standard": 0 },
+        "Huekuglepen": { "Yes": 29, "No": 0 },
+        "Silkepude": { "Yes": 39, "No": 0 },
+        "Ekstra korkarde": { "Yes": 99, "No": 0 },
+        "Lille Flag": { "Yes": 49, "No": 0 },
+        "Handsker": { "Yes": 39, "No": 0 },
+        "Store kuglepen": { "Yes": 39, "No": 0 },
+        "Smart Tag": { "Yes": 99, "No": 0 },
+        "Lyskugle": { "Yes": 25, "No": 0 },
+        "Luksus champagneglas": { "Yes": 100, "No": 0 },
+        "Fløjte": { "Yes": 29, "No": 0 },
+        "Trompet": { "Yes": 29, "No": 0 },
+        "Bucketpins": { "Yes": 99, "No": 0 }
+      },
+      "STØRRELSE": {
+        "Vælg størrelse": { "base": 0, "perMM": 0 },
+        "Millimeter tilpasningssæt": { "Yes": 39, "No": 0 }
       }
     },
     "luksus": {
@@ -1525,6 +1585,50 @@ exports.getConfiguratorSettings = async (req, res) => {
       });
     }
 
+    // Auto-migrate database values from budgethue/basic to basichue
+    if (setting && setting.value) {
+      const val = setting.value;
+      let migrated = false;
+      
+      if (val.priceConfig) {
+        if (val.priceConfig.budgethue) {
+          val.priceConfig.basichue = val.priceConfig.budgethue;
+          delete val.priceConfig.budgethue;
+          migrated = true;
+        }
+        if (val.priceConfig.basic) {
+          val.priceConfig.basichue = val.priceConfig.basic;
+          delete val.priceConfig.basic;
+          migrated = true;
+        }
+      }
+      
+      if (val.basePrices) {
+        for (const prog of Object.keys(val.basePrices)) {
+          if (val.basePrices[prog]) {
+            if (val.basePrices[prog].budgethue !== undefined) {
+              val.basePrices[prog].basichue = val.basePrices[prog].budgethue;
+              delete val.basePrices[prog].budgethue;
+              migrated = true;
+            }
+            if (val.basePrices[prog].basic !== undefined) {
+              val.basePrices[prog].basichue = val.basePrices[prog].basic;
+              delete val.basePrices[prog].basic;
+              migrated = true;
+            }
+          }
+        }
+      }
+      
+      if (migrated) {
+        await prisma.systemSetting.update({
+          where: { key: 'configurator_settings' },
+          data: { value: val }
+        });
+        setting.value = val;
+      }
+    }
+
     let finalValue = { ...DEFAULT_CONFIG, ...(setting.value || {}) };
     
     // Deep merge for priceConfig to ensure new keys in DEFAULT_CONFIG (like STU options) are preserved
@@ -1548,6 +1652,21 @@ exports.getConfiguratorSettings = async (req, res) => {
                   }
                 }
               }
+            }
+          }
+        }
+      }
+    }
+
+    // Deep merge for basePrices to ensure basichue or new tiers in basePrices are preserved
+    if (finalValue.basePrices && DEFAULT_CONFIG.basePrices) {
+      for (const program of Object.keys(DEFAULT_CONFIG.basePrices)) {
+        if (!finalValue.basePrices[program]) {
+          finalValue.basePrices[program] = DEFAULT_CONFIG.basePrices[program];
+        } else {
+          for (const tier of Object.keys(DEFAULT_CONFIG.basePrices[program])) {
+            if (finalValue.basePrices[program][tier] === undefined) {
+              finalValue.basePrices[program][tier] = DEFAULT_CONFIG.basePrices[program][tier];
             }
           }
         }

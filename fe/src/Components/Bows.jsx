@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+﻿import React, { useState, useEffect, useRef } from 'react'
 
 // signature
 import Kurdistan from '../assets/Countries/kurdistan.webp';
@@ -165,7 +165,7 @@ import purplesilver from '../assets/rosent/purplesilver.webp';
 
 
 
-const Bows = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig = {}, changeCurrentEmblem }) => {
+const Bows = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig = {}, changeCurrentEmblem, pakke }) => {
     const cameraTriggers = useRef({});
     if (visibilityConfig?.["KOKARDE"] === false) return null; const getInitialColor = () => {
         switch (program?.toLowerCase()) {
@@ -1075,7 +1075,7 @@ const getSilverEmblem = () => {
     const filteredGuld = guldcolors.filter(c => isVisible(c.value) && isVisible(c.name));
     const filteredSulv = sulvcolors.filter(c => isVisible(c.value) && isVisible(c.name));
     const filteredEmblems = emblemOptions.filter(e => isVisible(e.value) && isVisible(e.name));
-    const allPrestige = ['stu', 'landmand'].includes(program?.toLowerCase()) ? ['Signature', 'Prestige', 'Stjernetegn'] : ['Signature', 'Prestige', 'Stjernetegn', 'Flag'];
+    const allPrestige = (pakke === 'basichue' || ['stu', 'landmand'].includes(program?.toLowerCase())) ? ['Signature', 'Prestige', 'Stjernetegn'] : ['Signature', 'Prestige', 'Stjernetegn', 'Flag'];
     const filteredPrestige = allPrestige.filter(p => isVisible(p));
     const filteredFlags = staticFlags.filter(f => isVisible(f.name));
     const filteredTypes = currentTypeOptions.filter(t => isVisible(t.name));

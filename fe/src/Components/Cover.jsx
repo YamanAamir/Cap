@@ -16,7 +16,7 @@ import international from '../assets/flagbandimages/international.webp';
 import usakinaden from '../assets/flagbandimages/USAKINADEN.webp';
 import europe from '../assets/flagbandimages/europe.webp';
 
-const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem, visibilityConfig = {} }) => {
+const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem, visibilityConfig = {}, pakke }) => {
     // Default value functions
     const isVisible = (key) => visibilityConfig?.['BETRÆK_' + key] !== false;
 
@@ -108,6 +108,10 @@ const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem, v
         const allowedSTUCover = ['Hvid', 'Sort', 'Hvid med glimmer', 'Sort med glimmer'];
         coverColorOptions = coverColorOptions.filter(opt => allowedSTUCover.includes(opt.name));
     }
+    
+    if (pakke === 'basichue') {
+        coverColorOptions = coverColorOptions.filter(opt => opt.name === 'Hvid');
+    }
 
     const getCoverColor = () => {
         switch (program?.toLowerCase()) {
@@ -159,7 +163,17 @@ const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem, v
             ] : []),
             ///zee///
             getCoverColor()
-        ].filter(Boolean).filter(opt => isVisible(`Kantbånd_${opt.value}`));
+        ].filter(Boolean).filter(opt => isVisible(`Kantbånd_${opt.value}`))
+        .filter(opt => {
+            const restrictedColors = ['Purple', 'Green', 'Yellow', 'Pink'];
+            if (restrictedColors.includes(opt.value)) {
+                const progLower = program?.toLowerCase();
+                if (progLower === 'eux') return true;
+                if (progLower === 'eud' && opt.value === 'Purple') return true;
+                return false;
+            }
+            return true;
+        });
 
     let topKantColorOptions = [
         { name: 'NONE', value: 'NONE', img: coverColorOptionsimg2 },
@@ -582,7 +596,9 @@ const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem, v
                 type="color"
             />
 
-            {/* Edgeband Color Selection */}
+            {pakke !== 'basichue' && (
+                <>
+                    {/* Edgeband Color Selection */}
             <Selector
                 label="Topkant"
                 currentSelection={selectedTopkantColor}
@@ -664,6 +680,8 @@ const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem, v
 
 
                 </>
+            )}
+            </>
             )}
         </>
     );

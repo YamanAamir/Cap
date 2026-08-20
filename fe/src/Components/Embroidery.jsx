@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import noneImg from '../assets/cover images/none.webp';
 import {
     generateAllEmbroideryMaps,
@@ -319,11 +319,11 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
         { name: 'Sort', value: '#000000' },
     ].filter(Boolean).filter(opt => isVisible(`Navnebroderifarve_${opt.name}`));
 
-    const schoolEmbroideryColorOptions = [
+    let schoolEmbroideryColorOptions = [
         { name: 'Hvid', value: '#E5E7EB' },
         { name: 'Guld', value: '#ba9200' },
         { name: 'Sølv', value: '#757575' },
-    ].filter(opt => isVisible(`Skolebroderifarve_${opt.name}`));
+    ].filter(Boolean).filter(opt => isVisible(`Skolebroderifarve_${opt.name}`));
 
     // Reusable ColorSelector
     const ColorSelector = ({ label, currentSelection, onSelectionChange, colorOptions }) => (
@@ -358,6 +358,7 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
             </div>
 
             {/* Top Embroidery */}
+            {pakke !== 'basichue' && (
             <div className="space-y-4 mt-6">
                 <div>
                     <label className="text-sm font-semibold text-slate-700">Top broderi</label>
@@ -400,6 +401,7 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
                 </div>
                 <p className="text-sm mt-3 text-slate-700 font-medium">Valgt: {topEmbroiderySelection}</p>
             </div>
+            )}
 
             {/* Name Embroidery */}
             <div className="bg-white/70 border border-white/50 rounded-2xl mt-6">

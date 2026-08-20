@@ -8,6 +8,10 @@ import img6 from '../assets/stars/6-star.webp';
 import coverColorOptionsimg2 from '../assets/cover images/none.webp';
 import whiteGlitter from '../assets/button images/white glitter.webp';
 import blackGlitter from '../assets/button images/black glitter.webp';
+import topDesign1 from '../assets/topDesignImg/1Gold.png';
+import topDesign2 from '../assets/topDesignImg/2.png';
+import topDesign3 from '../assets/topDesignImg/3.png';
+import topDesign4 from '../assets/topDesignImg/4.png';
 
 import international from '../assets/flagbandimages/international.webp';
 import usakinaden from '../assets/flagbandimages/USAKINADEN.webp';
@@ -508,6 +512,10 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
         { name: 'Sort med glimmer', value: 'Sort med glimmer', img: blackGlitter, color: '#000000' }
     ].filter(Boolean).filter(opt => isVisible(`Farve_${opt.name}`));
 
+    if (pakke === 'basichue') {
+        coverColorOptions = coverColorOptions.filter(opt => opt.name === 'Hvid');
+    }
+
     const restrictedPrograms = [
         "sosuassistent",
         "sosuhjælper",
@@ -551,7 +559,17 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
             { name: 'Bordeaux', value: 'Bordeaux', color: '#7F1D1D' },
         ] : []),
         getCoverColor()
-    ].filter(Boolean).filter(opt => isVisible(`Kantbånd_${opt.value}`));
+    ].filter(Boolean).filter(opt => isVisible(`Kantbånd_${opt.value}`))
+    .filter(opt => {
+        const restrictedColors = ['Purple', 'Green', 'Yellow', 'Pink'];
+        if (restrictedColors.includes(opt.value)) {
+            const progLower = programNew?.toLowerCase();
+            if (progLower === 'eux') return true;
+            if (progLower === 'eud' && opt.value === 'Purple') return true;
+            return false;
+        }
+        return true;
+    });
     const isSTU = programNew?.toLowerCase() === 'stu';
     if (isSTU) {
         const allowedSTUCover = ['Hvid', 'Sort', 'Hvid med glimmer', 'Sort med glimmer'];
@@ -978,13 +996,15 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
                 onSelectionChange={setSelectedCoverColor}
                 options={coverColorOptions}
             />
-            <Selector
-                label="Topkant"
-                currentSelection={selectedTopkantColor}
-                onSelectionChange={setSelectedTopkantColor}
-                options={topKantColorOptions}
-            />
-            {!isRestricted && (
+            {pakke !== 'basichue' && (
+                <Selector
+                    label="Topkant"
+                    currentSelection={selectedTopkantColor}
+                    onSelectionChange={setSelectedTopkantColor}
+                    options={topKantColorOptions}
+                />
+            )}
+            {!isRestricted && pakke !== 'basichue' && (
                 <>
                     <Selector
                         label="Kantbånd"
@@ -998,7 +1018,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
                 </>
             )}
 
-            {!isRestricted && (
+            {!isRestricted && pakke !== 'basichue' && (
                 <>
                     <AccessorySelector
                         label="Flagbånd"
@@ -1043,7 +1063,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
             )}
 
 
-            {!isRestricted && (
+            {!isRestricted && pakke !== 'basichue' && (
                 <>
                     {selectedKantbandColor != 'NONE' ?
                         <Selector
@@ -1058,6 +1078,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
             )}
 
             {/* Top Embroidery */}
+            {pakke !== 'basichue' && (
             <div className="space-y-4 mt-8">
                 <div>
                     <label className="text-sm font-semibold text-slate-700">Top broderi</label>
@@ -1076,10 +1097,10 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
                 <div className="flex space-x-3 mt-4">
                     {[
                         { value: 'Ingen', label: 'Ingen', img: coverColorOptionsimg2 },
-                        { value: 'Top broderi 1', label: 'Top broderi 1', img: null },
-                        { value: 'Top broderi 2', label: 'Top broderi 2', img: null },
-                        { value: 'Top broderi 3', label: 'Top broderi 3', img: null },
-                        { value: 'Top broderi 4', label: 'Top broderi 4', img: null },
+                        { value: 'Top broderi 1', label: 'Top broderi 1', img: topDesign1 },
+                        { value: 'Top broderi 2', label: 'Top broderi 2', img: topDesign3 },
+                        { value: 'Top broderi 3', label: 'Top broderi 3', img: topDesign2 },
+                        { value: 'Top broderi 4', label: 'Top broderi 4', img: topDesign4 },
                     ].map((option) => (
                         <button
                             key={option.value}
@@ -1091,7 +1112,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
                             title={option.label}
                         >
                             {option.img ? (
-                                <img src={option.img} alt={option.label} className="w-full h-full object-contain p-2" />
+                                <img src={option.img} alt={option.label} className="w-full h-full object-contain rounded-lg " />
                             ) : (
                                 <span className="text-[10px] text-slate-400 font-medium text-center">Img</span>
                             )}
@@ -1100,7 +1121,10 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
                 </div>
                 <p className="text-sm mt-3 text-slate-700 font-medium">Valgt: {topEmbroiderySelection}</p>
             </div>
+            )}
 
+            {pakke !== 'basichue' && (
+            <>
             <div className="mt-8">
                 <h3 className="text-xl font-bold text-slate-900">ROSET & EMBLEM</h3>
             </div>
@@ -1179,6 +1203,8 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
                 </div>
                 <p className="text-sm text-slate-700">Valgt: {selectedType}</p>
             </div>
+            </>
+            )}
         </>
     );
 };

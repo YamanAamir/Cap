@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import {
     generateAllEmbroideryMaps,
     preloadAlphabetMaps,
@@ -469,7 +469,10 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
                 ];
         }
     };
-    const hatbandColorOptions = getHuebandColor().filter(opt => opt.name === '' || isVisible(`Huebånd_${opt.name}`));
+    let hatbandColorOptions = getHuebandColor().filter(opt => opt.name === '' || isVisible(`Huebånd_${opt.name}`));
+    if (pakke === 'basichue') {
+        hatbandColorOptions = hatbandColorOptions.filter(opt => opt.name !== 'Sort');
+    }
     let chinStrapColorOptions = [
         { name: 'Mat', value: '#2e2e2e', img: matteleather },
         { name: 'Shiny', value: '#757575' },
@@ -530,9 +533,15 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
     const buttonMaterialSortGuldTypes = ['Sort hagerem med guld knuder'];
     const buttonMaterialSolvTypes = ['Sølv hagerem med Sølv knuder'];
     const buttonMaterialSolveSortTypes = ['Sølv hagerem med sorte knuder'];
-    const buttonMaterialGuldTypes = ['Guld hagerem med guld knuder'];
-    const year = ['2025', '2026', '2027'];
+    let buttonMaterialGuldTypes = ['Guld hagerem med guld knuder'];
+    let year = ['2025', '2026', '2027'];
+    
+    if (pakke === 'basichue') {
+        chinStrapColorOptions = chinStrapColorOptions.filter(opt => ['Mat', 'Shiny'].includes(opt.name));
+        year = ['Ingen', '2025', '2026'];
+    }
     function getMaterialOptions() {
+        if (pakke === 'basichue') return ['BOMULD'];
         let baseOptions = [];
         switch (selectedHatbandColor) {
             case 'HHX':
@@ -690,12 +699,7 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
                 label="Materiale"
                 currentSelection={selectedMaterialType}
                 onSelectionChange={setSelectedMaterialType}
-                options={['HTX', 'HHX', 'STX', 'HF'].includes(selectedHatbandColor)
-                    ? materialEUXTypes :
-                    ['EUX', 'EUD'].includes(selectedHatbandColor)
-                        ? materialEUXAndEUDTypes :
-                        ['Sosuassistent', 'Sosuhjælper', 'Frisør',
-                            'Kosmetolog', 'Pædagog', 'PAU', 'Ernæringsassisten'].includes(selectedHatbandColor) ? materialColorTypes : selectedHatbandColor == 'Sort' ? materialSORTTypes : selectedHatbandColor == 'STU' ? materialSTUTypes : selectedHatbandColor == 'Grøn' ? materialLandmandTypes : []}
+                options={getMaterialOptions()}
             />
             {/* Chin Strap Color Selection */}
             <ColorSelector
