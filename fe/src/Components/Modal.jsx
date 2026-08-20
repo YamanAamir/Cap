@@ -25,7 +25,11 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
   const [discountLoading, setDiscountLoading] = useState(false);
   const [priceConfig, setPriceConfig] = useState(null);
   const [deliverySettings, setDeliverySettings] = useState({ "Denmark": 79, "Grønland": 348 });
-  const [paymentMethod, setPaymentMethod] = useState('full'); // 'full' | 'installment'
+  const [paymentMethod, setPaymentMethod] = useState(installmentPlan ? 'installment' : 'full'); // 'full' | 'installment'
+
+  useEffect(() => {
+    setPaymentMethod(installmentPlan ? 'installment' : 'full');
+  }, [installmentPlan]);
 
   const [customerDetails, setCustomerDetails] = useState({
     firstName: '',
@@ -890,46 +894,18 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Full Payment Card */}
-                <div
-                  onClick={() => setPaymentMethod('full')}
-                  className={`p-3.5 rounded-lg border-2 cursor-pointer transition-all ${
-                    paymentMethod === 'full'
-                      ? 'border-emerald-600 bg-white shadow-md'
-                      : 'border-emerald-200 bg-emerald-50/50 hover:bg-white'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                     <span className="font-bold text-gray-900 text-sm">Betal fuld pris</span>
-                     <input
-                      type="radio"
-                      name="paymentMethodChoice"
-                      checked={paymentMethod === 'full'}
-                      onChange={() => setPaymentMethod('full')}
-                      className="h-4 w-4 text-emerald-600"
-                    />
-                  </div>
-                  <p className="text-xs text-gray-600">Betal det fulde beløb nu</p>
-                  <p className="text-base font-extrabold text-emerald-700 mt-2">{finalPrice} DKK</p>
-                </div>
-
+              <div className="grid grid-cols-1 gap-3">
                 {/* Installment Plan Card */}
                 <div
-                  onClick={() => setPaymentMethod('installment')}
-                  className={`p-3.5 rounded-lg border-2 cursor-pointer transition-all ${
-                    paymentMethod === 'installment'
-                      ? 'border-emerald-600 bg-white shadow-md'
-                      : 'border-emerald-200 bg-emerald-50/50 hover:bg-white'
-                  }`}
+                  className={`p-3.5 rounded-lg border-2 transition-all border-emerald-600 bg-white shadow-md`}
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-bold text-gray-900 text-sm">Afdragsordning</span>
                     <input
                       type="radio"
                       name="paymentMethodChoice"
-                      checked={paymentMethod === 'installment'}
-                      onChange={() => setPaymentMethod('installment')}
+                      checked={true}
+                      readOnly
                       className="h-4 w-4 text-emerald-600"
                     />
                   </div>

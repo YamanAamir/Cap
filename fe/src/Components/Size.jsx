@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 
 const Size = ({ selectedOptions = {}, onOptionChange, size, visibilityConfig = {} }) => {
     const isVisible = (key) => visibilityConfig?.['STORRELSE_' + key] !== false;
-    const [selectedSize, setSelectedSize] = useState(selectedOptions['Vælg størrelse'] || null);
+    const [selectedSize, setSelectedSize] = useState(selectedOptions['Vælg størrelse'] || 'No');
     const [selectedMillimeterAdjustment, setSelectedMillimeterAdjustment] = useState(selectedOptions['Millimeter tilpasningssæt'] || 'No');
 
     const sizeCanvasRef = useRef(null);
@@ -22,9 +22,22 @@ const Size = ({ selectedOptions = {}, onOptionChange, size, visibilityConfig = {
     // ============== IMAGE GENERATE KARNE KA FUNCTION ==============
     const renderSizeImage = (sizeValue) => {
         const canvas = sizeCanvasRef.current;
-        if (!canvas || sizeValue === null) return;
+        if (!canvas) return;
 
         const ctx = canvas.getContext('2d');
+        if (sizeValue === null || sizeValue === 'No') {
+            canvas.width = 1;
+            canvas.height = 1;
+            ctx.clearRect(0, 0, 1, 1);
+            const emptyBase64 = canvas.toDataURL('image/png');
+            ['preview-iframe', 'preview-iframe2'].forEach(id => {
+                const iframe = document.getElementById(id);
+                if (iframe?.contentWindow) {
+                    iframe.contentWindow.postMessage(`SizeImage:${emptyBase64}`, "*");
+                }
+            });
+            return;
+        }
         const text = sizeValue.toString();
 
         const fontSize = 320;
@@ -63,11 +76,9 @@ const Size = ({ selectedOptions = {}, onOptionChange, size, visibilityConfig = {
     };
 
     useEffect(() => {
-        if (selectedSize !== null) {
-            onOptionChange('Vælg størrelse', selectedSize);
-            renderSizeImage(selectedSize);
-        }
-        if (size) size(selectedSize !== null && selectedMillimeterAdjustment !== null);
+        onOptionChange('Vælg størrelse', selectedSize);
+        renderSizeImage(selectedSize);
+        if (size) size(selectedSize !== null && selectedSize !== 'No' && selectedMillimeterAdjustment !== null);
     }, [selectedSize, selectedMillimeterAdjustment]);
 
     useEffect(() => {
@@ -85,37 +96,39 @@ const Size = ({ selectedOptions = {}, onOptionChange, size, visibilityConfig = {
             });
             cameraTriggers.current["size_mm"] = true;
         }
-        if (size) size(selectedSize !== null && selectedMillimeterAdjustment !== null);
     }, [selectedMillimeterAdjustment]);
 
     useEffect(() => {
         renderSizeImage(selectedSize);
     }, []);
 
-    const SizeSelector = ({ label, currentSelection, onSelectionChange, sizeOptions }) => (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between">
-                <div>
-                    <label className="text-sm font-semibold text-slate-700">{label}</label>
-                    <p className="text-xs text-slate-500">{currentSelection}</p>
+    const SizeSelector = ({ label, currentSelection, onSelectionChange, sizeOptions }) => {
+        const optionsWithNo = ['No', ...sizeOptions];
+        return (
+            <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <label className="text-sm font-semibold text-slate-700">{label}</label>
+                        <p className="text-xs text-slate-500">{currentSelection === 'No' ? 'Ingen størrelse valgt' : currentSelection}</p>
+                    </div>
+                </div>
+                <div className="flex space-x-3 flex-wrap">
+                    {optionsWithNo.map((sz) => (
+                        <button
+                            key={sz}
+                            onClick={() => onSelectionChange(sz)}
+                            className={`w-12 h-12 rounded-xl border-2 transition-all duration-200 hover:scale-110 my-3 flex items-center justify-center ${currentSelection === sz
+                                ? 'border-slate-800 ring-2 ring-slate-800 ring-offset-2 bg-blue-100'
+                                : 'border-slate-200 hover:border-slate-400 bg-white'
+                                }`}
+                        >
+                            {sz === 'No' ? '❌' : sz}
+                        </button>
+                    ))}
                 </div>
             </div>
-            <div className="flex space-x-3 flex-wrap">
-                {sizeOptions.map((sz) => (
-                    <button
-                        key={sz}
-                        onClick={() => onSelectionChange(sz)}
-                        className={`w-12 h-12 rounded-xl border-2 transition-all duration-200 hover:scale-110 my-3 flex items-center justify-center ${currentSelection === sz
-                            ? 'border-slate-800 ring-2 ring-slate-800 ring-offset-2 bg-blue-100'
-                            : 'border-slate-200 hover:border-slate-400 bg-white'
-                            }`}
-                    >
-                        {sz}
-                    </button>
-                ))}
-            </div>
-        </div>
-    );
+        );
+    };
 
     const OptionSelector = ({ label, currentSelection, onSelectionChange, options }) => (
         <div className="space-y-4">

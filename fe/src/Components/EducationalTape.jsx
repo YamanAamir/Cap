@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     generateAllEmbroideryMaps,
     preloadAlphabetMaps,
@@ -548,9 +548,11 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
             case 'HTX':
             case 'STX':
             case 'HF':
+                baseOptions = materialEUXTypes;
+                break;
             case 'EUD':
             case 'EUX':
-                baseOptions = materialEUXTypes;
+                baseOptions = materialEUXAndEUDTypes;
                 break;
             case 'Sosuassistent':
             case 'Sosuhjælper':
