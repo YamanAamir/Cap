@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 const Size = ({ selectedOptions = {}, onOptionChange, size, visibilityConfig = {} }) => {
     const isVisible = (key) => visibilityConfig?.['STORRELSE_' + key] !== false;
     const [selectedSize, setSelectedSize] = useState(selectedOptions['Vælg størrelse'] || null);
-    const [selectedMillimeterAdjustment, setSelectedMillimeterAdjustment] = useState(selectedOptions['Millimeter tilpasningssæt'] || null);
+    const [selectedMillimeterAdjustment, setSelectedMillimeterAdjustment] = useState(selectedOptions['Millimeter tilpasningssæt'] || 'No');
 
     const sizeCanvasRef = useRef(null);
     const cameraTriggers = useRef({});
