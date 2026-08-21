@@ -12,14 +12,17 @@ const DEFAULT_CONFIG = {
   "deliveryCharges": PROGRAM_LIST.reduce((acc, p) => ({ ...acc, [p]: { "Denmark": 79, "Grønland": 348 } }), {}),
   "basePrices": PROGRAM_LIST.reduce((acc, p) => {
     const hasSurcharge = ["STX", "HF", "HHX", "HTX"].includes(p);
+    const prices = {
+      "basichue": 179,
+      "standard": 449,
+      "luksus": hasSurcharge ? 1595 : 995
+    };
+    if (hasSurcharge) {
+      prices["premium"] = 2450;
+    }
     return {
       ...acc,
-      [p]: {
-        "basichue": 179,
-        "standard": 449,
-        "luksus": hasSurcharge ? 1595 : 995,
-        "premium": hasSurcharge ? 2450 : 1850
-      }
+      [p]: prices
     };
   }, {}),
   "priceConfig": {

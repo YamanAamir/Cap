@@ -1,4 +1,4 @@
-﻿import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { getBaseUrl } from "../services/marketing.api";
 import img1 from "../assets/menuCapPics/1.webp";
 import img2 from "../assets/menuCapPics/2.webp";
@@ -96,7 +96,6 @@ const StudentDashboard = () => {
   {/* jjjjjjjjjjjj */ }
   const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
   const [searchParams] = useSearchParams();
-  const packageName = searchParams.get("package"); // "standard"
   const programFixMap = {
     sosuhjaelper: "sosuhjælper",
     frisoer: "frisør",
@@ -105,8 +104,13 @@ const StudentDashboard = () => {
   };
 
   const rawProgram = searchParams.get("program");
-
   const program = programFixMap[rawProgram] ?? rawProgram;
+
+  const rawPackageName = searchParams.get("package") || "standard";
+  const allowedPremiumPrograms = ["stx", "hhx", "htx", "hf"];
+  const packageName = (rawPackageName === "premium" && !allowedPremiumPrograms.includes(program?.toLowerCase()))
+    ? "standard"
+    : rawPackageName;
 
   const [isConfigOpen, setIsConfigOpen] = useState(true);
   const [globalEmblem, setGlobalEmblem] = useState({

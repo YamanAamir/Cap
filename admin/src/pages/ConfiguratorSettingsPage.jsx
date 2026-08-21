@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { Save, Loader2, AlertCircle, Search, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -160,8 +160,12 @@ const ConfiguratorSettingsPage = () => {
   }, []);
 
   useEffect(() => {
-    const allowedPrograms = ['STX', 'HHX', 'HTX', 'HF', 'EUD', 'EUX'];
-    if (activeTier === 'basichue' && !allowedPrograms.includes(activeProgram)) {
+    const allowedBasicPrograms = ['STX', 'HHX', 'HTX', 'HF', 'EUD', 'EUX'];
+    if (activeTier === 'basichue' && !allowedBasicPrograms.includes(activeProgram)) {
+      setActiveTier('standard');
+    }
+    const allowedPremiumPrograms = ['STX', 'HHX', 'HTX', 'HF'];
+    if (activeTier === 'premium' && !allowedPremiumPrograms.includes(activeProgram)) {
       setActiveTier('standard');
     }
   }, [activeProgram, activeTier]);
@@ -435,6 +439,10 @@ const ConfiguratorSettingsPage = () => {
                 .filter(tier => {
                   if (tier === 'basichue') {
                     const allowedPrograms = ['STX', 'HHX', 'HTX', 'HF', 'EUD', 'EUX'];
+                    return allowedPrograms.includes(activeProgram);
+                  }
+                  if (tier === 'premium') {
+                    const allowedPrograms = ['STX', 'HHX', 'HTX', 'HF'];
                     return allowedPrograms.includes(activeProgram);
                   }
                   return true;
