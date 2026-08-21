@@ -295,7 +295,7 @@ const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem, v
             'hvid': 'Kantband:Hvid',
             ///zee///
             'sort': 'Kantband:Sort',
-            'hhx': 'Kantband:Royal Blue',
+            'royal blue': 'Kantband:Royal Blue',
             'bordeaux': 'Kantband:Bordeaux',
             'green': 'Kantband:Green',
             'yellow': 'Kantband:Yellow',
