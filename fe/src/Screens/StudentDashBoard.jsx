@@ -1090,7 +1090,7 @@ const StudentDashboard = () => {
                     />
 
                     {/* Premium shimmer loader bar */}
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, marginTop: -30 }}>
                       <div style={{
                         width: 200,
                         height: 2,
@@ -1216,7 +1216,7 @@ const StudentDashboard = () => {
                       />
 
                       {/* Shimmer bar */}
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, marginTop: -20 }}>
                         <div style={{
                           width: 140,
                           height: 2,
