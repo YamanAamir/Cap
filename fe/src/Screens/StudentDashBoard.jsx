@@ -291,15 +291,30 @@ const StudentDashboard = () => {
     let skyggeLinesSelected = false;
     let blackBow = false;
 
+    const standardPrices = dynamicConfig?.priceConfig?.['standard'] || {};
+
     for (const category in selectedOptions) {
       const categoryOptions = selectedOptions[category];
-      const categoryPrices = prices[category];
+      let categoryPrices = prices[category];
+
+      if (packageName === 'basichue' && !categoryPrices && (category === 'UDDANNELSESBÅND' || category === 'BRODERI')) {
+        categoryPrices = standardPrices[category];
+      }
 
       if (!categoryPrices) continue;
 
       for (const optionKey in categoryOptions) {
         const value = categoryOptions[optionKey];
         let optionPrices = categoryPrices[optionKey];
+
+        if (packageName === 'basichue' && (
+          (category === 'UDDANNELSESBÅND' && optionKey === 'Broderi foran') ||
+          (category === 'BRODERI' && optionKey === 'Navne broderi') ||
+          (category === 'BRODERI' && optionKey === 'Skolebroderi')
+        )) {
+          optionPrices = standardPrices[category]?.[optionKey];
+        }
+
         if (!optionPrices) continue;
 
         if (category == "EKSTRABETRÆK" && !isExtraOptionsSelected) {
@@ -389,18 +404,29 @@ const StudentDashboard = () => {
     }
 
     if (packageName === "basichue") {
-      const front = selectedOptions["UDDANNELSESBA.ND"]?.['Broderi foran'] || '';
+      const front = selectedOptions["UDDANNELSESBÅND"]?.['Broderi foran'] || '';
       const name = selectedOptions.BRODERI?.['Navne broderi'] || '';
       const school = selectedOptions.BRODERI?.['Skolebroderi'] || '';
       
       if (front.trim() !== '' && name.trim() !== '' && school.trim() !== '') {
+        const standardPrices = dynamicConfig?.priceConfig?.['standard'] || {};
         let frontPrice = 0, namePrice = 0, schoolPrice = 0;
         
-        if (prices["UDDANNELSESBA.ND"] && prices["UDDANNELSESBA.ND"]['Broderi foran']) frontPrice = calcTextPrice(front, prices["UDDANNELSESBA.ND"]['Broderi foran']);
-        if (prices.BRODERI && prices.BRODERI['Navne broderi']) namePrice = calcTextPrice(name, prices.BRODERI['Navne broderi']);
-        if (prices.BRODERI && prices.BRODERI['Skolebroderi']) schoolPrice = calcTextPrice(school, prices.BRODERI['Skolebroderi']);
+        if (standardPrices["UDDANNELSESBÅND"] && standardPrices["UDDANNELSESBÅND"]['Broderi foran']) {
+          frontPrice = calcTextPrice(front, standardPrices["UDDANNELSESBÅND"]['Broderi foran']);
+        }
+        if (standardPrices.BRODERI && standardPrices.BRODERI['Navne broderi']) {
+          namePrice = calcTextPrice(name, standardPrices.BRODERI['Navne broderi']);
+        }
+        if (standardPrices.BRODERI && standardPrices.BRODERI['Skolebroderi']) {
+          schoolPrice = calcTextPrice(school, standardPrices.BRODERI['Skolebroderi']);
+        }
         
-        total = total - frontPrice - namePrice - schoolPrice + 220;
+        const bundlePrice = (dynamicConfig?.basichueBundlePrices?.[progKey] !== undefined)
+          ? parseFloat(dynamicConfig.basichueBundlePrices[progKey])
+          : (parseFloat(dynamicConfig?.basichueBundlePrice) || 220);
+
+        total = total - frontPrice - namePrice - schoolPrice + bundlePrice;
       }
     }
 
@@ -572,6 +598,11 @@ const StudentDashboard = () => {
 
         // ===== BRODERI =====
         send(`topEmbroidery:${selectedOptions.BRODERI?.["Top broderi"] || "Ingen"}`);
+
+        // ===== SKYGGE =====
+        if (packageName === 'basichue') {
+          send("Skygge:Blank");
+        }
 
         // ===== UDDANNELSESBÅND (EducationalTape) =====
         const hb =

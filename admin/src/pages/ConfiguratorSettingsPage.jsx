@@ -314,6 +314,19 @@ const ConfiguratorSettingsPage = () => {
     });
   };
 
+  const handleBasichueBundlePriceChange = (program, value) => {
+    setConfig(prev => {
+      const newConfig = { ...prev };
+      if (!newConfig.basichueBundlePrices) newConfig.basichueBundlePrices = {};
+      
+      newConfig.basichueBundlePrices = {
+        ...newConfig.basichueBundlePrices,
+        [program]: parseFloat(value) || 0
+      };
+      return newConfig;
+    });
+  };
+
   const handleOptionVisibilityChange = (program, key, isVisible) => {
     setConfig(prevConfig => {
       const newConfig = { ...prevConfig };
@@ -496,6 +509,20 @@ const ConfiguratorSettingsPage = () => {
                         />
                       </div>
                     </div>
+                    {activeTier === 'basichue' && (
+                      <div className="flex justify-between items-center bg-white p-2 rounded border border-gray-100 mt-2">
+                        <span className="text-sm font-medium text-gray-700">Bundle Price (DKK)</span>
+                        <div className="flex items-center">
+                          <span className="text-xs text-gray-400 mr-2 font-semibold">DKK</span>
+                          <input
+                            type="number"
+                            value={config.basichueBundlePrices?.[activeProgram] ?? config.basichueBundlePrice ?? 220}
+                            onChange={(e) => handleBasichueBundlePriceChange(activeProgram, e.target.value)}
+                            className="w-20 p-1.5 text-right border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Delivery Charges */}
