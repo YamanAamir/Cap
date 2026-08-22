@@ -1,0 +1,47 @@
+{
+  "name": "express-prisma-crud",
+  "version": "1.0.0",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "prisma:migrate": "npx prisma migrate dev",
+    "prisma:studio": "npx prisma studio",
+    "prisma:generate": "npx prisma generate",
+    "postinstall": "prisma generate",
+    "seed": "node prisma/seed.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@prisma/client": "^6.17.0",
+    "@stripe/stripe-js": "^7.9.0",
+    "@vitalets/google-translate-api": "^9.2.1",
+    "archiver": "^7.0.1",
+    "bcryptjs": "^3.0.2",
+    "cloudinary": "^1.30.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "dotenv": "^17.2.0",
+    "exceljs": "^4.4.0",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
+    "multer-storage-cloudinary": "^4.0.0",
+    "node-cron": "^3.0.3",
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^7.0.5",
+    "nodemon": "^3.1.10",
+    "pdfkit": "^0.17.1",
+    "pg": "^8.16.3",
+    "stripe": "^18.5.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "prisma": "^6.17.0"
+  }
+}
