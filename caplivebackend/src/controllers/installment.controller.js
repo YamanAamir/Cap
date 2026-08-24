@@ -1,5 +1,14 @@
 const prisma = require('../utils/prisma');
 
+// Helper: handle both already-parsed (from $extends) and raw string (from select queries)
+const toArray = (val) => {
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    try { const p = JSON.parse(val); return Array.isArray(p) ? p : []; } catch { return []; }
+  }
+  return [];
+};
+
 // ─── Admin: list all plans ────────────────────────────────────────────────────
 exports.getInstallmentPlans = async (req, res) => {
   try {
@@ -7,11 +16,8 @@ exports.getInstallmentPlans = async (req, res) => {
       orderBy: { createdAt: 'desc' },
       include: { _count: { select: { orders: true } } },
     });
-    const parsed = plans.map(p => ({
-      ...p,
-      installments: p.installments ? JSON.parse(p.installments) : [],
-    }));
-    res.json(parsed);
+    // $extends already parsed installments — just normalize to array
+    res.json(plans.map(p => ({ ...p, installments: toArray(p.installments) })));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -33,11 +39,8 @@ exports.getPublicInstallmentPlans = async (req, res) => {
         notes: true,
       },
     });
-    const parsed = plans.map(p => ({
-      ...p,
-      installments: p.installments ? JSON.parse(p.installments) : [],
-    }));
-    res.json(parsed);
+    // select:{} bypasses $extends — installments may be raw string, use toArray
+    res.json(plans.map(p => ({ ...p, installments: toArray(p.installments) })));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -90,7 +93,8 @@ exports.updateInstallmentPlan = async (req, res) => {
         ...(notes !== undefined && { notes }),
       },
     });
-    res.json({ ...plan, installments: plan.installments ? JSON.parse(plan.installments) : [] });
+    // $extends already parsed plan.installments — normalize to array
+    res.json({ ...plan, installments: toArray(plan.installments) });
   } catch (err) {
     if (err.code === 'P2025') return res.status(404).json({ message: 'Plan not found' });
     res.status(500).json({ message: err.message });
