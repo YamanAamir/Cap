@@ -6,7 +6,7 @@ const getBaseUrl = () => {
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     return 'http://localhost:5000/api';
   }
-  return 'https://capdevapi.studentlife.dk/api';
+  return process.env.VITE_API_URL;
 };
 
 const api = axios.create({
