@@ -7,7 +7,11 @@ exports.getInstallmentPlans = async (req, res) => {
       orderBy: { createdAt: 'desc' },
       include: { _count: { select: { orders: true } } },
     });
-    res.json(plans);
+    const parsed = plans.map(p => ({
+      ...p,
+      installments: p.installments ? JSON.parse(p.installments) : [],
+    }));
+    res.json(parsed);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -24,13 +28,16 @@ exports.getPublicInstallmentPlans = async (req, res) => {
         name: true,
         program: true,
         packageTier: true,
-        packageTier: true,
         downPaymentAmount: true,
         installments: true,
         notes: true,
       },
     });
-    res.json(plans);
+    const parsed = plans.map(p => ({
+      ...p,
+      installments: p.installments ? JSON.parse(p.installments) : [],
+    }));
+    res.json(parsed);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -54,11 +61,12 @@ exports.createInstallmentPlan = async (req, res) => {
         packageTier,
         isActive: isActive !== undefined ? Boolean(isActive) : true,
         downPaymentAmount: parseFloat(downPaymentAmount),
-        installments: rows,
+        installments: JSON.stringify(rows),
         notes: notes || null,
       },
     });
-    res.status(201).json(plan);
+    res.status(201).json({ ...plan, installments: rows });
+
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -78,11 +86,11 @@ exports.updateInstallmentPlan = async (req, res) => {
         ...(packageTier !== undefined && { packageTier }),
         ...(isActive !== undefined && { isActive: Boolean(isActive) }),
         ...(downPaymentAmount !== undefined && { downPaymentAmount: parseFloat(downPaymentAmount) }),
-        ...(installments !== undefined && { installments }),
+        ...(installments !== undefined && { installments: JSON.stringify(Array.isArray(installments) ? installments : []) }),
         ...(notes !== undefined && { notes }),
       },
     });
-    res.json(plan);
+    res.json({ ...plan, installments: plan.installments ? JSON.parse(plan.installments) : [] });
   } catch (err) {
     if (err.code === 'P2025') return res.status(404).json({ message: 'Plan not found' });
     res.status(500).json({ message: err.message });

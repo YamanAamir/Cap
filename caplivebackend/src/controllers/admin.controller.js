@@ -651,11 +651,13 @@ exports.getSettings = async (req, res) => {
 exports.updateSetting = async (req, res) => {
   try {
     const { key, value } = req.body;
+    const serialized = typeof value === 'string' ? value : JSON.stringify(value);
     const setting = await prisma.systemSetting.upsert({
       where: { key },
-      update: { value },
-      create: { key, value },
+      update: { value: serialized },
+      create: { key, value: serialized },
     });
+    // setting.value is auto-parsed by prisma.js extension; return as-is
     res.json(setting);
   } catch (err) {
     res.status(500).json({ message: err.message });

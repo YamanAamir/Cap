@@ -3771,7 +3771,7 @@ const stripeWebhook = async (req, res) => {
 
             await prisma.order.update({
               where: { id: orderId },
-              data: { installmentDetails: details }
+              data: { installmentDetails: JSON.stringify(details) }
             });
             console.log(`✅ Installment ${installmentIndex + 1} paid for order ${orderId}`);
           }
@@ -3839,8 +3839,8 @@ const stripeWebhook = async (req, res) => {
 
         const order = await prisma.order.create({
           data: {
-            customerDetails: orderData.customerDetails,
-            selectedOptions: orderData.selectedOptions,
+            customerDetails: JSON.stringify(orderData.customerDetails),
+            selectedOptions: JSON.stringify(orderData.selectedOptions),
             totalPrice: orderData.finalPrice,
             currency: orderData.currency,
             orderNumber: orderData.orderNumber,
@@ -3851,10 +3851,10 @@ const stripeWebhook = async (req, res) => {
             packageName: orderData.packageName,
             program: orderData.program,
             customerId: orderData.customerId,
-            capImages: orderData.capImages || null,
+            capImages: orderData.capImages ? JSON.stringify(orderData.capImages) : null,
             discountCodeId: orderData.discountRecord?.id || null,
             discountAmount: orderData.discountAmount,
-            installmentDetails: finalInstallmentDetails,
+            installmentDetails: finalInstallmentDetails ? JSON.stringify(finalInstallmentDetails) : null,
           },
         });
 
@@ -3989,8 +3989,8 @@ const createInstallmentOrder = async (req, res) => {
       data: {
         orderNumber: orderNumber || `CAP-${Date.now()}`,
         customerEmail: email,
-        customerDetails,
-        selectedOptions,
+        customerDetails: JSON.stringify(customerDetails),
+        selectedOptions: JSON.stringify(selectedOptions),
         totalPrice: parseFloat(totalPrice) || 0,
         currency,
         orderDate: orderDate ? new Date(orderDate) : new Date(),
@@ -3999,9 +3999,9 @@ const createInstallmentOrder = async (req, res) => {
         packageName: packageName || null,
         program: program || null,
         customerId: customer.id,
-        capImages: capImages || null,
+        capImages: capImages ? JSON.stringify(capImages) : null,
         installmentPlanId: installmentPlanId ? parseInt(installmentPlanId) : null,
-        installmentDetails: installmentDetails || null,
+        installmentDetails: installmentDetails ? JSON.stringify(installmentDetails) : null,
       },
     });
 

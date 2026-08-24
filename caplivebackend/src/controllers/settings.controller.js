@@ -1698,13 +1698,19 @@ exports.getConfiguratorSettings = async (req, res) => {
       where: { key: 'configurator_settings' }
     });
 
+    // Parse the JSON string from DB
+    if (setting && typeof setting.value === 'string') {
+      try { setting.value = JSON.parse(setting.value); } catch (e) {}
+    }
+
     if (!setting) {
-      setting = await prisma.systemSetting.create({
+      await prisma.systemSetting.create({
         data: {
           key: 'configurator_settings',
-          value: DEFAULT_CONFIG
+          value: JSON.stringify(DEFAULT_CONFIG)
         }
       });
+      setting = { value: DEFAULT_CONFIG };
     }
 
     // Auto-migrate database values from budgethue/basic to basichue
@@ -1745,7 +1751,7 @@ exports.getConfiguratorSettings = async (req, res) => {
       if (migrated) {
         await prisma.systemSetting.update({
           where: { key: 'configurator_settings' },
-          data: { value: val }
+          data: { value: JSON.stringify(val) }
         });
         setting.value = val;
       }
@@ -1830,14 +1836,16 @@ exports.getConfiguratorSettings = async (req, res) => {
 exports.updateConfiguratorSettings = async (req, res) => {
   try {
     const newConfig = req.body;
+    const serialized = JSON.stringify(newConfig);
 
-    const setting = await prisma.systemSetting.upsert({
+    await prisma.systemSetting.upsert({
       where: { key: 'configurator_settings' },
-      update: { value: newConfig },
-      create: { key: 'configurator_settings', value: newConfig }
+      update: { value: serialized },
+      create: { key: 'configurator_settings', value: serialized }
     });
 
-    res.json(setting.value);
+    // Return the original object (not the raw string from DB)
+    res.json(newConfig);
   } catch (error) {
     console.error('Error updating configurator settings:', error);
     res.status(500).json({ message: 'Failed to update settings' });
