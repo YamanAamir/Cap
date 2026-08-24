@@ -566,7 +566,7 @@ const SmsCampaignsPage = () => {
               </p>
               <div className="bg-black/20 p-3 rounded border border-white/10 cursor-pointer hover:bg-black/30 transition-colors" onClick={() => {
                 const expandedSlug = campaigns.find(c => c.id === expanded)?.slug;
-                const url = expanded ? `${import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'}/sms-signup/${expandedSlug}` : '#';
+                const url = expanded ? `${import.meta.env.VITE_FRONTEND_BASE_URL}/sms-signup/${expandedSlug}` : '#';
                 if (!expanded) {
                   toast.error("Please expand a campaign first");
                   return;
@@ -575,7 +575,7 @@ const SmsCampaignsPage = () => {
                 toast.success("URL copied to clipboard!", { style: { background: '#333', color: '#fff', fontSize: '12px' } });
               }}>
                 <code className="block text-xs font-mono text-green-300 break-all">
-                  {expanded ? `${import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'}/sms-signup/${campaigns.find(c => c.id === expanded)?.slug}` : 'Select a campaign to view URL'}
+                  {expanded ? `${import.meta.env.VITE_FRONTEND_BASE_URL}/sms-signup/${campaigns.find(c => c.id === expanded)?.slug}` : 'Select a campaign to view URL'}
                 </code>
                 <p className="text-[10px] font-bold uppercase text-white/50 mt-1 flex justify-end">
                   Click to Copy
@@ -588,7 +588,7 @@ const SmsCampaignsPage = () => {
               <div className={`bg-slate-50 p-2 border border-slate-100 rounded-xl ${expanded ? 'cursor-pointer' : 'cursor-not-allowed'}`} onClick={() => { if (expanded) setShowQrModal(expanded) }}>
                 {expanded ? (
                   <QRCodeSVG 
-                    value={`${import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'}/sms-signup/${campaigns.find(c => c.id === expanded)?.slug}`}
+                    value={`${import.meta.env.VITE_FRONTEND_BASE_URL}/sms-signup/${campaigns.find(c => c.id === expanded)?.slug}`}
                     size={120}
                     level="M"
                     fgColor="#1e293b"
@@ -713,7 +713,7 @@ const SmsCampaignsPage = () => {
             <div className="p-4 bg-white border-2 border-slate-200 rounded-xl">
               <QRCodeSVG 
                 id="campaign-qr-code"
-                value={`${import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173'}/sms-signup/${campaigns.find(c => c.id === showQrModal)?.slug || ''}`}
+                value={`${import.meta.env.VITE_FRONTEND_BASE_URL}/sms-signup/${campaigns.find(c => c.id === showQrModal)?.slug || ''}`}
                 size={220}
                 level="M"
               />
