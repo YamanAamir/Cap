@@ -1849,6 +1849,35 @@ exports.getConfiguratorSettings = async (req, res) => {
   }
 };
 
+exports.getBasePrices = async (req, res) => {
+  try {
+    const setting = await prisma.systemSetting.findUnique({
+      where: { key: 'configurator_settings' }
+    });
+
+    let basePrices = null;
+
+    if (setting && typeof setting.value === 'string') {
+      try {
+        const parsed = JSON.parse(setting.value);
+        basePrices = (parsed && typeof parsed === 'object') ? parsed.basePrices : null;
+      } catch (e) {
+        basePrices = null;
+      }
+    }
+
+    // Fallback to DEFAULT_CONFIG if nothing in DB
+    if (!basePrices) {
+      basePrices = DEFAULT_CONFIG.basePrices;
+    }
+
+    res.json({ basePrices });
+  } catch (error) {
+    console.error('Error fetching base prices:', error);
+    res.status(500).json({ message: 'Failed to fetch base prices' });
+  }
+};
+
 exports.updateConfiguratorSettings = async (req, res) => {
   try {
     const newConfig = req.body;

@@ -62,6 +62,7 @@ router.put('/settings', admin, adminController.updateSetting);
 // Configurator Settings
 router.get('/settings/configurator', admin, settingsController.getConfiguratorSettings);
 router.put('/settings/configurator', admin, settingsController.updateConfiguratorSettings);
+router.get('/settings/configurator/base-prices', settingsController.getBasePrices);
 
 // Installment Plans
 router.get('/installment-plans', admin, installmentController.getInstallmentPlans);
