@@ -1698,9 +1698,25 @@ exports.getConfiguratorSettings = async (req, res) => {
       where: { key: 'configurator_settings' }
     });
 
-    // Parse the JSON string from DB
+    // Parse the JSON string from DB, reset corrupted data
     if (setting && typeof setting.value === 'string') {
-      try { setting.value = JSON.parse(setting.value); } catch (e) {}
+      let parsed = null;
+      try {
+        parsed = JSON.parse(setting.value);
+      } catch (e) {
+        parsed = null; // corrupted — will reset below
+      }
+      // If parse failed OR result is not a plain object, treat as corrupted
+      if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        console.warn('[Settings] Corrupted configurator_settings in DB — resetting to DEFAULT_CONFIG');
+        await prisma.systemSetting.update({
+          where: { key: 'configurator_settings' },
+          data: { value: JSON.stringify(DEFAULT_CONFIG) }
+        });
+        setting = { value: DEFAULT_CONFIG };
+      } else {
+        setting.value = parsed;
+      }
     }
 
     if (!setting) {

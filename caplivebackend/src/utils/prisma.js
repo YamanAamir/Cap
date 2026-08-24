@@ -6,6 +6,8 @@ function safeParseJson(value) {
   if (value === null || value === undefined) return value;
   if (typeof value === 'string') {
     const trimmed = value.trim();
+    // Guard against corrupted "[object Object]" / "[object Array]" etc. from .toString()
+    if (trimmed === '[object Object]' || trimmed === '[object Array]') return null;
     if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
       try {
         const parsed = JSON.parse(value);
