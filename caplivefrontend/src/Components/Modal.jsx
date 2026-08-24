@@ -410,7 +410,10 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       const stripeRes = await fetch(`${apiRoot}/sendEmail/create-checkout-session`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData),
+        body: JSON.stringify({
+          ...orderData,
+          frontendUrl: window.location.origin + "/studentlife"
+        }),
       });
 
       const stripeContentType = stripeRes.headers.get("content-type");

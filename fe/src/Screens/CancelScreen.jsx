@@ -1,49 +1,39 @@
 import React from "react";
-import { XCircle, ShoppingCart } from "lucide-react";
+import { XCircle, ShoppingCart, RefreshCw } from "lucide-react";
 
 const CancelScreen = ({ handleResetModal, onClose }) => {
   return (
-    <div className="overflow-y-auto px-6 py-12">
-      <div className="max-w-2xl mx-auto text-center">
+    <div className="min-h-screen flex flex-col justify-center items-center px-6 py-12 bg-white">
+      <div className="max-w-lg w-full text-center">
         {/* Cancel Icon */}
         <div className="flex justify-center mb-6">
-          <div className="p-4 bg-red-100 rounded-full">
-            <XCircle className="w-12 h-12 text-red-600" />
+          <div className="p-4 bg-red-50 rounded-full">
+            <XCircle className="w-16 h-16 text-red-500" />
           </div>
         </div>
 
         {/* Header */}
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          Payment Cancelled
+        <h2 className="text-2xl font-bold text-gray-900 mb-3">
+          Betaling annulleret
         </h2>
-        <p className="text-gray-600 mb-6">
-          Your payment was not completed. If this was a mistake, you can try
-          again or continue browsing our shop.
+        
+        {/* Description */}
+        <p className="text-gray-600 mb-8 text-sm sm:text-base leading-relaxed">
+          Din betaling blev desværre ikke gennemført. Hvis dette var en fejl, kan du prøve at gennemføre betalingen igen, eller gå tilbage til vores butik for at fortsætte med at handle.
         </p>
 
         {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <div className="flex justify-center">
           <button
             onClick={() => {
               handleResetModal?.();
-              window.location.href =
-                "https://shop.studentlife.dk/packages/";
+              window.location.href = "https://studentlife.dk";
               onClose?.();
             }}
-            className="flex items-center justify-center px-6 py-3 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-all duration-200"
+            className="flex items-center justify-center px-8 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-700 font-semibold hover:bg-gray-50 transition duration-200"
           >
             <ShoppingCart className="w-5 h-5 mr-2" />
-            Back to Shop
-          </button>
-
-          <button
-            onClick={() => {
-              handleResetModal?.();
-              window.location.href = "/checkout"; // adjust to your checkout route
-            }}
-            className="flex items-center justify-center px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg font-medium hover:from-red-700 hover:to-red-800 transition-all duration-200"
-          >
-            Try Again
+            Tilbage til butikken
           </button>
         </div>
       </div>

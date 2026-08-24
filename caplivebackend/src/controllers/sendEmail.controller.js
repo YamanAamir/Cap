@@ -3609,11 +3609,21 @@ const stripePayment = async (req, res) => {
       })})
     `;
 
+    const { frontendUrl } = req.body;
+    let clientUrl = frontendUrl || req.headers.origin;
+    if (clientUrl.endsWith('/')) {
+      clientUrl = clientUrl.slice(0, -1);
+    }
+    if (!clientUrl.includes('/studentlife')) {
+      clientUrl = `${clientUrl}/studentlife`;
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       customer_email: email,
       metadata: {
-        tempOrderId: tempOrderId
+        tempOrderId: tempOrderId,
+        orderNumber: orderNumber || ''
       },
       line_items: [
         {
@@ -3629,8 +3639,8 @@ const stripePayment = async (req, res) => {
       ],
       mode: "payment",
       locale: "da",
-      success_url: `https://shop.studentlife.dk/thankyou/?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: "https://elipsestudio.com/devstudentlife/cancel",
+      success_url: `${clientUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${clientUrl}/cancel`,
     });
     res.json({ id: session.id });
   } catch (err) {
@@ -3639,7 +3649,7 @@ const stripePayment = async (req, res) => {
 };
 
 const payInstallment = async (req, res) => {
-  const { orderId, installmentIndex } = req.query;
+  const { orderId, installmentIndex, frontendUrl } = req.query;
 
   try {
     const order = await prisma.order.findUnique({ where: { id: parseInt(orderId) } });
@@ -3658,13 +3668,28 @@ const payInstallment = async (req, res) => {
       return res.status(400).send('Denne rate er allerede betalt.');
     }
 
+    let clientUrl = frontendUrl || req.headers.referer || req.headers.origin;
+    try {
+      const parsedUrl = new URL(clientUrl);
+      clientUrl = parsedUrl.origin;
+    } catch (e) {
+      // ignore
+    }
+    if (clientUrl.endsWith('/')) {
+      clientUrl = clientUrl.slice(0, -1);
+    }
+    if (!clientUrl.includes('/studentlife')) {
+      clientUrl = `${clientUrl}/studentlife`;
+    }
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       customer_email: order.customerEmail,
       metadata: {
         type: 'installment_payment',
         orderId: order.id.toString(),
-        installmentIndex: idx.toString()
+        installmentIndex: idx.toString(),
+        orderNumber: order.orderNumber || ''
       },
       line_items: [
         {
@@ -3680,8 +3705,8 @@ const payInstallment = async (req, res) => {
       ],
       mode: "payment",
       locale: "da",
-      success_url: `https://shop.studentlife.dk/thankyou/?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: "https://elipsestudio.com/devstudentlife/cancel",
+      success_url: `${clientUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${clientUrl}/cancel`,
     });
 
     res.redirect(303, session.url);
