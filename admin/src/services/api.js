@@ -28,4 +28,41 @@ api.interceptors.request.use(
   }
 );
 
+function safeParseJson(value) {
+  if (value === null || value === undefined) return value;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+      try {
+        const parsed = JSON.parse(value);
+        return safeParseJson(parsed);
+      } catch (e) {
+        return value;
+      }
+    }
+  }
+  if (Array.isArray(value)) {
+    return value.map(safeParseJson);
+  }
+  if (value !== null && typeof value === 'object' && !(value instanceof Date)) {
+    const parsedObj = {};
+    for (const key of Object.keys(value)) {
+      parsedObj[key] = safeParseJson(value[key]);
+    }
+    return parsedObj;
+  }
+  return value;
+}
+
+// Response interceptor to safely parse any JSON string fields
+api.interceptors.response.use(
+  (response) => {
+    response.data = safeParseJson(response.data);
+    return response;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
 export default api;

@@ -23,6 +23,40 @@ app.post(
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
+function safeParseJson(value) {
+  if (value === null || value === undefined) return value;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+      try {
+        const parsed = JSON.parse(value);
+        return safeParseJson(parsed);
+      } catch (e) {
+        return value;
+      }
+    }
+  }
+  if (Array.isArray(value)) {
+    return value.map(safeParseJson);
+  }
+  if (value !== null && typeof value === 'object' && !(value instanceof Date)) {
+    const parsedObj = {};
+    for (const key of Object.keys(value)) {
+      parsedObj[key] = safeParseJson(value[key]);
+    }
+    return parsedObj;
+  }
+  return value;
+}
+
+app.use((req, res, next) => {
+  const originalJson = res.json;
+  res.json = function (body) {
+    return originalJson.call(this, safeParseJson(body));
+  };
+  next();
+});
+
 app.use(cookieParser());
 
 app.use(cors({
