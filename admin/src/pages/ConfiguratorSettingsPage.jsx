@@ -88,14 +88,6 @@ function isRelevantForTier(item, activeTier, groupName, category) {
   const catLower = category ? category.toLowerCase() : '';
 
   if (catLower === 'kokarde') {
-    if (groupLower === 'kokarde' && itemLower === 'flag') return false;
-    const flagTypes = [
-      'kurdistan', 'irak', 'iran', 'somalia', 'somaliland', 'palæstina', 
-      'libanon', 'afghanistan', 'albanien', 'serbien', 'bosnien', 
-      'danmark', 'grønland', 'marokko', 'pakistan', 'tyrkiet', 'sweden'
-    ];
-    if (groupLower === 'type' && flagTypes.includes(itemLower)) return false;
-    
     if (groupLower === 'roset farve') {
       const allowedColors = ['#7f1d1d', '#1e3a8a', '#dc2626', 'rød', 'euxred'];
       if (!allowedColors.includes(itemLower)) return false;
