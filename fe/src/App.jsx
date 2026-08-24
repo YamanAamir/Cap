@@ -6,13 +6,19 @@ import SuccessScreen from './Screens/SuccessScreen'
 import CancelScreen from './Screens/CancelScreen'
 import AdminFlags from './Screens/AdminFlags'
 import SmsSignupScreen from './Screens/SmsSignupScreen'
+import MaintenanceScreen from './Screens/MaintenanceScreen'
 import { initPixel } from './utils/metaPixel'
 
 import { identifyVisitor, pushEvent } from './lib/tracking';
 import { startRecording } from './lib/sessionRecorder';
 
 function App() {
+  if (import.meta.env.VITE_MAINTENANCE_MODE === 'true') {
+    return <MaintenanceScreen />;
+  }
+
   useEffect(() => {
+
     initPixel();
     
     const searchParams = new URLSearchParams(window.location.search);
