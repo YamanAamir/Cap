@@ -807,7 +807,7 @@ const StudentDashboard = () => {
 
     if (window.innerWidth >= 768) {
       ////////DEV Student Life////////
-      iframe_desktop.src = "https://playcanv.as/e/p/9y9yBbyR/";
+      iframe_desktop.src = "https://playcanv.as/e/p/to6gFrqQ/";
 
       ////////Production Student Life////////
       // iframe_desktop.src = "https://playcanv.as/e/p/QIG7fh8C/";
