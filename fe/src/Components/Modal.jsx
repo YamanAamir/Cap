@@ -209,6 +209,16 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       }
     }
 
+    if (
+      (program?.toLowerCase() === "landmand" || program?.toLowerCase() === "stu") &&
+      section === "FOER" &&
+      key === "Foer" &&
+      displayValue === "Viskose"
+    ) {
+      price = 0;
+      standardPrice = 0;
+    }
+
     if (displayValue === '' || displayValue === 'Ikke valgt') {
       return 'Ikke valgt';
     }

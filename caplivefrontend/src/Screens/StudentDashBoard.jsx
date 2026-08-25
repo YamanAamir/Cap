@@ -321,6 +321,16 @@ const StudentDashboard = () => {
           continue;
         }
 
+        // Special case: For landmand and stu programs, Viskose is the default lining and should be free (0 surcharge)
+        if (
+          (program?.toLowerCase() === "landmand" || program?.toLowerCase() === "stu") &&
+          category === "FOER" &&
+          optionKey === "Foer" &&
+          (value === "Viskose" || value?.value === "Viskose")
+        ) {
+          continue;
+        }
+
         // Special case: SKYGGE lines (1–3)
         if (
           category === "SKYGGE" &&
