@@ -89,7 +89,6 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
     const [selectedYear, setSelectedYear] = useState(
         selectedOptions.år || currentYear.toString()
     );
-    const yearCanvasRef = useRef(document.createElement('canvas'));
     // --- COLOR MAPPING: Broderi farve → Hex Code ---
     const getTextColorHex = () => {
         const map = {
@@ -314,46 +313,8 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
         sendMessageToIframes(message);
         if (cameraTriggers.current['knapfarve']) { sendMessageToIframes("knapfarve camera") } else { cameraTriggers.current['knapfarve'] = true }
     }, [selectedButtonColor])
-    // NEW FUNCTION: Generate 512×512 Year Image
-    const generateYearImage = (yearText) => {
-        if (!yearText || yearText === 'Ingen') {
-            const message = `YearImage:`;
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(message, "*");
-                }
-            });
-            return;
-        }
-        const canvas = yearCanvasRef.current;
-        const ctx = canvas.getContext('2d');
-        canvas.width = 512;
-        canvas.height = 512;
-        ctx.clearRect(0, 0, 512, 512);
-        const fontSize = 240;
-        const fontFamily = 'Arial';
-        ctx.font = `${fontSize}px ${fontFamily}`;
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-        // Draw year in absolute center
-        ctx.fillText(yearText, 256, 256);
-        // Generate and send image
-        const base64Image = canvas.toDataURL('image/png', 1.0);
-        const message = `YearImage:${base64Image}`;
-        ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-            const iframe = document.getElementById(id);
-            if (iframe?.contentWindow) {
-                iframe.contentWindow.postMessage(message, "*");
-            }
-        });
-    };
     useEffect(() => {
         onOptionChange('år', selectedYear);
-        generateYearImage(selectedYear);
     }, [selectedYear])
     useEffect(() => {
         if (!selectedYear) return;
