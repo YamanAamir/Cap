@@ -1048,10 +1048,10 @@ const StudentDashboard = () => {
               {matchingInstallmentPlan && (
                 <div className="mb-3 px-3.5 py-2 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg flex items-center justify-between text-xs">
                   <span className="font-bold text-emerald-800 flex items-center gap-1.5">
-                    <span className="text-sm">⚡</span> Afdragsordning tilgængelig
+                    <span className="text-sm">⚡</span> Betal i 3 rater
                   </span>
                   <span className="text-sm font-semibold text-emerald-700">
-                    Første betaling: {matchingInstallmentPlan.downPaymentAmount || 399} kr.
+                   I dag: {matchingInstallmentPlan.downPaymentAmount} kr.
                   </span>
                 </div>
               )}
@@ -1453,10 +1453,10 @@ const StudentDashboard = () => {
             {matchingInstallmentPlan && (
               <div className="mb-2.5 px-3 py-1.5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg flex items-center justify-between text-xs">
                 <span className="font-bold text-emerald-800 flex items-center gap-1">
-                  <span className="text-sm">⚡</span> Afdragsordning tilgængelig
+                  <span className="text-sm">⚡</span> Betal i 3 rater
                 </span>
                 <span className="font-semibold text-emerald-700">
-                  Første betaling: {matchingInstallmentPlan.downPaymentAmount || 399} kr.
+                  I dag: {matchingInstallmentPlan.downPaymentAmount} kr.
                 </span>
               </div>
             )}

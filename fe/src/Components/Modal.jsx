@@ -903,7 +903,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
                   <h3 className="text-lg font-bold text-gray-800">Vælg betalingsmåde</h3>
                 </div>
                 <span className="text-xs font-bold px-2.5 py-0.5 rounded bg-emerald-600 text-white uppercase tracking-wider">
-                  Afdragsordning tilgængelig
+                  Betal i 3 rater
                 </span>
               </div>
 
@@ -924,7 +924,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
                   </div>
                   <p className="text-xs text-gray-600">Del betalingen op i {installmentsCount + 1} bider</p>
                   <p className="text-base font-extrabold text-emerald-700 mt-2">
-                    Første betaling (Depositum): {downPaymentAmount} DKK
+                    I dag: {downPaymentAmount} DKK
                   </p>
                 </div>
               </div>
