@@ -217,10 +217,77 @@ const updateOrder = async (req, res) => {
   }
 };
 
+const resendOrderEmails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await prisma.order.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    console.log(`♻️ Dashboard Action: Resending confirmation emails for Order: ${order.orderNumber} to Customer: ${order.customerEmail}...`);
+
+    // Dynamically require to avoid circular dependencies
+    const { sendCapEmail } = require('./sendEmail.controller');
+
+    // Simulate response payload capture
+    let responseStatus = 200;
+    let responseData = null;
+
+    const mockRes = {
+      status: (code) => {
+        responseStatus = code;
+        return {
+          json: (data) => {
+            responseData = data;
+          }
+        };
+      },
+      json: (data) => {
+        responseData = data;
+      }
+    };
+
+    const mockReq = {
+      body: {
+        customerDetails: order.customerDetails,
+        selectedOptions: order.selectedOptions,
+        totalPrice: order.totalPrice,
+        currency: order.currency,
+        orderNumber: order.orderNumber,
+        orderDate: order.orderDate,
+        email: order.customerEmail,
+        packageName: order.packageName,
+        program: order.program,
+        capImages: order.capImages,
+        installmentDetails: order.installmentDetails,
+      }
+    };
+
+    await sendCapEmail(mockReq, mockRes);
+
+    if (responseStatus === 200) {
+      console.log(`✅ Dashboard Action: Successfully force-resent confirmation emails for Order: ${order.orderNumber}`);
+      return res.status(200).json({ message: 'Emails sent successfully', details: responseData });
+    } else {
+      console.error(`❌ Dashboard Action: Failed to force-send emails for Order: ${order.orderNumber}:`, responseData);
+      return res.status(responseStatus).json({ message: 'Failed to send emails', error: responseData });
+    }
+
+  } catch (error) {
+    console.error('Error resending order emails:', error);
+    res.status(500).json({ message: 'Error resending emails', error: error.message });
+  }
+};
+
 module.exports = {
   getOrders,
   getOrderById,
   updateOrderStatus,
   updateOrder,
   deleteOrder,
+  resendOrderEmails,
 };

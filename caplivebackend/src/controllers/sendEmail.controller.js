@@ -3379,7 +3379,7 @@ MOMS: 20% of the total price DKK (vat)
 
 const sendCapEmail = async (req, res) => {
   try {
-    const {
+    let {
       customerDetails,
       selectedOptions,
       totalPrice,
@@ -3390,7 +3390,22 @@ const sendCapEmail = async (req, res) => {
       packageName,
       program,
       capImages,
+      installmentDetails,
     } = req.body;
+
+    // Parse stringified JSON if they are passed as strings (e.g. from Stripe Webhook or db calls)
+    if (typeof customerDetails === 'string') {
+      try { customerDetails = JSON.parse(customerDetails); } catch (_) {}
+    }
+    if (typeof selectedOptions === 'string') {
+      try { selectedOptions = JSON.parse(selectedOptions); } catch (_) {}
+    }
+    if (typeof capImages === 'string') {
+      try { capImages = JSON.parse(capImages); } catch (_) {}
+    }
+    if (typeof installmentDetails === 'string') {
+      try { installmentDetails = JSON.parse(installmentDetails); } catch (_) {}
+    }
 
     const buildCapAttachments = (images) => {
       if (!images) return [];
@@ -3867,6 +3882,8 @@ const stripeWebhook = async (req, res) => {
 
         await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${tempOrderId}`;
 
+        console.log(`⚡ Stripe Webhook: Dispatching order confirmation emails for Order Number: ${order.orderNumber} to Customer: ${order.customerEmail}...`);
+
         await sendCapEmail(
           {
             body: {
@@ -3886,10 +3903,10 @@ const stripeWebhook = async (req, res) => {
           { status: () => ({ json: () => { } }) }
         );
 
-        console.log("✅ Email sent");
+        console.log(`✅ Stripe Webhook: Successfully processed and sent confirmation emails for Order: ${order.orderNumber}`);
 
       } catch (err) {
-        console.error("❌ Email error:", err.message);
+        console.error("❌ Stripe Webhook: Failed to process order / send email:", err);
       }
     }
   }

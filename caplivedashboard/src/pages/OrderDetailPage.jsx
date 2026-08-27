@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getOrder, updateOrderStatus } from '../services/auth.service';
+import { getOrder, updateOrderStatus, resendOrderEmails } from '../services/auth.service';
 import { getOrderStatuses } from '../services/admin.service';
 import {
   ChevronLeft, Loader2, User, Mail, Package, Calendar,
@@ -27,6 +27,9 @@ const OrderDetailPage = () => {
   
   // Confirmation Modal
   const [confirmModal, setConfirmModal] = useState({ isOpen: false });
+
+  // Resend Email State
+  const [resendingEmails, setResendingEmails] = useState(false);
 
   const fetchOrder = async () => {
     setLoading(true);
@@ -63,6 +66,20 @@ const OrderDetailPage = () => {
     } finally {
       setUpdating(false);
       setConfirmModal({ isOpen: false });
+    }
+  };
+
+  const handleResendEmails = async () => {
+    if (!window.confirm("Are you sure you want to force-resend confirmation emails for this order? This will send confirmation emails to the Customer, Admin, and Factory using the latest configuration.")) return;
+    setResendingEmails(true);
+    try {
+      await resendOrderEmails(id);
+      alert('Emails resent successfully!');
+    } catch (err) {
+      console.error('Failed to resend emails:', err);
+      alert(err.response?.data?.message || 'Failed to resend emails. Please try again.');
+    } finally {
+      setResendingEmails(false);
     }
   };
 
@@ -175,27 +192,46 @@ const OrderDetailPage = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-[#fafafa] p-1.5 rounded border border-slate-200 w-full md:w-auto">
-          <select
-            value={selectedStatusId}
-            onChange={(e) => setSelectedStatusId(e.target.value)}
-            className="h-10 border-0 bg-transparent px-3 text-sm font-bold text-slate-700 min-w-[200px] focus:ring-0 cursor-pointer outline-none w-full md:w-auto"
-          >
-            <option value="">Update Status...</option>
-            {statuses.filter(s => s.isActive).map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          {/* Force Send Email Button */}
           <button
-            onClick={() => setConfirmModal({ isOpen: true })}
-            disabled={updating || !selectedStatusId || String(order.statusId) === selectedStatusId}
-            className={cn(
-              "flex items-center justify-center h-10 px-4 rounded text-white font-bold transition-colors shrink-0",
-              updating || !selectedStatusId || String(order.statusId) === selectedStatusId ? "bg-slate-300 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
-            )}
+            onClick={handleResendEmails}
+            disabled={resendingEmails}
+            className="flex items-center justify-center h-10 px-4 rounded bg-emerald-600 text-white font-bold transition-colors hover:bg-emerald-700 disabled:bg-slate-300 shrink-0 text-sm"
           >
-            {updating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'UPDATE'}
+            {resendingEmails ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Sending...
+              </>
+            ) : (
+              <>
+                <Mail className="h-4 w-4 mr-1.5" /> Send Order Emails
+              </>
+            )}
           </button>
+
+          <div className="flex items-center gap-2 bg-[#fafafa] p-1.5 rounded border border-slate-200 w-full md:w-auto">
+            <select
+              value={selectedStatusId}
+              onChange={(e) => setSelectedStatusId(e.target.value)}
+              className="h-10 border-0 bg-transparent px-3 text-sm font-bold text-slate-700 min-w-[200px] focus:ring-0 cursor-pointer outline-none w-full md:w-auto"
+            >
+              <option value="">Update Status...</option>
+              {statuses.filter(s => s.isActive).map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => setConfirmModal({ isOpen: true })}
+              disabled={updating || !selectedStatusId || String(order.statusId) === selectedStatusId}
+              className={cn(
+                "flex items-center justify-center h-10 px-4 rounded text-white font-bold transition-colors shrink-0",
+                updating || !selectedStatusId || String(order.statusId) === selectedStatusId ? "bg-slate-300 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+              )}
+            >
+              {updating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'UPDATE'}
+            </button>
+          </div>
         </div>
       </div>
 

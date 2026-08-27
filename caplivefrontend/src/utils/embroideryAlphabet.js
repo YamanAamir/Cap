@@ -1,10 +1,28 @@
 export function sanitizeEmbroideryLetters(text, max = 20) {
     if (!text) return '';
-    return text
+    
+    let temp = text
+        .replace(/Æ/g, '__AE_CAP__')
+        .replace(/æ/g, '__AE_SML__')
+        .replace(/Ø/g, '__O_CAP__')
+        .replace(/ø/g, '__O_SML__')
+        .replace(/Å/g, '__A_CAP__')
+        .replace(/å/g, '__A_SML__');
+        
+    temp = temp
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-zA-Z0-9\s]/g, '')
-        .slice(0, max);
+        .replace(/[^a-zA-Z0-9\s_]/g, '');
+        
+    temp = temp
+        .replace(/__AE_CAP__/g, 'Æ')
+        .replace(/__AE_SML__/g, 'æ')
+        .replace(/__O_CAP__/g, 'Ø')
+        .replace(/__O_SML__/g, 'ø')
+        .replace(/__A_CAP__/g, 'Å')
+        .replace(/__A_SML__/g, 'å');
+        
+    return temp.slice(0, max);
 }
 
 export function preloadAlphabetMaps() { }
@@ -131,7 +149,15 @@ export async function generateAllEmbroideryMaps(text) {
         };
     }
 
-    const chars = text.split('');
+    const mappedText = text
+        .replace(/Æ/g, 'AE')
+        .replace(/æ/g, 'ae')
+        .replace(/Ø/g, 'O')
+        .replace(/ø/g, 'o')
+        .replace(/Å/g, 'A')
+        .replace(/å/g, 'a');
+
+    const chars = mappedText.split('');
     const baseUrl = import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5175/devstudentlife';
     const base = `${baseUrl}/alphabets`;
 

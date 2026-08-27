@@ -6,6 +6,7 @@ const { verifyToken } = require('../middleware/auth.middleware');
 router.get('/', verifyToken, orderController.getOrders);
 router.get('/:id', verifyToken, orderController.getOrderById);
 router.patch('/:id/status', verifyToken, orderController.updateOrderStatus);
+router.post('/:id/resend-email', verifyToken, orderController.resendOrderEmails);
 router.put('/:id', verifyToken, orderController.updateOrder);
 router.delete('/:id', verifyToken, orderController.deleteOrder);
 
