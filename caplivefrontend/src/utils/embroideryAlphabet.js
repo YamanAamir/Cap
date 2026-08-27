@@ -60,6 +60,9 @@ const LETTER_CONFIG = {
     X: { folder: 'Capital', renderW: 50, renderH: 65, baselineFrac: 1.0, overlap: 2 },
     Y: { folder: 'Capital', renderW: 45, renderH: 80, baselineFrac: 0.80, overlap: 4, zIndex: 10 },
     Z: { folder: 'Capital', renderW: 44, renderH: 62, baselineFrac: 1.0, overlap: 4 },
+    Æ: { folder: 'Capital', renderW: 65, renderH: 65, baselineFrac: 1.0, overlap: 4 },
+    Ø: { folder: 'Capital', renderW: 45, renderH: 65, baselineFrac: 1.0, overlap: 2 },
+    Å: { folder: 'Capital', renderW: 58, renderH: 75, baselineFrac: 0.85, overlap: 4 },
 
     // ── SMALL x-height (renderH: 45) ─────────────────────────
     a: { folder: 'Small', renderW: 34, renderH: 45, baselineFrac: 1.0, shiftX: -3, overlap: 3, zIndex: 10 },
@@ -76,6 +79,9 @@ const LETTER_CONFIG = {
     w: { folder: 'Small', renderW: 45, renderH: 45, baselineFrac: 1.0 },
     x: { folder: 'Small', renderW: 43, renderH: 45, baselineFrac: 1.0 },
     z: { folder: 'Small', renderW: 48, renderH: 45, baselineFrac: 1.0 },
+    æ: { folder: 'Small', renderW: 40, renderH: 45, baselineFrac: 1.0, overlap: 3 },
+    ø: { folder: 'Small', renderW: 32, renderH: 45, baselineFrac: 1.0, zIndex: 10 },
+    å: { folder: 'Small', renderW: 34, renderH: 55, baselineFrac: 0.80, shiftX: -3, overlap: 3, zIndex: 10 },
 
     // ── SMALL ascenders (renderH: 70) ─────────────────────────
     b: { folder: 'Small', renderW: 38, renderH: 70, baselineFrac: 1.0 },
@@ -149,15 +155,7 @@ export async function generateAllEmbroideryMaps(text) {
         };
     }
 
-    const mappedText = text
-        .replace(/Æ/g, 'AE')
-        .replace(/æ/g, 'ae')
-        .replace(/Ø/g, 'O')
-        .replace(/ø/g, 'o')
-        .replace(/Å/g, 'A')
-        .replace(/å/g, 'a');
-
-    const chars = mappedText.split('');
+    const chars = text.split('');
     const baseUrl = import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5175/devstudentlife';
     const base = `${baseUrl}/alphabets`;
 
