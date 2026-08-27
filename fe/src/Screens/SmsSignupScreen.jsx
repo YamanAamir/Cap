@@ -15,12 +15,6 @@ const SmsSignupScreen = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (window.location.hostname === 'studenterhue.studentlife.dk') {
-      window.location.href = `https://studenterhue.studentlife.dk/studentlife/sms-signup/${slug}`;
-    }
-  }, [slug]);
-
-  useEffect(() => {
     const fetchCampaign = async () => {
       try {
         const data = await getSmsCampaignBySlug(slug);
