@@ -86,6 +86,13 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
     const [embroideryText, setEmbroideryText] = useState(
         selectedOptions['Broderi foran'] || ''
     );
+    const [inputEmbroideryText, setInputEmbroideryText] = useState(
+        selectedOptions['Broderi foran'] || ''
+    );
+
+    useEffect(() => {
+        setInputEmbroideryText(selectedOptions['Broderi foran'] || '');
+    }, [selectedOptions['Broderi foran']]);
     const [selectedYear, setSelectedYear] = useState(
         selectedOptions.år || currentYear.toString()
     );
@@ -107,29 +114,33 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
     };
     const embroideryTimeoutRef = useRef(null);
 
-    const handleEmbroideryTextChange = (text) => {
-        const upperText = sanitizeEmbroideryLetters(text, 20);
+    const handleApplyEmbroideryText = async () => {
+        const upperText = sanitizeEmbroideryLetters(inputEmbroideryText, 20);
         setEmbroideryText(upperText);
         onOptionChange('Broderi foran', upperText);
+        const result = await generateAllEmbroideryMaps(upperText);
+        sendEmbroideryMapsToIframes('front', result);
+    };
 
-        clearTimeout(embroideryTimeoutRef.current);
-        embroideryTimeoutRef.current = setTimeout(async () => {
-            const result = await generateAllEmbroideryMaps(upperText);
-            sendEmbroideryMapsToIframes('front',result);
-        }, 300);
+    const handleClearEmbroideryText = async () => {
+        setInputEmbroideryText('');
+        setEmbroideryText('');
+        onOptionChange('Broderi foran', '');
+        const result = await generateAllEmbroideryMaps('');
+        sendEmbroideryMapsToIframes('front', result);
+    };
+
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter') {
+            handleApplyEmbroideryText();
+        }
     };
 
     useEffect(() => {
         preloadAlphabetMaps();
     }, []);
 
-    // color change: resend current text maps without touching state
-    useEffect(() => {
-        if (!embroideryText) return;
-        generateAllEmbroideryMaps(embroideryText).then((result) => {
-            sendEmbroideryMapsToIframes('front',result);
-        });
-    }, [selectedEmbroideryColor]);
+
     ///zee///
     // Standard package mein fancy hagerem block karne ke liye
     // useEffect(() => {
@@ -335,7 +346,7 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
     // Initialize Broderi foran on component mount if not already set
     useEffect(() => {
         if (!selectedOptions['Broderi foran']) {
-            handleEmbroideryTextChange('');
+            onOptionChange('Broderi foran', '');
         }
     }, []);
     const getCurrentEmblem = () => {
@@ -703,8 +714,9 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
                     <div className="relative">
                         <input
                             type="text"
-                            value={embroideryText}
-                            onChange={(e) => handleEmbroideryTextChange(e.target.value)}
+                            value={inputEmbroideryText}
+                            onChange={(e) => setInputEmbroideryText(sanitizeEmbroideryLetters(e.target.value, 20))}
+                            onKeyDown={handleKeyPress}
                             placeholder="Fri tekst"
                             className="w-full px-4 py-4 rounded-2xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 bg-white/80 backdrop-blur-sm text-slate-700 placeholder-slate-400"
                             maxLength={20}
@@ -712,6 +724,22 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
                         <div className="absolute inset-y-0 right-0 flex items-center pr-4">
                             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                         </div>
+                    </div>
+                    <div className="flex justify-end space-x-4 mt-2 px-1">
+                        <button
+                            type="button"
+                            onClick={handleApplyEmbroideryText}
+                            className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-all duration-200"
+                        >
+                            Anvend tekst
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleClearEmbroideryText}
+                            className="text-sm font-semibold text-red-500 hover:text-red-700 hover:underline transition-all duration-200"
+                        >
+                            Ryd tekst
+                        </button>
                     </div>
                 </div>
             </div>

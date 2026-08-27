@@ -544,13 +544,7 @@ const StudentDashboard = () => {
   // Listen for messages from the iframe
   useEffect(() => {
     const handleMessage = (event) => {
-      // Debug: log ALL incoming postMessages
-      if (event.data !== null && event.data !== undefined) {
-        const preview = typeof event.data === "string"
-          ? event.data.slice(0, 120)
-          : JSON.stringify(event.data).slice(0, 120);
-        console.log("📨 postMessage received:", preview);
-      }
+
 
       // Check for the model-loaded signal (string or object form)
       const rawStr = typeof event.data === "string"

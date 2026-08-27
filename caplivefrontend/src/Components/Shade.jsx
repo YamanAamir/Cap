@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import img1 from '../assets/shadeimages/glimmer.webp';
 import img2 from '../assets/shadeimages/none.webp';
 import img3 from '../assets/shadeimages/shade.webp';
@@ -16,8 +16,17 @@ const Shade = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig
     const [selectedMaterialType, setSelectedMaterialType] = useState(selectedOptions.Materiale || getDefaultMaterialType());
     const [selectedShadowTapeColor, setSelectedShadowTapeColor] = useState(selectedOptions.Skyggebånd || getDefaultShadowTapeColor());
     const [engravingLine1, setEngravingLine1] = useState(selectedOptions['Skyggegravering Line 1'] || '');
+    const [inputLine1, setInputLine1] = useState(selectedOptions['Skyggegravering Line 1'] || '');
+
     const [engravingLine2, setEngravingLine2] = useState(selectedOptions['Skyggegravering Line 2'] || '');
+    const [inputLine2, setInputLine2] = useState(selectedOptions['Skyggegravering Line 2'] || '');
+
     const [engravingLine3, setEngravingLine3] = useState(selectedOptions['Skyggegravering Line 3'] || '');
+    const [inputLine3, setInputLine3] = useState(selectedOptions['Skyggegravering Line 3'] || '');
+
+    useEffect(() => { setInputLine1(selectedOptions['Skyggegravering Line 1'] || ''); }, [selectedOptions['Skyggegravering Line 1']]);
+    useEffect(() => { setInputLine2(selectedOptions['Skyggegravering Line 2'] || ''); }, [selectedOptions['Skyggegravering Line 2']]);
+    useEffect(() => { setInputLine3(selectedOptions['Skyggegravering Line 3'] || ''); }, [selectedOptions['Skyggegravering Line 3']]);
 
     useEffect(() => {
         const allowed = (pakke === 'basichue') ? ['Shiny', 'Blank'] : null;
@@ -89,22 +98,61 @@ const Shade = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig
         });
     };
 
-    const handleLine1Change = (text) => {
-        setEngravingLine1(text);
-        onOptionChange('Skyggegravering Line 1', text);
-        renderLineToCanvas(text, canvasLine1Ref, 'EngravingLine1Image');
+    const handleApplyLine1 = () => {
+        setEngravingLine1(inputLine1);
+        onOptionChange('Skyggegravering Line 1', inputLine1);
+        renderLineToCanvas(inputLine1, canvasLine1Ref, 'EngravingLine1Image');
     };
 
-    const handleLine2Change = (text) => {
-        setEngravingLine2(text);
-        onOptionChange('Skyggegravering Line 2', text);
-        renderLineToCanvas(text, canvasLine2Ref, 'EngravingLine2Image');
+    const handleClearLine1 = () => {
+        setInputLine1('');
+        setEngravingLine1('');
+        onOptionChange('Skyggegravering Line 1', '');
+        renderLineToCanvas('', canvasLine1Ref, 'EngravingLine1Image');
     };
 
-    const handleLine3Change = (text) => {
-        setEngravingLine3(text);
-        onOptionChange('Skyggegravering Line 3', text);
-        renderLineToCanvas(text, canvasLine3Ref, 'EngravingLine3Image');
+    const handleApplyLine2 = () => {
+        setEngravingLine2(inputLine2);
+        onOptionChange('Skyggegravering Line 2', inputLine2);
+        renderLineToCanvas(inputLine2, canvasLine2Ref, 'EngravingLine2Image');
+    };
+
+    const handleClearLine2 = () => {
+        setInputLine2('');
+        setEngravingLine2('');
+        onOptionChange('Skyggegravering Line 2', '');
+        renderLineToCanvas('', canvasLine2Ref, 'EngravingLine2Image');
+    };
+
+    const handleApplyLine3 = () => {
+        setEngravingLine3(inputLine3);
+        onOptionChange('Skyggegravering Line 3', inputLine3);
+        renderLineToCanvas(inputLine3, canvasLine3Ref, 'EngravingLine3Image');
+    };
+
+    const handleClearLine3 = () => {
+        setInputLine3('');
+        setEngravingLine3('');
+        onOptionChange('Skyggegravering Line 3', '');
+        renderLineToCanvas('', canvasLine3Ref, 'EngravingLine3Image');
+    };
+
+    const handleKeyPressLine1 = (e) => {
+        if (e.key === 'Enter') {
+            handleApplyLine1();
+        }
+    };
+
+    const handleKeyPressLine2 = (e) => {
+        if (e.key === 'Enter') {
+            handleApplyLine2();
+        }
+    };
+
+    const handleKeyPressLine3 = (e) => {
+        if (e.key === 'Enter') {
+            handleApplyLine3();
+        }
     };
 
     // Initial render
@@ -423,16 +471,64 @@ const Shade = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig
                 <div className="space-y-4">
                     <div className="relative">
                         <span className="inline-flex items-center px-3 pt-2 rounded-full text-xs font-bold">Maks. 30 Tegn</span>
-                        <input type="text" value={engravingLine1} onChange={(e) => handleLine1Change(e.target.value)} placeholder="Linje 1" maxLength={30}
-                            className="w-full my-4 px-4 py-4 rounded-2xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 bg-white/80 backdrop-blur-sm text-slate-700 placeholder-slate-400" />
+                        <input type="text" value={inputLine1} onChange={(e) => setInputLine1(e.target.value)} onKeyDown={handleKeyPressLine1} placeholder="Linje 1" maxLength={30}
+                            className="w-full mt-2 mb-1 px-4 py-4 rounded-2xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 bg-white/80 backdrop-blur-sm text-slate-700 placeholder-slate-400" />
+                        <div className="flex justify-end space-x-4 mb-4 px-1">
+                            <button
+                                type="button"
+                                onClick={handleApplyLine1}
+                                className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-all duration-200"
+                            >
+                                Anvend tekst
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleClearLine1}
+                                className="text-sm font-semibold text-red-500 hover:text-red-700 hover:underline transition-all duration-200"
+                            >
+                                Ryd tekst
+                            </button>
+                        </div>
 
                         <span className="inline-flex items-center px-3 pt-2 rounded-full text-xs font-bold">Maks. 30 Tegn</span>
-                        <input type="text" value={engravingLine2} onChange={(e) => handleLine2Change(e.target.value)} placeholder="Linje 2" maxLength={30}
-                            className="w-full px-4 my-4 py-4 rounded-2xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 bg-white/80 backdrop-blur-sm text-slate-700 placeholder-slate-400" />
+                        <input type="text" value={inputLine2} onChange={(e) => setInputLine2(e.target.value)} onKeyDown={handleKeyPressLine2} placeholder="Linje 2" maxLength={30}
+                            className="w-full mt-2 mb-1 px-4 py-4 rounded-2xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 bg-white/80 backdrop-blur-sm text-slate-700 placeholder-slate-400" />
+                        <div className="flex justify-end space-x-4 mb-4 px-1">
+                            <button
+                                type="button"
+                                onClick={handleApplyLine2}
+                                className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-all duration-200"
+                            >
+                                Anvend tekst
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleClearLine2}
+                                className="text-sm font-semibold text-red-500 hover:text-red-700 hover:underline transition-all duration-200"
+                            >
+                                Ryd tekst
+                            </button>
+                        </div>
 
                         <span className="inline-flex items-center px-3 pt-2 rounded-full text-xs font-bold">Maks. 30 Tegn</span>
-                        <input type="text" value={engravingLine3} onChange={(e) => handleLine3Change(e.target.value)} placeholder="Linje 3" maxLength={30}
-                            className="w-full px-4 my-4 py-4 rounded-2xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 bg-white/80 backdrop-blur-sm text-slate-700 placeholder-slate-400" />
+                        <input type="text" value={inputLine3} onChange={(e) => setInputLine3(e.target.value)} onKeyDown={handleKeyPressLine3} placeholder="Linje 3" maxLength={30}
+                            className="w-full mt-2 mb-1 px-4 py-4 rounded-2xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 bg-white/80 backdrop-blur-sm text-slate-700 placeholder-slate-400" />
+                        <div className="flex justify-end space-x-4 mb-2 px-1">
+                            <button
+                                type="button"
+                                onClick={handleApplyLine3}
+                                className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-all duration-200"
+                            >
+                                Anvend tekst
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleClearLine3}
+                                className="text-sm font-semibold text-red-500 hover:text-red-700 hover:underline transition-all duration-200"
+                            >
+                                Ryd tekst
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -111,10 +111,25 @@ async function toBase64(url) {
 // ============================================================
 
 export async function generateAllEmbroideryMaps(text) {
-    if (!text) return {
-        text: '', basecolor: null, normal: null,
-        roughness: null, height: null, ambient: null, opacity: null
-    };
+    if (!text) {
+        const emptyCanvas = document.createElement('canvas');
+        emptyCanvas.width = 1;
+        emptyCanvas.height = 1;
+        const ctx = emptyCanvas.getContext('2d');
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, 1, 1);
+        const black1x1 = emptyCanvas.toDataURL('image/png');
+
+        return {
+            text: '',
+            basecolor: null,
+            normal: null,
+            roughness: null,
+            height: null,
+            ambient: null,
+            opacity: black1x1
+        };
+    }
 
     const chars = text.split('');
     const baseUrl = import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5175/devstudentlife';

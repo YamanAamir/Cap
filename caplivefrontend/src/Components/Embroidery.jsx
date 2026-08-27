@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import noneImg from '../assets/cover images/none.webp';
 import {
     generateAllEmbroideryMaps,
@@ -41,12 +41,26 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
     const [nameEmbroideryText, setNameEmbroideryText] = useState(
         selectedOptions['Navne broderi'] || ''
     );
+    const [inputNameText, setInputNameText] = useState(
+        selectedOptions['Navne broderi'] || ''
+    );
     const [selectedSchoolEmbroideryColor, setSelectedSchoolEmbroideryColor] = useState(
         selectedOptions['Skolebroderi farve'] || getDefaultSchoolEmbroideryColor()
     );
     const [schoolEmbroideryText, setSchoolEmbroideryText] = useState(
         selectedOptions.Skolebroderi || ''
     );
+    const [inputSchoolText, setInputSchoolText] = useState(
+        selectedOptions.Skolebroderi || ''
+    );
+
+    useEffect(() => {
+        setInputNameText(selectedOptions['Navne broderi'] || '');
+    }, [selectedOptions['Navne broderi']]);
+
+    useEffect(() => {
+        setInputSchoolText(selectedOptions.Skolebroderi || '');
+    }, [selectedOptions.Skolebroderi]);
     const [ingenButton, setIngenButton] = useState(
         selectedOptions.Ingen || false
     );
@@ -88,55 +102,50 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
 
 
     // --- Handlers ---
-    const handleNameTextChange = (text) => {
-        const clean = sanitizeEmbroideryLetters(text, 26);
-
+    const handleApplyNameText = async () => {
+        const clean = sanitizeEmbroideryLetters(inputNameText, 26);
         setNameEmbroideryText(clean);
         onOptionChange('Navne broderi', clean);
-
-        clearTimeout(nameTimeoutRef.current);
-
-        nameTimeoutRef.current = setTimeout(async () => {
-            const result = await generateAllEmbroideryMaps(clean);
-
-            sendEmbroideryMapsToIframes(
-                'backTop',
-                result
-            );
-        }, 300);
+        const result = await generateAllEmbroideryMaps(clean);
+        sendEmbroideryMapsToIframes('backTop', result);
     };
 
-    const handleSchoolTextChange = (text) => {
-        const clean = sanitizeEmbroideryLetters(text, 35);
+    const handleClearNameText = async () => {
+        setInputNameText('');
+        setNameEmbroideryText('');
+        onOptionChange('Navne broderi', '');
+        const result = await generateAllEmbroideryMaps('');
+        sendEmbroideryMapsToIframes('backTop', result);
+    };
 
+    const handleApplySchoolText = async () => {
+        if (ingenButton) return;
+        const clean = sanitizeEmbroideryLetters(inputSchoolText, 35);
         setSchoolEmbroideryText(clean);
         onOptionChange('Skolebroderi', clean);
-
-        clearTimeout(schoolTimeoutRef.current);
-
-        schoolTimeoutRef.current = setTimeout(async () => {
-            const result = await generateAllEmbroideryMaps(clean);
-
-            sendEmbroideryMapsToIframes(
-                'backBottom',
-                result
-            );
-        }, 300);
+        const result = await generateAllEmbroideryMaps(clean);
+        sendEmbroideryMapsToIframes('backBottom', result);
     };
 
-    // Re-render on color change
-    useEffect(() => {
-        if (!nameEmbroideryText) return;
+    const handleClearSchoolText = async () => {
+        setInputSchoolText('');
+        setSchoolEmbroideryText('');
+        onOptionChange('Skolebroderi', '');
+        const result = await generateAllEmbroideryMaps('');
+        sendEmbroideryMapsToIframes('backBottom', result);
+    };
 
-        generateAllEmbroideryMaps(nameEmbroideryText)
-            .then((result) => {
-                sendEmbroideryMapsToIframes(
-                    'backTop',
-                    result
-                );
-            });
+    const handleKeyPressName = (e) => {
+        if (e.key === 'Enter') {
+            handleApplyNameText();
+        }
+    };
 
-    }, [selectedNameEmbroideryColor]);
+    const handleKeyPressSchool = (e) => {
+        if (e.key === 'Enter') {
+            handleApplySchoolText();
+        }
+    };
 
     useEffect(() => {
 
@@ -165,7 +174,6 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
             });
 
     }, [
-        selectedSchoolEmbroideryColor,
         ingenButton
     ]);
 
@@ -174,6 +182,8 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
         onOptionChange('Ingen', ingenButton);
         if (ingenButton) {
             setSchoolEmbroideryText('');
+            setInputSchoolText('');
+            onOptionChange('Skolebroderi', '');
             sendEmbroideryMapsToIframes('backBottom', {
                 text: '',
                 basecolor: null,
@@ -424,8 +434,9 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
                     <div className="relative">
                         <input
                             type="text"
-                            value={nameEmbroideryText}
-                            onChange={(e) => handleNameTextChange(e.target.value)}
+                            value={inputNameText}
+                            onChange={(e) => setInputNameText(sanitizeEmbroideryLetters(e.target.value, 26))}
+                            onKeyDown={handleKeyPressName}
                             placeholder="Fri tekst"
                             maxLength={26}
                             className="w-full px-4 py-4 rounded-2xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 bg-white/80 backdrop-blur-sm text-slate-700 placeholder-slate-400"
@@ -433,6 +444,22 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
                         <div className="absolute inset-y-0 right-0 flex items-center pr-4">
                             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                         </div>
+                    </div>
+                    <div className="flex justify-end space-x-4 mt-2 px-1">
+                        <button
+                            type="button"
+                            onClick={handleApplyNameText}
+                            className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-all duration-200"
+                        >
+                            Anvend tekst
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleClearNameText}
+                            className="text-sm font-semibold text-red-500 hover:text-red-700 hover:underline transition-all duration-200"
+                        >
+                            Ryd tekst
+                        </button>
                     </div>
                 </div>
             </div>
@@ -476,8 +503,9 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
                     <div className="relative">
                         <input
                             type="text"
-                            value={ingenButton ? '' : schoolEmbroideryText}
-                            onChange={(e) => handleSchoolTextChange(e.target.value)}
+                            value={ingenButton ? '' : inputSchoolText}
+                            onChange={(e) => setInputSchoolText(sanitizeEmbroideryLetters(e.target.value, 35))}
+                            onKeyDown={handleKeyPressSchool}
                             placeholder="Fri tekst"
                             maxLength={35}
                             disabled={ingenButton}
@@ -488,6 +516,24 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
                         <div className="absolute inset-y-0 right-0 flex items-center pr-4">
                             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                         </div>
+                    </div>
+                    <div className="flex justify-end space-x-4 mt-2 px-1">
+                        <button
+                            type="button"
+                            onClick={handleApplySchoolText}
+                            disabled={ingenButton}
+                            className={`text-sm font-semibold transition-all duration-200 ${ingenButton ? 'text-gray-400 cursor-not-allowed' : 'text-blue-600 hover:text-blue-800 hover:underline'}`}
+                        >
+                            Anvend tekst
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleClearSchoolText}
+                            disabled={ingenButton}
+                            className={`text-sm font-semibold transition-all duration-200 ${ingenButton ? 'text-gray-400 cursor-not-allowed' : 'text-red-500 hover:text-red-700 hover:underline'}`}
+                        >
+                            Ryd tekst
+                        </button>
                     </div>
                 </div>
             </div>
