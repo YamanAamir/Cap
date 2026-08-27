@@ -79,9 +79,9 @@ const LETTER_CONFIG = {
     w: { folder: 'Small', renderW: 45, renderH: 45, baselineFrac: 1.0 },
     x: { folder: 'Small', renderW: 43, renderH: 45, baselineFrac: 1.0 },
     z: { folder: 'Small', renderW: 48, renderH: 45, baselineFrac: 1.0 },
-    æ: { folder: 'Small', renderW: 40, renderH: 45, baselineFrac: 1.0, overlap: 3 },
+    æ: { folder: 'Small', renderW: 40, renderH: 60, baselineFrac: 0.9, overlap: 3 },
     ø: { folder: 'Small', renderW: 32, renderH: 45, baselineFrac: 1.0, zIndex: 10 },
-    å: { folder: 'Small', renderW: 34, renderH: 55, baselineFrac: 0.80, shiftX: -3, overlap: 3, zIndex: 10 },
+    å: { folder: 'Small', renderW: 34, renderH: 60, baselineFrac: 1.0, shiftX: -3, overlap: 3, zIndex: 10 },
 
     // ── SMALL ascenders (renderH: 70) ─────────────────────────
     b: { folder: 'Small', renderW: 38, renderH: 70, baselineFrac: 1.0 },
