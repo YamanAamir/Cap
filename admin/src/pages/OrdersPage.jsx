@@ -12,6 +12,7 @@ const OrdersPage = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
   const [sortBy, setSortBy] = useState('createdAt');
   const [order, setOrder] = useState('desc');
   const [debounceSearch, setDebounceSearch] = useState('');
@@ -43,7 +44,7 @@ const OrdersPage = () => {
         search: debounceSearch,
         sortBy,
         order,
-        limit: 20,
+        limit,
         statusId: statusFilter,
         installment: installmentFilter,
       });
@@ -57,8 +58,12 @@ const OrdersPage = () => {
   };
 
   useEffect(() => {
+    setPage(1);
+  }, [debounceSearch, statusFilter, installmentFilter, limit]);
+
+  useEffect(() => {
     fetchOrders();
-  }, [page, debounceSearch, sortBy, order, statusFilter, installmentFilter]);
+  }, [page, debounceSearch, sortBy, order, statusFilter, installmentFilter, limit]);
 
   const handleSort = (field) => {
     if (sortBy === field) {
@@ -268,28 +273,84 @@ const OrdersPage = () => {
         </table>
       </div>
 
-      <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <p className="text-xs text-slate-500 font-bold">
-          Showing <span className="text-slate-700">{data.orders.length}</span> of <span className="text-slate-700">{data.pagination.totalCount || 0}</span> orders
-        </p>
-        
-        {/* Simple Pagination */}
-        <div className="flex gap-1">
-           <button 
-             disabled={page === 1}
-             onClick={() => setPage(page - 1)}
-             className="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded text-sm hover:bg-slate-50 disabled:opacity-50"
-           >
-             Prev
-           </button>
-           <button 
-             disabled={!data.pagination.totalPages || page === data.pagination.totalPages}
-             onClick={() => setPage(page + 1)}
-             className="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded text-sm hover:bg-slate-50 disabled:opacity-50"
-           >
-             Next
-           </button>
+      {/* Pagination Footer */}
+      <div className="mt-4 px-5 py-4 bg-slate-50 border border-slate-200 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4 text-sm shrink-0">
+        {/* Entries display limit selector */}
+        <div className="flex items-center gap-2 text-slate-600">
+          <span>Show</span>
+          <select
+            value={limit}
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setPage(1);
+            }}
+            className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:border-blue-500 bg-white font-bold"
+          >
+            {[5, 10, 20, 50, 100].map(size => (
+              <option key={size} value={size}>{size}</option>
+            ))}
+          </select>
+          <span>entries</span>
         </div>
+
+        {/* Showing entries info */}
+        <div className="text-slate-500 font-medium">
+          {(data.pagination.totalCount || 0) > 0 ? (
+            <>
+              Showing <span className="font-bold text-slate-800">{((page - 1) * limit) + 1}</span> to{' '}
+              <span className="font-bold text-slate-800">{Math.min(page * limit, data.pagination.totalCount || 0)}</span> of{' '}
+              <span className="font-bold text-slate-800">{data.pagination.totalCount || 0}</span> orders
+            </>
+          ) : (
+            'No orders to display'
+          )}
+        </div>
+
+        {/* Pagination controls */}
+        {data.pagination.totalPages > 1 && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+              disabled={page === 1}
+              className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            
+            {/* Page numbers list */}
+            {Array.from({ length: data.pagination.totalPages }, (_, i) => i + 1)
+              .filter(p => {
+                return p === 1 || p === data.pagination.totalPages || Math.abs(p - page) <= 1;
+              })
+              .map((p, index, array) => {
+                const showEllipsis = index > 0 && p - array[index - 1] > 1;
+                return (
+                  <React.Fragment key={p}>
+                    {showEllipsis && <span className="px-2 text-slate-400">...</span>}
+                    <button
+                      onClick={() => setPage(p)}
+                      className={cn(
+                        "px-3 py-1.5 rounded text-xs font-bold transition-all",
+                        page === p
+                          ? "bg-blue-600 text-white shadow-sm"
+                          : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                      )}
+                    >
+                      {p}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+
+            <button
+              onClick={() => setPage(prev => Math.min(prev + 1, data.pagination.totalPages))}
+              disabled={page === data.pagination.totalPages}
+              className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       <ConfirmModal
