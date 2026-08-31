@@ -84,23 +84,79 @@ StudentLife Production`,
 
 
 
+const normalizePhone = (p) => {
+  if (!p) return null;
+  // Strip all non-digit characters
+  const digits = p.replace(/\D/g, '');
+  return digits || null;
+};
+
+// Check if two phone strings refer to the same number (with/without country code)
+const phonesMatch = (a, b) => {
+  if (!a || !b) return false;
+  const da = normalizePhone(a);
+  const db = normalizePhone(b);
+  if (!da || !db) return false;
+  // Match if one ends with the other (handles +45xxxxxxxx vs xxxxxxxx)
+  return da === db || da.endsWith(db) || db.endsWith(da);
+};
+
 const upsertCustomerFromOrder = async (customerDetails, email) => {
   const name = `${customerDetails?.firstName || ''} ${customerDetails?.lastName || ''}`.trim() || customerDetails?.name || 'Customer';
-  const phone = customerDetails?.phone || null;
+  const rawPhone = customerDetails?.phone || null;
+  const phone = normalizePhone(rawPhone);
 
+  // 1. Try to find by email first
   let customer = await prisma.customer.findUnique({ where: { email } });
 
   if (customer) {
+    // Update name and phone (only set phone if not already set, to avoid overwriting)
+    const updateData = { name };
+    if (phone && !customer.phone) {
+      updateData.phone = phone;
+    } else if (phone && customer.phone && !phonesMatch(customer.phone, phone)) {
+      // Phone changed - only update if the new phone doesn't belong to another customer
+      const allWithPhone = await prisma.customer.findMany({ where: { phone: { not: null } } });
+      const conflict = allWithPhone.find(c => c.id !== customer.id && phonesMatch(c.phone, phone));
+      if (!conflict) {
+        updateData.phone = phone;
+      }
+    }
     customer = await prisma.customer.update({
       where: { id: customer.id },
-      data: { name, phone: phone || customer.phone },
+      data: updateData,
     });
+  } else if (phone) {
+    // 2. No customer found by email. Check if phone already belongs to an existing customer
+    const allWithPhone = await prisma.customer.findMany({ where: { phone: { not: null } } });
+    const existingByPhone = allWithPhone.find(c => phonesMatch(c.phone, phone));
+
+    if (existingByPhone) {
+      // Update the existing customer's email/name instead of creating a duplicate
+      customer = await prisma.customer.update({
+        where: { id: existingByPhone.id },
+        data: { name, email },
+      });
+    } else {
+      // 3. Truly new customer - safe to create
+      customer = await prisma.customer.create({
+        data: {
+          name,
+          email,
+          phone,
+          orderEmailConsent: customerDetails?.orderEmailConsent !== false,
+          smsMarketingConsent: !!customerDetails?.smsMarketingConsent,
+          emailMarketingConsent: !!customerDetails?.emailMarketingConsent,
+        },
+      });
+    }
   } else {
+    // 4. No phone - just create by email (email is unique, already checked above)
     customer = await prisma.customer.create({
       data: {
         name,
         email,
-        phone,
+        phone: null,
         orderEmailConsent: customerDetails?.orderEmailConsent !== false,
         smsMarketingConsent: !!customerDetails?.smsMarketingConsent,
         emailMarketingConsent: !!customerDetails?.emailMarketingConsent,

@@ -13,6 +13,13 @@ const DEFAULT_STEPS = [
   { dayOffset: 20, message: 'Sidste chance {{name}}! Brug {{discountCode}} inden den udløber.' },
 ];
 
+const AVAILABLE_PLACEHOLDERS = [
+  { label: '{{name}}', token: '{{name}}', desc: 'Customer name' },
+  { label: '{{discountCode}}', token: '{{discountCode}}', desc: 'Discount code' },
+  { label: '{{expiryDate}}', token: '{{expiryDate}}', desc: 'Expiry date' },
+  { label: '{{link}}', token: '{{link}}', desc: 'Campaign signup URL' },
+];
+
 const SmsCampaignsPage = () => {
   const [campaigns, setCampaigns] = useState([]);
   const [draftCampaigns, setDraftCampaigns] = useState({});
@@ -513,9 +520,24 @@ const SmsCampaignsPage = () => {
                             </div>
                             
                             <div className="flex-1">
-                              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
-                                SMS Content
-                              </label>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase">
+                                  SMS Content
+                                </label>
+                                <div className="flex items-center gap-1 flex-wrap justify-end">
+                                  {AVAILABLE_PLACEHOLDERS.map(ph => (
+                                    <button
+                                      key={ph.token}
+                                      type="button"
+                                      title={ph.desc}
+                                      onClick={() => updateDraftStep(campaign.id, i, 'message', (step.message || '') + ph.token)}
+                                      className="px-1.5 py-0.5 bg-blue-50 border border-blue-200 text-blue-700 rounded text-[10px] font-bold hover:bg-blue-100 transition-colors font-mono"
+                                    >
+                                      {ph.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
                               <textarea
                                 value={step.message}
                                 onChange={e => updateDraftStep(campaign.id, i, 'message', e.target.value)}
