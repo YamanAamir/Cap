@@ -229,7 +229,7 @@ const OrdersPage = () => {
                   <td className="px-6 py-4 text-right">
                     <div className="flex flex-col items-end gap-1">
                       <span className="font-bold text-slate-800">
-                        {new Intl.NumberFormat('da-DK', { style: 'currency', currency: order.currency || 'DKK' }).format(order.totalPrice)}
+                        {new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(order.totalPrice)} kr.
                       </span>
                       {order.installmentPlanId && (
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700 tracking-wide">

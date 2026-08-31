@@ -39,7 +39,7 @@ const emptyForm = () => ({
 });
 
 const formatDKK = (val) =>
-  new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK', maximumFractionDigits: 0 }).format(val || 0);
+  new Intl.NumberFormat('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(val || 0) + ' kr.';
 
 const calcAmount = (totalPrice, downPayment, numInstallments) => {
   const remaining = Math.max(0, totalPrice - downPayment);

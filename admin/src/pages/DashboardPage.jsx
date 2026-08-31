@@ -23,7 +23,7 @@ const DashboardPage = () => {
     );
   }
 
-  const formatCurrency = (val) => new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK' }).format(val || 0);
+  const formatCurrency = (val) => new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val || 0) + ' kr.';
 
   return (
     <div className="max-w-[1400px] mx-auto animate-in fade-in duration-500 pb-12">

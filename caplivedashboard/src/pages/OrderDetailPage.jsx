@@ -315,7 +315,7 @@ const OrderDetailPage = () => {
           <div className="bg-[#fafafa] border border-slate-200 rounded p-6">
             <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1 block">Net Valuation</span>
             <p className="text-3xl font-bold text-slate-900 tracking-tight">
-              {new Intl.NumberFormat('da-DK', { style: 'currency', currency: order.currency || 'DKK' }).format(order.totalPrice || 0)}
+              {new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(order.totalPrice || 0)} kr.
             </p>
             
             <div className="mt-6 space-y-3">
