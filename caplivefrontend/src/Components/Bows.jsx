@@ -697,8 +697,8 @@ const getSilverEmblem = () => {
         Signature: {
             Guld: [
                 ...(getGoldEmblem() || []),
-                { name: 'UDEN_STEN Guld Guld', icon: UdenStenGuld },
-                { name: 'UDEN_STEN Guld Simli Guld', icon: UdenStenGuldSimli },
+                // { name: 'UDEN_STEN Guld Guld', icon: UdenStenGuld },
+                // { name: 'UDEN_STEN Guld Simli Guld', icon: UdenStenGuldSimli },
                 { name: 'F Key Guld', icon: FKeyGold },
                 { name: 'DNA Guld', icon: DnaGold },
                 { name: 'Pi Guld', icon: PilGold },
@@ -723,8 +723,8 @@ const getSilverEmblem = () => {
 
             Sølv: [
                 ...(getSilverEmblem() || []),
-                { name: 'UDEN_STEN Sølv Sølv', icon: UdenStenSoelv },
-                { name: 'UDEN_STEN Sølv Simli Sølv', icon: UdenStenSoelvSimli },
+                // { name: 'UDEN_STEN Sølv Sølv', icon: UdenStenSoelv },
+                // { name: 'UDEN_STEN Sølv Simli Sølv', icon: UdenStenSoelvSimli },
                 { name: 'F Key Sølv', icon: FKeySilver },
                 { name: 'DNA Sølv', icon: DnaSilver },
                 { name: 'Pi Sølv', icon: PiSilver },
