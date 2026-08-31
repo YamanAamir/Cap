@@ -13,15 +13,15 @@ import { identifyVisitor, pushEvent } from './lib/tracking';
 import { startRecording } from './lib/sessionRecorder';
 
 function App() {
-  if (window.location.hostname === 'studenterhue.studentlife.dk' && window.location.pathname.includes('/sms-signup/')) {
-    const parts = window.location.pathname.split('/');
-    const smsSignupIndex = parts.indexOf('sms-signup');
-    if (smsSignupIndex !== -1 && parts[smsSignupIndex + 1]) {
-      const slug = parts[smsSignupIndex + 1];
-      window.location.href = `https://studenterhue.studentlife.dk/studentlife/sms-signup/${slug}`;
-      return null;
-    }
-  }
+  // if (window.location.hostname === 'studenterhue.studentlife.dk' && window.location.pathname.includes('/sms-signup/')) {
+  //   const parts = window.location.pathname.split('/');
+  //   const smsSignupIndex = parts.indexOf('sms-signup');
+  //   if (smsSignupIndex !== -1 && parts[smsSignupIndex + 1]) {
+  //     const slug = parts[smsSignupIndex + 1];
+  //     window.location.href = `https://studenterhue.studentlife.dk/studentlife/sms-signup/${slug}`;
+  //     return null;
+  //   }
+  // }
 
   if (import.meta.env.VITE_MAINTENANCE_MODE === 'true') {
     return <MaintenanceScreen />;
