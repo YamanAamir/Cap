@@ -26,6 +26,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
   const [priceConfig, setPriceConfig] = useState(null);
   const [deliverySettings, setDeliverySettings] = useState({ "Denmark": 79, "Grønland": 348 });
   const [paymentMethod, setPaymentMethod] = useState(installmentPlan ? 'installment' : 'full'); // 'full' | 'installment'
+  const [emailError, setEmailError] = useState('');
 
   useEffect(() => {
     setPaymentMethod(installmentPlan ? 'installment' : 'full');
@@ -355,17 +356,39 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
     }
   };
 
+  const isValidEmail = (email) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+  };
+
   const handleInputChange = (field, value) => {
     setCustomerDetails(prev => ({
       ...prev,
       [field]: value
     }));
+    if (field === 'email') {
+      if (value.trim() && !isValidEmail(value)) {
+        setEmailError('Indtast venligst en gyldig e-mailadresse');
+      } else {
+        setEmailError('');
+      }
+    }
   };
 
   // Validate customer details
   const validateCustomerDetails = () => {
     const required = ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'postalCode'];
-    return required.every(field => customerDetails[field].trim() !== '');
+    const allFilled = required.every(field => (customerDetails[field] || '').trim() !== '');
+    if (!allFilled) {
+      alert('Udfyld venligst alle påkrævede felter.');
+      return false;
+    }
+    if (!isValidEmail(customerDetails.email)) {
+      setEmailError('Indtast venligst en gyldig e-mailadresse');
+      refs.email.current?.focus();
+      return false;
+    }
+    setEmailError('');
+    return true;
   };
 
   const buildFilteredOptions = (selectedOptions) => {
@@ -598,10 +621,18 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
                   type="email"
                   value={customerDetails.email || ""}
                   onChange={(e) => handleInputChange("email", e.target.value)}
+                  onBlur={() => {
+                    if (customerDetails.email?.trim() && !isValidEmail(customerDetails.email)) {
+                      setEmailError('Indtast venligst en gyldig e-mailadresse');
+                    }
+                  }}
                   onKeyPress={(e) => handleKeyPress(e, "email")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
+                  className={`w-full px-3 py-2 border ${emailError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-green-500 focus:border-green-500'} rounded-lg focus:ring-2 transition-all duration-200`}
                   placeholder="Indtast din mail"
                 />
+                {emailError && (
+                  <p className="text-red-500 text-xs mt-1 font-medium">{emailError}</p>
+                )}
               </div>
 
               {/* School Name + Deliver to School */}
@@ -1266,9 +1297,10 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
               {currentStep < steps.length - 1 ? (
                 <button
                   onClick={() => {
-                    if (currentStep === 1 && !validateCustomerDetails()) {
-                      alert('Please fill in all required fields.');
-                      return;
+                    if (currentStep === 1) {
+                      if (!validateCustomerDetails()) {
+                        return;
+                      }
                     }
                     setCurrentStep(prev => prev + 1);
                   }}

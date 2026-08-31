@@ -88,6 +88,11 @@ import TeaterSilver from '../assets/images/teater silver.webp';
 import TeaterGold from '../assets/images/Teater gold.webp';
 import TwinSilver from '../assets/images/twin silver.webp';
 import TwinGold from '../assets/images/twin gold.webp';
+
+import UdenStenGuld from '../assets/images/uden_sten_guld.png';
+import UdenStenGuldSimli from '../assets/images/uden_sten_guld_simli.png';
+import UdenStenSoelvSimli from '../assets/images/uden_sten_soelv_simli.png';
+import UdenStenSoelv from '../assets/images/uden_sten_soelv.png';
 import NodeSilver from '../assets/images/Node silv.webp';
 import NodeGold from '../assets/images/Node gold.webp';
 import SportGold from '../assets/images/sport gold.webp';
@@ -368,6 +373,8 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
                 { name: 'Marokko', icon: Morocco },
                 { name: 'Grønland', icon: Greenland },
                 ...getGoldEmblem(),
+                // { name: 'UDEN_STEN Guld Guld', icon: UdenStenGuld },
+                // { name: 'UDEN_STEN Guld Simli Guld', icon: UdenStenGuldSimli },
                 { name: 'F Key Guld', icon: FKeyGold },
                 { name: 'DNA Guld', icon: DnaGold },
                 { name: 'Pi Guld', icon: PilGold },
@@ -405,6 +412,8 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
                 { name: 'Marokko', icon: Morocco },
                 { name: 'Grønland', icon: Greenland },
                 ...getSilverEmblem(),
+                // { name: 'UDEN_STEN Sølv Sølv', icon: UdenStenSoelv },
+                // { name: 'UDEN_STEN Sølv Simli Sølv', icon: UdenStenSoelvSimli },
                 { name: 'F Key Sølv', icon: FKeySilver },
                 { name: 'DNA Sølv', icon: DnaSilver },
                 { name: 'Pi Sølv', icon: PiSilver },
@@ -475,7 +484,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
     const currentTypeOptions = (allTypeOptions[selectedPrestige]?.[selectedEmblem.name] || []).filter(opt => isVisible(`Type_${opt.name}`));
 
     const getBaseName = (name) => {
-        return name.replace(/\s*(Guld|Sølv|Solv)\s*$/i, '').trim();
+        return name.replace(/\s*(Guld|Sølv|Solv)\s*/gi, ' ').replace(/\s+/g, ' ').trim();
     };
 
     const handlePrestigeChange = (type) => {
@@ -910,7 +919,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
 
     useEffect(() => { forOptionChange('Type', selectedType); }, [selectedType]);
     useEffect(() => {
-        const message = selectedType + " " + selectedEmblem.value;
+        const message = (selectedType && selectedType.startsWith('UDEN_STEN')) ? selectedType : (selectedType + " " + selectedEmblem.value);
         ['preview-iframe', 'preview-iframe2'].forEach((id) => {
             const iframe = document.getElementById(id);
             if (iframe?.contentWindow) {

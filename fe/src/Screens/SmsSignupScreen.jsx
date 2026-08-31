@@ -226,7 +226,7 @@ const SmsSignupScreen = () => {
                 <ShieldCheck className="h-3 w-3 text-blue-600" /> GDPR Samtykke
               </p>
               <span className="text-[11px] text-slate-500 leading-relaxed font-medium block">
-                Jeg giver samtykke til at modtage SMS-marketing fra StudentLife. Jeg kan til enhver tid afmelde ved at sende STOP.
+                Jeg giver samtykke til at modtage SMS-marketing fra StudentLife.
               </span>
             </div>
           </label>

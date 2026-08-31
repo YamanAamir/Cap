@@ -801,13 +801,13 @@ const StudentDashboard = () => {
 
     if (window.innerWidth >= 768) {
       ////////DEV Student Life////////
-      iframe_desktop.src = "https://playcanv.as/e/b/fa649829/";
+      iframe_desktop.src = "https://playcanv.as/e/p/2PRziXTS/";
 
       ////////Production Student Life////////
       // iframe_desktop.src = "https://playcanv.as/e/p/QIG7fh8C/";
     } else {
       ////////DEV Student Life////////
-      iframe_mobile.src = "https://playcanv.as/e/b/fa649829/";
+      iframe_mobile.src = "https://playcanv.as/e/p/2PRziXTS/";
 
       ////////Production Student Life////////
       // iframe_mobile.src = "https://playcanv.as/e/p/QIG7fh8C/";

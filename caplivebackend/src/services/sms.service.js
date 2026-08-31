@@ -157,23 +157,38 @@ const registerSmsSignup = async ({ name, phone, email, school, gdprConsent, camp
     throw new Error('GDPR consent is required');
   }
 
-  const existingPhone = await prisma.customer.findFirst({ where: { phone } });
-  if (existingPhone?.smsMarketingConsent && !existingPhone.smsOptOut) {
-    const existingCode = await prisma.discountCode.findFirst({
-      where: { customerId: existingPhone.id, usedAt: null, expiresAt: { gt: new Date() } },
+  let campaign = null;
+  if (campaignId) {
+    campaign = await prisma.smsCampaign.findUnique({ where: { id: parseInt(campaignId) } });
+  }
+  if (!campaign) {
+    campaign = await prisma.smsCampaign.findFirst({ where: { isActive: true } });
+  }
+
+  // Find if customer already exists by phone or email
+  let customer = await prisma.customer.findFirst({ where: { phone } });
+  if (!customer) {
+    customer = await prisma.customer.findUnique({ where: { email } });
+  }
+
+  // Check duplicate enrollment for this campaign
+  if (customer && campaign) {
+    const existingEnrollment = await prisma.smsCampaignEnrollment.findFirst({
+      where: {
+        campaignId: campaign.id,
+        customerId: customer.id,
+      },
     });
-    if (existingCode) {
-      return { customer: existingPhone, discountCode: existingCode, alreadyRegistered: true };
+    if (existingEnrollment) {
+      throw new Error('Du er allerede tilmeldt denne kampagne');
     }
   }
 
-  let customer = await prisma.customer.findUnique({ where: { email } });
   if (customer) {
     customer = await prisma.customer.update({
       where: { id: customer.id },
       data: {
         name,
-        phone,
         school: school || customer.school,
         smsMarketingConsent: true,
         smsConsentAt: new Date(),
@@ -194,14 +209,6 @@ const registerSmsSignup = async ({ name, phone, email, school, gdprConsent, camp
         gdprConsentAt: new Date(),
       },
     });
-  }
-
-  let campaign = null;
-  if (campaignId) {
-    campaign = await prisma.smsCampaign.findUnique({ where: { id: parseInt(campaignId) } });
-  }
-  if (!campaign) {
-    campaign = await prisma.smsCampaign.findFirst({ where: { isActive: true } });
   }
 
   let discountCode = null;

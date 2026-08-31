@@ -63,6 +63,11 @@ import AnkerGold from '../assets/images/anker gold.webp';
 import AnkerSilver from '../assets/images/anker silver.webp';
 import AtomGold from '../assets/images/atom gold.webp';
 import AtomSilver from '../assets/images/atom silver.webp';
+
+import UdenStenGuld from '../assets/images/uden_sten_guld.png';
+import UdenStenGuldSimli from '../assets/images/uden_sten_guld_simli.png';
+import UdenStenSoelvSimli from '../assets/images/uden_sten_soelv_simli.png';
+import UdenStenSoelv from '../assets/images/uden_sten_soelv.png';
 import DnaGold from '../assets/images/dna gold.webp';
 import DnaSilver from '../assets/images/dna silver.webp';
 import ItSilver from '../assets/images/It silver.webp';
@@ -692,6 +697,8 @@ const getSilverEmblem = () => {
         Signature: {
             Guld: [
                 ...(getGoldEmblem() || []),
+                // { name: 'UDEN_STEN Guld Guld', icon: UdenStenGuld },
+                // { name: 'UDEN_STEN Guld Simli Guld', icon: UdenStenGuldSimli },
                 { name: 'F Key Guld', icon: FKeyGold },
                 { name: 'DNA Guld', icon: DnaGold },
                 { name: 'Pi Guld', icon: PilGold },
@@ -712,15 +719,12 @@ const getSilverEmblem = () => {
                 { name: 'Node Guld', icon: NodeGold },
                 { name: 'Sport Guld', icon: SportGold },
                 { name: 'Teater Guld', icon: TeaterGold },
-
-
-
-
-
             ].filter(Boolean),
 
             Sølv: [
                 ...(getSilverEmblem() || []),
+                // { name: 'UDEN_STEN Sølv Sølv', icon: UdenStenSoelv },
+                // { name: 'UDEN_STEN Sølv Simli Sølv', icon: UdenStenSoelvSimli },
                 { name: 'F Key Sølv', icon: FKeySilver },
                 { name: 'DNA Sølv', icon: DnaSilver },
                 { name: 'Pi Sølv', icon: PiSilver },
@@ -741,9 +745,6 @@ const getSilverEmblem = () => {
                 { name: 'Node Sølv', icon: NodeSilver },
                 { name: 'Sport Sølv', icon: SportSilver },
                 { name: 'Teater Sølv', icon: TeaterSilver },
-
-
-
             ].filter(Boolean)
         },
 
@@ -955,7 +956,11 @@ const getSilverEmblem = () => {
             if (!selectedFlag?.name) return;
             sendMessageToIframes(`${selectedFlag.name} ${selectedEmblem.value}`);
         } else {
-            sendMessageToIframes(`${selectedType} ${selectedEmblem.value}`);
+            if (selectedType && selectedType.startsWith('UDEN_STEN')) {
+                sendMessageToIframes(selectedType);
+            } else {
+                sendMessageToIframes(`${selectedType} ${selectedEmblem.value}`);
+            }
         }
 
         if (cameraTriggers.current["type"]) {
@@ -1008,7 +1013,7 @@ const getSilverEmblem = () => {
     };
 
     const getBaseName = (name) => {
-        return name.replace(/\s*(Guld|SA,lv|Solv|Sølv)\s*/i, ' ').trim();
+        return name.replace(/\s*(Guld|Sølv|Solv|SA,lv)\s*/gi, ' ').replace(/\s+/g, ' ').trim();
     };
 
     // Helper function to apply emblem suffix to base name
