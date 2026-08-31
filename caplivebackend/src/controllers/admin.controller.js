@@ -290,7 +290,7 @@ exports.createSmsCampaign = async (req, res) => {
         discountValue: discountValue !== undefined ? parseFloat(discountValue) : null,
         steps: {
           create: steps.map((s, i) => ({
-            dayOffset: s.dayOffset,
+            dayOffset: parseInt(s.dayOffset) || 0,
             message: s.message,
             sortOrder: s.sortOrder ?? i,
           })),
@@ -350,7 +350,7 @@ exports.updateSmsCampaign = async (req, res) => {
       await prisma.smsCampaignStep.createMany({
         data: steps.map((s, i) => ({
           campaignId: id,
-          dayOffset: s.dayOffset,
+          dayOffset: parseInt(s.dayOffset) || 0,
           message: s.message,
           sortOrder: s.sortOrder ?? i,
           isActive: s.isActive !== false,
@@ -379,7 +379,7 @@ exports.updateSmsCampaign = async (req, res) => {
           for (const enrollment of enrollments) {
             for (const step of steps) {
               const scheduledFor = new Date(enrollment.enrolledAt);
-              scheduledFor.setDate(scheduledFor.getDate() + step.dayOffset);
+              scheduledFor.setDate(scheduledFor.getDate() + (parseInt(step.dayOffset) || 0));
 
               // Only queue messages that are in the future to avoid spamming old steps
               if (scheduledFor > new Date()) {
@@ -406,16 +406,23 @@ exports.updateSmsCampaign = async (req, res) => {
               actualType = discountType.split(':')[0];
             }
             if (customerIds.length > 0) {
-              await prisma.discountCode.updateMany({
-                where: {
-                  customerId: { in: customerIds },
-                  usedAt: null,
-                },
-                data: {
-                  ...(actualType !== undefined && { type: actualType }),
-                  ...(discountValue !== undefined && { value: discountValue !== null ? parseFloat(discountValue) : null })
-                }
-              });
+              const discountUpdateData = {};
+              if (actualType !== undefined && actualType !== null) {
+                discountUpdateData.type = actualType;
+              }
+              if (discountValue !== undefined && discountValue !== null) {
+                discountUpdateData.value = parseFloat(discountValue);
+              }
+              
+              if (Object.keys(discountUpdateData).length > 0) {
+                await prisma.discountCode.updateMany({
+                  where: {
+                    customerId: { in: customerIds },
+                    usedAt: null,
+                  },
+                  data: discountUpdateData
+                });
+              }
             }
           }
         }
@@ -435,11 +442,43 @@ exports.updateSmsCampaign = async (req, res) => {
 exports.deleteSmsCampaign = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    const force = req.query.force === 'true';
     
     // Check if campaign has enrollments
     const enrollmentsCount = await prisma.smsCampaignEnrollment.count({ where: { campaignId: id } });
     if (enrollmentsCount > 0) {
-      return res.status(400).json({ message: 'Cannot delete campaign that has enrollments. Deactivate it instead.' });
+      if (!force) {
+        return res.status(400).json({ message: 'Cannot delete campaign that has enrollments. Deactivate it instead.' });
+      }
+
+      // Cascade delete:
+      // 1. Fetch enrollments to get discount codes and enrollment IDs
+      const enrollments = await prisma.smsCampaignEnrollment.findMany({
+        where: { campaignId: id },
+        select: { id: true, discountCodeId: true }
+      });
+      
+      const enrollmentIds = enrollments.map(e => e.id);
+      const discountCodeIds = enrollments.map(e => e.discountCodeId).filter(Boolean);
+      
+      // Delete associated SMS Messages
+      if (enrollmentIds.length > 0) {
+        await prisma.smsMessage.deleteMany({
+          where: { enrollmentId: { in: enrollmentIds } }
+        });
+      }
+      
+      // Delete associated Enrollments
+      await prisma.smsCampaignEnrollment.deleteMany({
+        where: { campaignId: id }
+      });
+      
+      // Delete associated DiscountCodes
+      if (discountCodeIds.length > 0) {
+        await prisma.discountCode.deleteMany({
+          where: { id: { in: discountCodeIds } }
+        });
+      }
     }
 
     await prisma.smsCampaign.delete({ where: { id } });

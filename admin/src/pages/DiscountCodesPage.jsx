@@ -10,6 +10,12 @@ const DiscountCodesPage = () => {
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({ code: '', type: 'PERCENTAGE', value: 10, expiresAt: '', phoneNumber: '' });
   const [creating, setCreating] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
 
   const load = () => {
     setLoading(true);
@@ -34,6 +40,12 @@ const DiscountCodesPage = () => {
   };
 
   const filteredCodes = codes.filter(c => c.code.toLowerCase().includes(search.toLowerCase()) || (c.phoneNumber && c.phoneNumber.includes(search)));
+
+  const totalItems = filteredCodes.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const paginatedCodes = filteredCodes.slice(startIndex, startIndex + pageSize);
 
   if (loading) {
     return (
@@ -139,12 +151,12 @@ const DiscountCodesPage = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {filteredCodes.length === 0 ? (
+            {paginatedCodes.length === 0 ? (
               <tr>
                 <td colSpan="7" className="px-6 py-8 text-center text-slate-500 font-medium">No coupons found.</td>
               </tr>
             ) : (
-              filteredCodes.map((c, index) => {
+              paginatedCodes.map((c, index) => {
                 const used = !!c.usedAt;
                 
                 return (
@@ -179,6 +191,84 @@ const DiscountCodesPage = () => {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Pagination Footer */}
+      <div className="mt-4 px-5 py-4 bg-slate-50 border border-slate-200 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4 text-sm shrink-0">
+        {/* Entries display limit selector */}
+        <div className="flex items-center gap-2 text-slate-600">
+          <span>Show</span>
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:border-blue-500 bg-white font-bold"
+          >
+            {[5, 10, 20, 50, 100].map(size => (
+              <option key={size} value={size}>{size}</option>
+            ))}
+          </select>
+          <span>entries</span>
+        </div>
+
+        {/* Showing entries info */}
+        <div className="text-slate-500 font-medium">
+          {totalItems > 0 ? (
+            <>
+              Showing <span className="font-bold text-slate-800">{startIndex + 1}</span> to{' '}
+              <span className="font-bold text-slate-800">{endIndex}</span> of{' '}
+              <span className="font-bold text-slate-800">{totalItems}</span> coupons
+            </>
+          ) : (
+            'No coupons to display'
+          )}
+        </div>
+
+        {/* Pagination controls */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed"
+          >
+            Previous
+          </button>
+          
+          {/* Page numbers list */}
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter(page => {
+              return page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1;
+            })
+            .map((page, index, array) => {
+              const showEllipsis = index > 0 && page - array[index - 1] > 1;
+              return (
+                <React.Fragment key={page}>
+                  {showEllipsis && <span className="px-2 text-slate-400">...</span>}
+                  <button
+                    onClick={() => setCurrentPage(page)}
+                    className={cn(
+                      "px-3 py-1.5 rounded text-xs font-bold transition-all",
+                      currentPage === page
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                    )}
+                  >
+                    {page}
+                  </button>
+                </React.Fragment>
+              );
+            })}
+
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed"
+          >
+            Next
+          </button>
+        </div>
       </div>
 
     </div>

@@ -156,7 +156,7 @@ const ConfiguratorSettingsPage = () => {
     if (activeTier === 'basichue' && !allowedBasicPrograms.includes(activeProgram)) {
       setActiveTier('standard');
     }
-    const allowedPremiumPrograms = ['STX', 'HHX', 'HTX', 'HF'];
+    const allowedPremiumPrograms = ['STX', 'HHX', 'HTX', 'HF', 'EUD', 'EUX'];
     if (activeTier === 'premium' && !allowedPremiumPrograms.includes(activeProgram)) {
       setActiveTier('standard');
     }
@@ -447,7 +447,7 @@ const ConfiguratorSettingsPage = () => {
                     return allowedPrograms.includes(activeProgram);
                   }
                   if (tier === 'premium') {
-                    const allowedPrograms = ['STX', 'HHX', 'HTX', 'HF'];
+                    const allowedPrograms = ['STX', 'HHX', 'HTX', 'HF', 'EUD', 'EUX'];
                     return allowedPrograms.includes(activeProgram);
                   }
                   return true;

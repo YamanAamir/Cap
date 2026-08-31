@@ -107,7 +107,7 @@ const StudentDashboard = () => {
   const program = programFixMap[rawProgram] ?? rawProgram;
 
   const rawPackageName = searchParams.get("package") || "standard";
-  const allowedPremiumPrograms = ["stx", "hhx", "htx", "hf"];
+  const allowedPremiumPrograms = ["stx", "hhx", "htx", "hf", "eux", "eud"];
   const packageName = (rawPackageName === "premium" && !allowedPremiumPrograms.includes(program?.toLowerCase()))
     ? "standard"
     : rawPackageName;

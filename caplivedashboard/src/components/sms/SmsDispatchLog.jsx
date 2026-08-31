@@ -39,6 +39,9 @@ export default function SmsDispatchLog({ campaigns }) {
   const [forceSendingId, setForceSendingId] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, msgId: null });
   
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   // Filters
   const [filters, setFilters] = useState({
     campaignId: '',
@@ -67,6 +70,7 @@ export default function SmsDispatchLog({ campaigns }) {
 
   useEffect(() => {
     loadMessages();
+    setCurrentPage(1);
   }, [filters]);
 
   const confirmForceSend = async () => {
@@ -89,6 +93,20 @@ export default function SmsDispatchLog({ campaigns }) {
   const handleFilterChange = (e) => {
     setFilters(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
+
+  const grouped = Object.values(
+    messages.reduce((acc, msg) => {
+      if (!acc[msg.phone]) acc[msg.phone] = { phone: msg.phone, customer: msg.customer, msgs: [] };
+      acc[msg.phone].msgs.push(msg);
+      return acc;
+    }, {})
+  );
+
+  const totalItems = grouped.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const paginatedGrouped = grouped.slice(startIndex, startIndex + pageSize);
 
   return (
     <div className="bg-white border border-slate-200 rounded-lg flex flex-col h-full min-h-[600px] shadow-sm">
@@ -171,13 +189,7 @@ export default function SmsDispatchLog({ campaigns }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {Object.values(
-                messages.reduce((acc, msg) => {
-                  if (!acc[msg.phone]) acc[msg.phone] = { phone: msg.phone, customer: msg.customer, msgs: [] };
-                  acc[msg.phone].msgs.push(msg);
-                  return acc;
-                }, {})
-              ).map((group) => {
+              {paginatedGrouped.map((group) => {
                 const isExpanded = expandedPhone === group.phone;
                 const latestMsg = group.msgs[0]; // Assuming they are sorted or we just take the first
                 
@@ -271,8 +283,83 @@ export default function SmsDispatchLog({ campaigns }) {
           </table>
         )}
       </div>
-      <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 font-bold text-right shrink-0">
-        Showing top {messages.length} records matching filters
+      {/* Pagination Footer */}
+      <div className="px-5 py-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0 text-sm">
+        {/* Entries display limit selector */}
+        <div className="flex items-center gap-2 text-slate-600">
+          <span>Show</span>
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              setPageSize(Number(e.target.value));
+              setCurrentPage(1);
+            }}
+            className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:border-blue-500 bg-white font-bold"
+          >
+            {[5, 10, 20, 50, 100].map(size => (
+              <option key={size} value={size}>{size}</option>
+            ))}
+          </select>
+          <span>entries</span>
+        </div>
+
+        {/* Showing entries info */}
+        <div className="text-slate-500 font-medium">
+          {totalItems > 0 ? (
+            <>
+              Showing <span className="font-bold text-slate-800">{startIndex + 1}</span> to{' '}
+              <span className="font-bold text-slate-800">{endIndex}</span> of{' '}
+              <span className="font-bold text-slate-800">{totalItems}</span> recipients
+            </>
+          ) : (
+            'No records to display'
+          )}
+        </div>
+
+        {/* Pagination controls */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed"
+          >
+            Previous
+          </button>
+          
+          {/* Page numbers list */}
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter(page => {
+              // Show current, first, last, and pages adjacent to current
+              return page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1;
+            })
+            .map((page, index, array) => {
+              const showEllipsis = index > 0 && page - array[index - 1] > 1;
+              return (
+                <React.Fragment key={page}>
+                  {showEllipsis && <span className="px-2 text-slate-400">...</span>}
+                  <button
+                    onClick={() => setCurrentPage(page)}
+                    className={cn(
+                      "px-3 py-1.5 rounded text-xs font-bold transition-all",
+                      currentPage === page
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                    )}
+                  >
+                    {page}
+                  </button>
+                </React.Fragment>
+              );
+            })}
+
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed"
+          >
+            Next
+          </button>
+        </div>
       </div>
 
       <ConfirmModal

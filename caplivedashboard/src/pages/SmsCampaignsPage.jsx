@@ -32,6 +32,7 @@ const SmsCampaignsPage = () => {
   const [newDiscountType, setNewDiscountType] = useState('PERCENTAGE');
   const [newDiscountValue, setNewDiscountValue] = useState(10);
   const [newDiscountExpiryDays, setNewDiscountExpiryDays] = useState(20);
+  const [forceDelete, setForceDelete] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -182,6 +183,7 @@ const SmsCampaignsPage = () => {
 
   const handleDeleteClick = (campaignId) => {
     setDeleteModal({ isOpen: true, campaignId, isDeleting: false });
+    setForceDelete(false);
   };
 
   const handleDownloadQR = () => {
@@ -214,7 +216,7 @@ const SmsCampaignsPage = () => {
     const { campaignId } = deleteModal;
     setDeleteModal(prev => ({ ...prev, isDeleting: true }));
     try {
-      await deleteSmsCampaign(campaignId);
+      await deleteSmsCampaign(campaignId, forceDelete);
       toast.success('Campaign deleted successfully');
       setDeleteModal({ isOpen: false, campaignId: null, isDeleting: false });
       load();
@@ -672,9 +674,21 @@ const SmsCampaignsPage = () => {
               </button>
             </div>
             
-            <div className="p-6 text-slate-700">
+            <div className="p-6 text-slate-700 space-y-4">
               <p>Are you sure you want to delete this campaign? This action cannot be undone.</p>
-              <p className="text-sm text-slate-500 mt-2">Note: Campaigns with existing enrollments cannot be deleted. Deactivate them instead.</p>
+              
+              <label className="flex items-start gap-3 p-3 border border-red-100 bg-red-50/30 rounded-lg cursor-pointer hover:bg-red-50/50 transition-colors">
+                <input 
+                  type="checkbox" 
+                  className="mt-1 shrink-0 rounded text-red-600 focus:ring-red-500"
+                  checked={forceDelete}
+                  onChange={e => setForceDelete(e.target.checked)}
+                />
+                <div>
+                  <span className="block text-sm font-bold text-slate-800">Force delete (delete all enrollments, messages, discount codes)</span>
+                  <span className="block text-xs text-slate-500 mt-1">If checked, this will permanently remove all campaign data, including scheduled messages and generated discount codes for signed up users.</span>
+                </div>
+              </label>
             </div>
 
             <div className="flex justify-end gap-3 p-4 border-t border-slate-100 bg-slate-50">
