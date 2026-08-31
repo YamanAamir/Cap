@@ -9,17 +9,22 @@ const scheduleCampaignMessages = async (enrollmentId, customer, discountCode) =>
 
   if (!enrollment) return;
 
+  const frontendBaseUrl = process.env.FRONTEND_BASE_URL || 'https://studenterhue.studentlife.dk/studentlife';
+  const campaignSlug = enrollment.campaign.slug || '';
+
   const vars = {
     name: customer.name,
     discountCode: discountCode?.code || '',
     expiryDate: discountCode ? new Date(discountCode.expiresAt).toLocaleDateString('da-DK') : '',
+    link: campaignSlug ? `${frontendBaseUrl}/sms-signup/${campaignSlug}` : '',
   };
 
   for (const step of enrollment.campaign.steps) {
     const message = step.message
       .replace(/\{\{name\}\}/g, vars.name)
       .replace(/\{\{discountCode\}\}/g, vars.discountCode)
-      .replace(/\{\{expiryDate\}\}/g, vars.expiryDate);
+      .replace(/\{\{expiryDate\}\}/g, vars.expiryDate)
+      .replace(/\{\{link\}\}/g, vars.link);
 
     const scheduledFor = new Date(enrollment.enrolledAt);
     scheduledFor.setDate(scheduledFor.getDate() + step.dayOffset);
