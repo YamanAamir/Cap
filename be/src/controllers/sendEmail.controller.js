@@ -3566,7 +3566,7 @@ const stripePayment = async (req, res) => {
       const result = await applyDiscountCode(discountCode, customerDetails?.phone, finalPrice);
       discountRecord = result.discount;
       discountAmount = result.discountAmount;
-      finalPrice = result.finalPrice;
+      // finalPrice = result.finalPrice; // Do not subtract again, frontend already subtracted it from totalPrice
     }
 
     let stripeChargeAmount = finalPrice;

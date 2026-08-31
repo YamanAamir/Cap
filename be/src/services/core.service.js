@@ -190,6 +190,29 @@ const applyDiscountCode = async (code, phone, orderTotal) => {
     throw new Error('Discount code not valid for this phone number');
   }
 
+  // Strict check: Prevent customers who have already completed an order with a discount from applying it again
+  if (cPhone) {
+    const customersWithPhone = await prisma.customer.findMany({
+      where: { phone: { not: null } }
+    });
+    const matchingCustomerIds = customersWithPhone
+      .filter(c => cleanPhone(c.phone).endsWith(cPhone) || cPhone.endsWith(cleanPhone(c.phone)))
+      .map(c => c.id);
+
+    if (matchingCustomerIds.length > 0) {
+      const existingOrderWithDiscount = await prisma.order.findFirst({
+        where: {
+          customerId: { in: matchingCustomerIds },
+          discountCodeId: { not: null },
+          status: { not: 'CANCELLED' }
+        }
+      });
+      if (existingOrderWithDiscount) {
+        throw new Error('A discount has already been used for this phone number');
+      }
+    }
+  }
+
   let discountAmount = 0;
   if (discount.type === 'PERCENTAGE') {
     discountAmount = (orderTotal * discount.value) / 100;
