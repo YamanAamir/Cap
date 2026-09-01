@@ -919,45 +919,32 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
 
     useEffect(() => { forOptionChange('Type', selectedType); }, [selectedType]);
     useEffect(() => {
-        const isMobile = typeof window !== 'undefined' && (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768);
-
-        const sendEmblemType = () => {
-            let message;
-            if (selectedType && selectedType.startsWith('UDEN_STEN')) {
-                message = selectedType;
-            } else if (selectedType) {
-                const isGold = selectedEmblem.name === 'Guld' || selectedEmblem.value === 'Guld';
-                let typeName = selectedType;
-                if (isGold && typeName.includes('Sølv')) {
-                    typeName = typeName.replace(/\bSølv\b/g, 'Guld');
-                } else if (!isGold && typeName.includes('Guld')) {
-                    typeName = typeName.replace(/\bGuld\b/g, 'Sølv');
-                }
-                message = `${typeName} ${selectedEmblem.value}`;
+        let message;
+        if (selectedType && selectedType.startsWith('UDEN_STEN')) {
+            message = selectedType;
+        } else if (selectedType) {
+            const isGold = selectedEmblem.name === 'Guld' || selectedEmblem.value === 'Guld';
+            let typeName = selectedType;
+            if (isGold && typeName.includes('Sølv')) {
+                typeName = typeName.replace(/\bSølv\b/g, 'Guld');
+            } else if (!isGold && typeName.includes('Guld')) {
+                typeName = typeName.replace(/\bGuld\b/g, 'Sølv');
             }
-
-            if (!message) return;
-
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(message, "*");
-                    if (cameraTriggers.current["type"]) {
-                        iframe.contentWindow.postMessage("type camera", "*");
-                    }
-                }
-            });
-            cameraTriggers.current["type"] = true;
-        };
-
-        if (isMobile) {
-            const timer = setTimeout(() => {
-                sendEmblemType();
-            }, 5000);
-            return () => clearTimeout(timer);
-        } else {
-            sendEmblemType();
+            message = `${typeName} ${selectedEmblem.value}`;
         }
+
+        if (!message) return;
+
+        ['preview-iframe', 'preview-iframe2'].forEach((id) => {
+            const iframe = document.getElementById(id);
+            if (iframe?.contentWindow) {
+                iframe.contentWindow.postMessage(message, "*");
+                if (cameraTriggers.current["type"]) {
+                    iframe.contentWindow.postMessage("type camera", "*");
+                }
+            }
+        });
+        cameraTriggers.current["type"] = true;
     }, [selectedType, selectedEmblem]);
 
     useEffect(() => {
