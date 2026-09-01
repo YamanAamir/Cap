@@ -97,29 +97,25 @@ const LETTER_CONFIG = {
 };
 
 // ============================================================
-// UTILITIES & CACHING
+// UTILITIES & MEMORY MANAGEMENT
 // ============================================================
 
-const imageCache = new Map();
-const maskCache = new Map();
+export function preloadAlphabetMaps() {
+    // Kept for backward compatibility - memory is preserved dynamically
+}
 
-function loadImage(src) {
-    if (!src) return Promise.resolve(null);
-    if (imageCache.has(src)) {
-        return imageCache.get(src);
-    }
-    const p = new Promise((resolve) => {
+function loadSingleImage(url) {
+    if (!url) return Promise.resolve(null);
+    return new Promise((resolve) => {
         const img = new Image();
         img.crossOrigin = 'anonymous';
         img.onload = () => resolve(img);
         img.onerror = () => {
-            console.warn(`❌ Failed image load: ${src}`);
+            console.warn(`Failed image load: ${url}`);
             resolve(null);
         };
-        img.src = src;
+        img.src = url;
     });
-    imageCache.set(src, p);
-    return p;
 }
 
 function getRenderScale() {
@@ -128,70 +124,8 @@ function getRenderScale() {
     return isMobile ? 1 : 2;
 }
 
-function getOrCreateLetterMask(cacheKey, opacityImg, dw, dh) {
-    if (!opacityImg || dw <= 0 || dh <= 0) return null;
-    
-    const key = `${cacheKey}_${dw}_${dh}`;
-    if (maskCache.has(key)) {
-        return maskCache.get(key);
-    }
-
-    const maskCanvas = document.createElement('canvas');
-    maskCanvas.width = dw;
-    maskCanvas.height = dh;
-    const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
-    maskCtx.drawImage(opacityImg, 0, 0, dw, dh);
-
-    const maskData = maskCtx.getImageData(0, 0, dw, dh);
-    const px = maskData.data;
-    const len = px.length;
-
-    const c1 = px[0];
-    const c2 = px[(dw - 1) * 4];
-    const c3 = px[(dh - 1) * dw * 4];
-    const c4 = px[len - 4];
-    const cornerAvg = (c1 + c2 + c3 + c4) / 4;
-    const isInverted = cornerAvg > 128;
-
-    for (let i = 0; i < len; i += 4) {
-        const brightness = px[i];
-        px[i + 3] = isInverted ? (255 - brightness) : brightness;
-        px[i] = 255;
-        px[i + 1] = 255;
-        px[i + 2] = 255;
-    }
-    maskCtx.putImageData(maskData, 0, 0);
-
-    maskCache.set(key, maskCanvas);
-    return maskCanvas;
-}
-
-export function preloadAlphabetMaps() {
-    // Background idle preload of common letters
-    if (typeof window === 'undefined') return;
-    const baseUrl = import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5175/devstudentlife';
-    const base = `${baseUrl}/alphabets`;
-    const commonChars = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'U', 'V', 'a', 'e', 'i', 'o', 'r', 's', 't', 'n'];
-    
-    const preloadLetters = () => {
-        commonChars.forEach(char => {
-            const cfg = LETTER_CONFIG[char];
-            if (!cfg || !cfg.folder) return;
-            const dir = `${base}/${cfg.folder}/${char}`;
-            loadImage(`${dir}/BaseColor.jpg`);
-            loadImage(`${dir}/Opacity.jpg`);
-        });
-    };
-
-    if ('requestIdleCallback' in window) {
-        window.requestIdleCallback(preloadLetters, { timeout: 3000 });
-    } else {
-        setTimeout(preloadLetters, 1000);
-    }
-}
-
 // ============================================================
-// MAIN GENERATOR (OPTIMIZED FOR MOBILE / IPHONE)
+// MAIN GENERATOR (SEQUENTIAL & MEMORY SAFE FOR IPHONE / MOBILE)
 // ============================================================
 
 export async function generateAllEmbroideryMaps(text) {
@@ -219,37 +153,16 @@ export async function generateAllEmbroideryMaps(text) {
     const baseUrl = import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5175/devstudentlife';
     const base = `${baseUrl}/alphabets`;
 
-    // ── 1. Fetch images (direct cached Image objects) ────────
-    const perLetter = await Promise.all(chars.map(async (char, idx) => {
-        const cfg = LETTER_CONFIG[char];
-        if (!cfg || !cfg.folder) {
-            return {
-                char,
-                cfg: cfg || { renderW: 32, renderH: 0, baselineFrac: 1.0 },
-                basecolor: null, normal: null, roughness: null,
-                height_map: null, ambient: null, opacity: null,
-                idx
-            };
-        }
-        const dir = `${base}/${cfg.folder}/${char}`;
-        const [basecolor, normal, roughness, height_map, ambient, opacity] =
-            await Promise.all([
-                loadImage(`${dir}/BaseColor.jpg`),
-                loadImage(`${dir}/Normal.jpg`),
-                loadImage(`${dir}/Roughness.jpg`),
-                loadImage(`${dir}/Height.jpg`),
-                loadImage(`${dir}/AmbientOcclusion.jpg`),
-                loadImage(`${dir}/Opacity.jpg`),
-            ]);
-        return { char, cfg, basecolor, normal, roughness, height_map, ambient, opacity, idx };
-    }));
+    // ── 1. Layout calculation ────────────────────────────────
+    const perLetter = chars.map((char, idx) => {
+        const cfg = LETTER_CONFIG[char] || { renderW: 32, renderH: 0, baselineFrac: 1.0 };
+        return { char, cfg, idx };
+    });
 
-    // ── 2. Canvas setup ──────────────────────────────────────
     const RENDER_SCALE = getRenderScale();
     const CANVAS_W = 1024 * RENDER_SCALE;
     const CANVAS_H = 300 * RENDER_SCALE;
 
-    // ── 3. Shared BASELINE_Y ─────────────────────────────────
     const maxAbove = Math.max(
         ...perLetter.map(l => (l.cfg.renderH || 0) * (l.cfg.baselineFrac ?? 1.0)),
         1
@@ -262,7 +175,6 @@ export async function generateAllEmbroideryMaps(text) {
     const blockH = (maxAbove + maxBelow) * RENDER_SCALE;
     const BASELINE_Y = Math.round((CANVAS_H - blockH) / 2 + maxAbove * RENDER_SCALE);
 
-    // ── 4. Horizontal layout ─────────────────────────────────
     let totalW = 0;
     perLetter.forEach((l, i) => {
         totalW += (l.cfg.renderW || 0) * RENDER_SCALE;
@@ -291,32 +203,98 @@ export async function generateAllEmbroideryMaps(text) {
 
         curX += ((cfg.renderW || 0) - (cfg.overlap || 0)) * RENDER_SCALE * fitScale + sx;
 
-        // Pre-compute the alpha mask ONCE for this letter
-        const maskCanvas = l.opacity ? getOrCreateLetterMask(`${l.char}_${l.cfg.folder}`, l.opacity, dw, dh) : null;
-
-        return { ...l, _drawX: drawX, _drawY: drawY, _dw: dw, _dh: dh, _z: cfg.zIndex || 1, _maskCanvas: maskCanvas };
+        return {
+            char: l.char,
+            cfg: l.cfg,
+            _drawX: drawX,
+            _drawY: drawY,
+            _dw: dw,
+            _dh: dh,
+            _z: cfg.zIndex || 1
+        };
     });
 
     const sorted = [...drawQueue].sort((a, b) => a._z - b._z);
 
-    // Reusable pooled canvases for stitch operations
-    const scratchCanvas = document.createElement('canvas');
-    const scratchCtx = scratchCanvas.getContext('2d');
-
+    // Reusable single canvas pair
     const mainCanvas = document.createElement('canvas');
     mainCanvas.width = CANVAS_W;
     mainCanvas.height = CANVAS_H;
     const mainCtx = mainCanvas.getContext('2d');
 
-    // ── 5. Fast Stitch ───────────────────────────────────────
-    function stitchMapSync(key) {
+    const scratchCanvas = document.createElement('canvas');
+    const scratchCtx = scratchCanvas.getContext('2d');
+
+    // ── 2. Pre-compute letter alpha masks once ────────────────
+    const letterMasks = new Map();
+    for (const item of sorted) {
+        if (!item.cfg.folder || item._dw <= 0 || item._dh <= 0) continue;
+        const maskKey = `${item.char}_${item.cfg.folder}_${item._dw}_${item._dh}`;
+        if (letterMasks.has(maskKey)) continue;
+
+        const opUrl = `${base}/${item.cfg.folder}/${item.char}/Opacity.jpg`;
+        const opImg = await loadSingleImage(opUrl);
+        if (!opImg) continue;
+
+        const maskCanvas = document.createElement('canvas');
+        maskCanvas.width = item._dw;
+        maskCanvas.height = item._dh;
+        const maskCtx = maskCanvas.getContext('2d', { willReadFrequently: true });
+        maskCtx.drawImage(opImg, 0, 0, item._dw, item._dh);
+
+        const maskData = maskCtx.getImageData(0, 0, item._dw, item._dh);
+        const px = maskData.data;
+        const len = px.length;
+
+        const c1 = px[0];
+        const c2 = px[(item._dw - 1) * 4];
+        const c3 = px[(item._dh - 1) * item._dw * 4];
+        const c4 = px[len - 4];
+        const cornerAvg = (c1 + c2 + c3 + c4) / 4;
+        const isInverted = cornerAvg > 128;
+
+        for (let i = 0; i < len; i += 4) {
+            const brightness = px[i];
+            px[i + 3] = isInverted ? (255 - brightness) : brightness;
+            px[i] = 255;
+            px[i + 1] = 255;
+            px[i + 2] = 255;
+        }
+        maskCtx.putImageData(maskData, 0, 0);
+        letterMasks.set(maskKey, maskCanvas);
+
+        // Immediate release
+        opImg.src = '';
+    }
+
+    for (const item of sorted) {
+        if (item.cfg.folder) {
+            const maskKey = `${item.char}_${item.cfg.folder}_${item._dw}_${item._dh}`;
+            item._maskCanvas = letterMasks.get(maskKey) || null;
+        }
+    }
+
+    // ── 3. Sequential single map generator (Ultra-Low Memory) ──
+    async function generateSingleMap(fileName) {
         mainCtx.clearRect(0, 0, CANVAS_W, CANVAS_H);
 
+        const uniqueChars = new Map();
         for (const item of sorted) {
-            const mapKey = key === 'height' ? 'height_map' : key;
-            const img = item[mapKey];
+            if (item.cfg.folder && !uniqueChars.has(item.char)) {
+                const url = `${base}/${item.cfg.folder}/${item.char}/${fileName}`;
+                uniqueChars.set(item.char, loadSingleImage(url));
+            }
+        }
 
-            if (!img || item._dw <= 0 || item._dh <= 0) continue;
+        const loadedMap = new Map();
+        for (const [char, promise] of uniqueChars.entries()) {
+            loadedMap.set(char, await promise);
+        }
+
+        for (const item of sorted) {
+            if (!item.cfg.folder || item._dw <= 0 || item._dh <= 0) continue;
+            const img = loadedMap.get(item.char);
+            if (!img) continue;
 
             if (item._maskCanvas) {
                 scratchCanvas.width = item._dw;
@@ -336,15 +314,42 @@ export async function generateAllEmbroideryMaps(text) {
             }
         }
 
-        return mainCanvas.toDataURL('image/png');
+        const dataUrl = mainCanvas.toDataURL('image/png');
+
+        // Free RAM / GPU memory immediately after stitching this map
+        for (const [, img] of loadedMap.entries()) {
+            if (img) img.src = '';
+        }
+        loadedMap.clear();
+        uniqueChars.clear();
+
+        return dataUrl;
     }
 
-    const basecolor = stitchMapSync('basecolor');
-    const normal = stitchMapSync('normal');
-    const roughness = stitchMapSync('roughness');
-    const height = stitchMapSync('height');
-    const ambient = stitchMapSync('ambient');
-    const opacity = stitchMapSync('opacity');
+    // ── 4. Generate maps sequentially with micro-delays for GC ─
+    const basecolor = await generateSingleMap('BaseColor.jpg');
+    await new Promise(r => setTimeout(r, 10));
+
+    const normal = await generateSingleMap('Normal.jpg');
+    await new Promise(r => setTimeout(r, 10));
+
+    const roughness = await generateSingleMap('Roughness.jpg');
+    await new Promise(r => setTimeout(r, 10));
+
+    const height = await generateSingleMap('Height.jpg');
+    await new Promise(r => setTimeout(r, 10));
+
+    const ambient = await generateSingleMap('AmbientOcclusion.jpg');
+    await new Promise(r => setTimeout(r, 10));
+
+    const opacity = await generateSingleMap('Opacity.jpg');
+
+    // Clean up all canvases from RAM
+    letterMasks.clear();
+    mainCanvas.width = 1;
+    mainCanvas.height = 1;
+    scratchCanvas.width = 1;
+    scratchCanvas.height = 1;
 
     return { text, basecolor, normal, roughness, height, ambient, opacity };
 }
@@ -354,15 +359,18 @@ export async function generateAllEmbroideryMaps(text) {
 // ============================================================
 export function sendEmbroideryMapsToIframes(prefix, payload) {
     const ids = ['preview-iframe', 'preview-iframe2'];
-    const send = msg => ids.forEach(id => {
+    ids.forEach(id => {
         const iframe = document.getElementById(id);
-        if (!iframe?.contentWindow) { console.warn(`❌ iframe not found: ${id}`); return; }
-        iframe.contentWindow.postMessage(msg, '*');
+        if (!iframe?.contentWindow) return;
+        try {
+            if (payload.basecolor) iframe.contentWindow.postMessage(`${prefix}EmbroideryBasecolor:${payload.basecolor}`, '*');
+            if (payload.normal) iframe.contentWindow.postMessage(`${prefix}EmbroideryNormal:${payload.normal}`, '*');
+            if (payload.roughness) iframe.contentWindow.postMessage(`${prefix}EmbroideryRoughness:${payload.roughness}`, '*');
+            if (payload.height) iframe.contentWindow.postMessage(`${prefix}EmbroideryHeight:${payload.height}`, '*');
+            if (payload.ambient) iframe.contentWindow.postMessage(`${prefix}EmbroideryAmbient:${payload.ambient}`, '*');
+            if (payload.opacity) iframe.contentWindow.postMessage(`${prefix}EmbroideryOpacity:${payload.opacity}`, '*');
+        } catch (e) {
+            console.warn('postMessage error:', e);
+        }
     });
-    if (payload.basecolor) send(`${prefix}EmbroideryBasecolor:${payload.basecolor}`);
-    if (payload.normal) send(`${prefix}EmbroideryNormal:${payload.normal}`);
-    if (payload.roughness) send(`${prefix}EmbroideryRoughness:${payload.roughness}`);
-    if (payload.height) send(`${prefix}EmbroideryHeight:${payload.height}`);
-    if (payload.ambient) send(`${prefix}EmbroideryAmbient:${payload.ambient}`);
-    if (payload.opacity) send(`${prefix}EmbroideryOpacity:${payload.opacity}`);
 }
