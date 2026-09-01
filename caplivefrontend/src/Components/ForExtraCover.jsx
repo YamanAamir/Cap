@@ -953,7 +953,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
         if (isMobile) {
             const timer = setTimeout(() => {
                 sendEmblemType();
-            }, 1000);
+            }, 5000);
             return () => clearTimeout(timer);
         } else {
             sendEmblemType();
