@@ -37,7 +37,7 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
     ];
 
     const hatBoxTypes = ['Standard', 'Luksus æske', 'Premium æske'].filter(opt => isVisible(`Hueæske_${opt}`));
-    const premiumaske = ['Sort velour', 'Kunstlæderæske', 'Hvid læderæske'].filter(opt => isVisible(`Premiumæske_${opt}`));
+    const premiumaske = ['Sort velour', 'Kunstlæderæske', 'Hvid kunstlæderæske'].filter(opt => isVisible(`Premiumæske_${opt}`) && (opt !== 'Hvid kunstlæderæske' || isVisible(`Premiumæske_Hvid læderæske`)));
 
     const selectedHatBoxType = tilbehor.Hueæske || 'Standard';
     const selectedPremiumæske = tilbehor['Premium æske'] || '';
@@ -158,8 +158,11 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
 
     const handlePremiumæskeChange = (type) => {
         updateTilbehor({ 'Premium æske': type });
+        const postMessageValue = (type === 'Hvid kunstlæderæske' || type === 'Hvid læderæske')
+            ? 'hvid læderæske'
+            : type.toLowerCase();
         sendWithCamera(
-            `Accessories Premiumæske:${type.toLowerCase()}`,
+            `Accessories Premiumæske:${postMessageValue}`,
             'premium',
             'premiumæske camera'
         );
@@ -235,7 +238,7 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
                         <label className="text-sm font-semibold text-slate-700">Premium æske</label>
                         <div className="flex items-center gap-2 mt-1">
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                {selectedPremiumæske}
+                                {selectedPremiumæske === 'Hvid læderæske' ? 'Hvid kunstlæderæske' : selectedPremiumæske}
                             </span>
                         </div>
                     </div>
@@ -245,7 +248,7 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
                                 key={type}
                                 type="button"
                                 onClick={() => handlePremiumæskeChange(type)}
-                                className={`px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 m-1 ${selectedPremiumæske === type
+                                className={`px-6 py-3 rounded-xl text-sm font-medium transition-all duration-200 m-1 ${selectedPremiumæske === type || (type === 'Hvid kunstlæderæske' && selectedPremiumæske === 'Hvid læderæske')
                                     ? 'bg-blue-600 text-white shadow-md'
                                     : 'bg-white text-slate-700 border border-slate-200 hover:border-slate-300 hover:shadow-sm'
                                     }`}

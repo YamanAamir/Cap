@@ -98,7 +98,10 @@ export const syncTilbehorToIframes = (tilbehor) => {
     }
 
     if (tilbehor['Premium æske']) {
-        sendMessageToIframes(`Accessories Premiumæske:${tilbehor['Premium æske'].toLowerCase()}`);
+        const postMsgVal = (tilbehor['Premium æske'] === 'Hvid kunstlæderæske' || tilbehor['Premium æske'] === 'Hvid læderæske')
+            ? 'hvid læderæske'
+            : tilbehor['Premium æske'].toLowerCase();
+        sendMessageToIframes(`Accessories Premiumæske:${postMsgVal}`);
     }
 
     yesNoKeys.forEach(([key, iframeKey]) => {

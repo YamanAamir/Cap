@@ -11,7 +11,8 @@ const LABEL_MAP = {
   "#DC2626": "Standard Red",
   "PSort": "Premium Black",
   "SosuSort": "SOSU Black",
-  "EuxRed": "EUX Red"
+  "EuxRed": "EUX Red",
+  "Hvid læderæske": "Hvid kunstlæderæske"
 };
 
 const PROGRAM_KEYWORDS = {

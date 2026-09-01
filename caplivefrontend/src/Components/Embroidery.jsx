@@ -101,38 +101,76 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
 
 
 
+    const [isApplyingName, setIsApplyingName] = useState(false);
+    const [isApplyingSchool, setIsApplyingSchool] = useState(false);
+
     // --- Handlers ---
     const handleApplyNameText = async () => {
-        const clean = sanitizeEmbroideryLetters(inputNameText, 26);
-        setNameEmbroideryText(clean);
-        onOptionChange('Navne broderi', clean);
-        const result = await generateAllEmbroideryMaps(clean);
-        sendEmbroideryMapsToIframes('backTop', result);
+        if (isApplyingName) return;
+        setIsApplyingName(true);
+        await new Promise(r => setTimeout(r, 10));
+        try {
+            const clean = sanitizeEmbroideryLetters(inputNameText, 26);
+            setNameEmbroideryText(clean);
+            onOptionChange('Navne broderi', clean);
+            const result = await generateAllEmbroideryMaps(clean);
+            sendEmbroideryMapsToIframes('backTop', result);
+        } catch (err) {
+            console.error('Error applying name embroidery:', err);
+        } finally {
+            setIsApplyingName(false);
+        }
     };
 
     const handleClearNameText = async () => {
-        setInputNameText('');
-        setNameEmbroideryText('');
-        onOptionChange('Navne broderi', '');
-        const result = await generateAllEmbroideryMaps('');
-        sendEmbroideryMapsToIframes('backTop', result);
+        if (isApplyingName) return;
+        setIsApplyingName(true);
+        await new Promise(r => setTimeout(r, 10));
+        try {
+            setInputNameText('');
+            setNameEmbroideryText('');
+            onOptionChange('Navne broderi', '');
+            const result = await generateAllEmbroideryMaps('');
+            sendEmbroideryMapsToIframes('backTop', result);
+        } catch (err) {
+            console.error('Error clearing name embroidery:', err);
+        } finally {
+            setIsApplyingName(false);
+        }
     };
 
     const handleApplySchoolText = async () => {
-        if (ingenButton) return;
-        const clean = sanitizeEmbroideryLetters(inputSchoolText, 35);
-        setSchoolEmbroideryText(clean);
-        onOptionChange('Skolebroderi', clean);
-        const result = await generateAllEmbroideryMaps(clean);
-        sendEmbroideryMapsToIframes('backBottom', result);
+        if (ingenButton || isApplyingSchool) return;
+        setIsApplyingSchool(true);
+        await new Promise(r => setTimeout(r, 10));
+        try {
+            const clean = sanitizeEmbroideryLetters(inputSchoolText, 35);
+            setSchoolEmbroideryText(clean);
+            onOptionChange('Skolebroderi', clean);
+            const result = await generateAllEmbroideryMaps(clean);
+            sendEmbroideryMapsToIframes('backBottom', result);
+        } catch (err) {
+            console.error('Error applying school embroidery:', err);
+        } finally {
+            setIsApplyingSchool(false);
+        }
     };
 
     const handleClearSchoolText = async () => {
-        setInputSchoolText('');
-        setSchoolEmbroideryText('');
-        onOptionChange('Skolebroderi', '');
-        const result = await generateAllEmbroideryMaps('');
-        sendEmbroideryMapsToIframes('backBottom', result);
+        if (ingenButton || isApplyingSchool) return;
+        setIsApplyingSchool(true);
+        await new Promise(r => setTimeout(r, 10));
+        try {
+            setInputSchoolText('');
+            setSchoolEmbroideryText('');
+            onOptionChange('Skolebroderi', '');
+            const result = await generateAllEmbroideryMaps('');
+            sendEmbroideryMapsToIframes('backBottom', result);
+        } catch (err) {
+            console.error('Error clearing school embroidery:', err);
+        } finally {
+            setIsApplyingSchool(false);
+        }
     };
 
     const handleKeyPressName = (e) => {
@@ -449,14 +487,16 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
                         <button
                             type="button"
                             onClick={handleApplyNameText}
-                            className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-all duration-200"
+                            disabled={isApplyingName}
+                            className={`text-sm font-semibold transition-all duration-200 ${isApplyingName ? 'text-blue-400 cursor-wait' : 'text-blue-600 hover:text-blue-800 hover:underline'}`}
                         >
-                            Anvend tekst
+                            {isApplyingName ? 'Anvender...' : 'Anvend tekst'}
                         </button>
                         <button
                             type="button"
                             onClick={handleClearNameText}
-                            className="text-sm font-semibold text-red-500 hover:text-red-700 hover:underline transition-all duration-200"
+                            disabled={isApplyingName}
+                            className={`text-sm font-semibold transition-all duration-200 ${isApplyingName ? 'text-gray-400 cursor-not-allowed' : 'text-red-500 hover:text-red-700 hover:underline'}`}
                         >
                             Ryd tekst
                         </button>
@@ -521,16 +561,16 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
                         <button
                             type="button"
                             onClick={handleApplySchoolText}
-                            disabled={ingenButton}
-                            className={`text-sm font-semibold transition-all duration-200 ${ingenButton ? 'text-gray-400 cursor-not-allowed' : 'text-blue-600 hover:text-blue-800 hover:underline'}`}
+                            disabled={ingenButton || isApplyingSchool}
+                            className={`text-sm font-semibold transition-all duration-200 ${ingenButton || isApplyingSchool ? 'text-gray-400 cursor-not-allowed' : 'text-blue-600 hover:text-blue-800 hover:underline'}`}
                         >
-                            Anvend tekst
+                            {isApplyingSchool ? 'Anvender...' : 'Anvend tekst'}
                         </button>
                         <button
                             type="button"
                             onClick={handleClearSchoolText}
-                            disabled={ingenButton}
-                            className={`text-sm font-semibold transition-all duration-200 ${ingenButton ? 'text-gray-400 cursor-not-allowed' : 'text-red-500 hover:text-red-700 hover:underline'}`}
+                            disabled={ingenButton || isApplyingSchool}
+                            className={`text-sm font-semibold transition-all duration-200 ${ingenButton || isApplyingSchool ? 'text-gray-400 cursor-not-allowed' : 'text-red-500 hover:text-red-700 hover:underline'}`}
                         >
                             Ryd tekst
                         </button>

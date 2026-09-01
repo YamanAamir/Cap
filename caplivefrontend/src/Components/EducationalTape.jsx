@@ -112,22 +112,41 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
         };
         return map[selectedEmbroideryColor] || '#000000';
     };
-    const embroideryTimeoutRef = useRef(null);
+    const [isApplyingText, setIsApplyingText] = useState(false);
 
     const handleApplyEmbroideryText = async () => {
-        const upperText = sanitizeEmbroideryLetters(inputEmbroideryText, 20);
-        setEmbroideryText(upperText);
-        onOptionChange('Broderi foran', upperText);
-        const result = await generateAllEmbroideryMaps(upperText);
-        sendEmbroideryMapsToIframes('front', result);
+        if (isApplyingText) return;
+        setIsApplyingText(true);
+        // Yield to allow mobile browser to render button feedback
+        await new Promise(r => setTimeout(r, 10));
+        try {
+            const upperText = sanitizeEmbroideryLetters(inputEmbroideryText, 20);
+            setEmbroideryText(upperText);
+            onOptionChange('Broderi foran', upperText);
+            const result = await generateAllEmbroideryMaps(upperText);
+            sendEmbroideryMapsToIframes('front', result);
+        } catch (err) {
+            console.error('Error applying front embroidery:', err);
+        } finally {
+            setIsApplyingText(false);
+        }
     };
 
     const handleClearEmbroideryText = async () => {
-        setInputEmbroideryText('');
-        setEmbroideryText('');
-        onOptionChange('Broderi foran', '');
-        const result = await generateAllEmbroideryMaps('');
-        sendEmbroideryMapsToIframes('front', result);
+        if (isApplyingText) return;
+        setIsApplyingText(true);
+        await new Promise(r => setTimeout(r, 10));
+        try {
+            setInputEmbroideryText('');
+            setEmbroideryText('');
+            onOptionChange('Broderi foran', '');
+            const result = await generateAllEmbroideryMaps('');
+            sendEmbroideryMapsToIframes('front', result);
+        } catch (err) {
+            console.error('Error clearing front embroidery:', err);
+        } finally {
+            setIsApplyingText(false);
+        }
     };
 
     const handleKeyPress = (e) => {
@@ -729,14 +748,16 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
                         <button
                             type="button"
                             onClick={handleApplyEmbroideryText}
-                            className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-all duration-200"
+                            disabled={isApplyingText}
+                            className={`text-sm font-semibold transition-all duration-200 ${isApplyingText ? 'text-blue-400 cursor-wait' : 'text-blue-600 hover:text-blue-800 hover:underline'}`}
                         >
-                            Anvend tekst
+                            {isApplyingText ? 'Anvender...' : 'Anvend tekst'}
                         </button>
                         <button
                             type="button"
                             onClick={handleClearEmbroideryText}
-                            className="text-sm font-semibold text-red-500 hover:text-red-700 hover:underline transition-all duration-200"
+                            disabled={isApplyingText}
+                            className={`text-sm font-semibold transition-all duration-200 ${isApplyingText ? 'text-gray-400 cursor-not-allowed' : 'text-red-500 hover:text-red-700 hover:underline'}`}
                         >
                             Ryd tekst
                         </button>
