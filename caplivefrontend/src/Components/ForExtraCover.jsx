@@ -919,17 +919,45 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
 
     useEffect(() => { forOptionChange('Type', selectedType); }, [selectedType]);
     useEffect(() => {
-        const message = (selectedType && selectedType.startsWith('UDEN_STEN')) ? selectedType : (selectedType + " " + selectedEmblem.value);
-        ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-            const iframe = document.getElementById(id);
-            if (iframe?.contentWindow) {
-                iframe.contentWindow.postMessage(message, "*");
-                if (cameraTriggers.current["type"]) {
-                    iframe.contentWindow.postMessage("type camera", "*");
+        const isMobile = typeof window !== 'undefined' && (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768);
+
+        const sendEmblemType = () => {
+            let message;
+            if (selectedType && selectedType.startsWith('UDEN_STEN')) {
+                message = selectedType;
+            } else if (selectedType) {
+                const isGold = selectedEmblem.name === 'Guld' || selectedEmblem.value === 'Guld';
+                let typeName = selectedType;
+                if (isGold && typeName.includes('Sølv')) {
+                    typeName = typeName.replace(/\bSølv\b/g, 'Guld');
+                } else if (!isGold && typeName.includes('Guld')) {
+                    typeName = typeName.replace(/\bGuld\b/g, 'Sølv');
                 }
+                message = `${typeName} ${selectedEmblem.value}`;
             }
-        });
-        cameraTriggers.current["type"] = true;
+
+            if (!message) return;
+
+            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
+                const iframe = document.getElementById(id);
+                if (iframe?.contentWindow) {
+                    iframe.contentWindow.postMessage(message, "*");
+                    if (cameraTriggers.current["type"]) {
+                        iframe.contentWindow.postMessage("type camera", "*");
+                    }
+                }
+            });
+            cameraTriggers.current["type"] = true;
+        };
+
+        if (isMobile) {
+            const timer = setTimeout(() => {
+                sendEmblemType();
+            }, 1000);
+            return () => clearTimeout(timer);
+        } else {
+            sendEmblemType();
+        }
     }, [selectedType, selectedEmblem]);
 
     useEffect(() => {

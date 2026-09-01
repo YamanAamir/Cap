@@ -951,29 +951,42 @@ const getSilverEmblem = () => {
             });
         };
 
-        // Country-flag mode: same string shape as Signature ("Teater Guld Guld") → "Kurdistan Guld"
-        if (selectedPrestige === 'Flag') {
-            if (!selectedFlag?.name) return;
-            sendMessageToIframes(`${selectedFlag.name} ${selectedEmblem.value}`);
-        } else {
-            if (selectedType && selectedType.startsWith('UDEN_STEN')) {
-                sendMessageToIframes(selectedType);
-            } else if (selectedType) {
-                const isGold = selectedEmblem.name === 'Guld' || selectedEmblem.value === 'Guld';
-                let typeName = selectedType;
-                if (isGold && typeName.includes('Sølv')) {
-                    typeName = typeName.replace(/\bSølv\b/g, 'Guld');
-                } else if (!isGold && typeName.includes('Guld')) {
-                    typeName = typeName.replace(/\bGuld\b/g, 'Sølv');
-                }
-                sendMessageToIframes(`${typeName} ${selectedEmblem.value}`);
-            }
-        }
+        const isMobile = typeof window !== 'undefined' && (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768);
 
-        if (cameraTriggers.current["type"]) {
-            sendMessageToIframes("type camera");
+        const sendEmblemType = () => {
+            // Country-flag mode: same string shape as Signature ("Teater Guld Guld") → "Kurdistan Guld"
+            if (selectedPrestige === 'Flag') {
+                if (!selectedFlag?.name) return;
+                sendMessageToIframes(`${selectedFlag.name} ${selectedEmblem.value}`);
+            } else {
+                if (selectedType && selectedType.startsWith('UDEN_STEN')) {
+                    sendMessageToIframes(selectedType);
+                } else if (selectedType) {
+                    const isGold = selectedEmblem.name === 'Guld' || selectedEmblem.value === 'Guld';
+                    let typeName = selectedType;
+                    if (isGold && typeName.includes('Sølv')) {
+                        typeName = typeName.replace(/\bSølv\b/g, 'Guld');
+                    } else if (!isGold && typeName.includes('Guld')) {
+                        typeName = typeName.replace(/\bGuld\b/g, 'Sølv');
+                    }
+                    sendMessageToIframes(`${typeName} ${selectedEmblem.value}`);
+                }
+            }
+
+            if (cameraTriggers.current["type"]) {
+                sendMessageToIframes("type camera");
+            } else {
+                cameraTriggers.current["type"] = true;
+            }
+        };
+
+        if (isMobile) {
+            const timer = setTimeout(() => {
+                sendEmblemType();
+            }, 1000);
+            return () => clearTimeout(timer);
         } else {
-            cameraTriggers.current["type"] = true;
+            sendEmblemType();
         }
     }, [selectedType, selectedEmblem, selectedPrestige, selectedFlag]);
 
