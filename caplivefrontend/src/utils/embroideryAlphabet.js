@@ -1,5 +1,13 @@
+export function isArabicText(text) {
+    if (!text || typeof text !== 'string') return false;
+    return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(text);
+}
+
 export function sanitizeEmbroideryLetters(text, max = 20) {
     if (!text) return '';
+    if (isArabicText(text)) {
+        return text.slice(0, max);
+    }
     
     let temp = text
         .replace(/Æ/g, '__AE_CAP__')
@@ -57,8 +65,8 @@ const LETTER_CONFIG = {
     Y: { folder: 'Capital', renderW: 45, renderH: 80, baselineFrac: 0.80, overlap: 4, zIndex: 10 },
     Z: { folder: 'Capital', renderW: 44, renderH: 62, baselineFrac: 1.0, overlap: 4 },
     Æ: { folder: 'Capital', renderW: 65, renderH: 65, baselineFrac: 1.0, overlap: 4 },
-    Ø: { folder: 'Capital', renderW: 45, renderH: 65, baselineFrac: 1.0, overlap: 2 },
-    Å: { folder: 'Capital', renderW: 58, renderH: 75, baselineFrac: 0.85, overlap: 4 },
+    Ø: { folder: 'Capital', renderW: 45, renderH: 65, baselineFrac: 0.9, overlap: 4 },
+    Å: { folder: 'Capital', renderW: 58, renderH: 75, baselineFrac: 0.95, overlap: 4 },
 
     // ── SMALL x-height (renderH: 45) ─────────────────────────
     a: { folder: 'Small', renderW: 34, renderH: 45, baselineFrac: 1.0, shiftX: -3, overlap: 3, zIndex: 10 },
@@ -111,7 +119,6 @@ function loadSingleImage(url) {
         img.crossOrigin = 'anonymous';
         img.onload = () => resolve(img);
         img.onerror = () => {
-            console.warn(`Failed image load: ${url}`);
             resolve(null);
         };
         img.src = url;
@@ -369,6 +376,19 @@ export function sendEmbroideryMapsToIframes(prefix, payload) {
             if (payload.height) iframe.contentWindow.postMessage(`${prefix}EmbroideryHeight:${payload.height}`, '*');
             if (payload.ambient) iframe.contentWindow.postMessage(`${prefix}EmbroideryAmbient:${payload.ambient}`, '*');
             if (payload.opacity) iframe.contentWindow.postMessage(`${prefix}EmbroideryOpacity:${payload.opacity}`, '*');
+        } catch (e) {
+            console.warn('postMessage error:', e);
+        }
+    });
+}
+
+export function sendArabicTextToIframes(text) {
+    const ids = ['preview-iframe', 'preview-iframe2'];
+    ids.forEach(id => {
+        const iframe = document.getElementById(id);
+        if (!iframe?.contentWindow) return;
+        try {
+            iframe.contentWindow.postMessage(`arabictext:${text}`, '*');
         } catch (e) {
             console.warn('postMessage error:', e);
         }

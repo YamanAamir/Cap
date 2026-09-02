@@ -4,6 +4,8 @@ import {
     preloadAlphabetMaps,
     sanitizeEmbroideryLetters,
     sendEmbroideryMapsToIframes,
+    isArabicText,
+    sendArabicTextToIframes,
 } from '../utils/embroideryAlphabet';
 import coverColorOptionsimg2 from '../assets/cover images/none.webp';
 import matteleather from '../assets/button images/matteleather.webp';
@@ -123,8 +125,13 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
             const upperText = sanitizeEmbroideryLetters(inputEmbroideryText, 20);
             setEmbroideryText(upperText);
             onOptionChange('Broderi foran', upperText);
-            const result = await generateAllEmbroideryMaps(upperText);
-            sendEmbroideryMapsToIframes('front', result);
+            if (isArabicText(upperText)) {
+                sendArabicTextToIframes(upperText);
+            } else {
+                sendArabicTextToIframes('clear');
+                const result = await generateAllEmbroideryMaps(upperText);
+                sendEmbroideryMapsToIframes('front', result);
+            }
         } catch (err) {
             console.error('Error applying front embroidery:', err);
         } finally {
@@ -137,11 +144,17 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
         setIsApplyingText(true);
         await new Promise(r => setTimeout(r, 10));
         try {
+            const wasArabic = isArabicText(embroideryText) || isArabicText(inputEmbroideryText);
             setInputEmbroideryText('');
             setEmbroideryText('');
             onOptionChange('Broderi foran', '');
-            const result = await generateAllEmbroideryMaps('');
-            sendEmbroideryMapsToIframes('front', result);
+            if (wasArabic) {
+                sendArabicTextToIframes('clear');
+            } else {
+                const result = await generateAllEmbroideryMaps('');
+                sendEmbroideryMapsToIframes('front', result);
+                sendArabicTextToIframes('clear');
+            }
         } catch (err) {
             console.error('Error clearing front embroidery:', err);
         } finally {
