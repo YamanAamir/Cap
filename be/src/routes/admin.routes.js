@@ -29,6 +29,9 @@ router.delete('/order-statuses/:id', admin, adminController.deleteOrderStatus);
 
 router.get('/discount-codes', admin, adminController.getDiscountCodes);
 router.post('/discount-codes', admin, adminController.createDiscountCode);
+router.put('/discount-codes/:id', admin, adminController.updateDiscountCode);
+router.patch('/discount-codes/:id', admin, adminController.updateDiscountCode);
+router.delete('/discount-codes/:id', admin, adminController.deleteDiscountCode);
 
 router.get('/production/batches', admin, adminController.getProductionBatches);
 router.get('/production/batches/:id', admin, adminController.getProductionBatch);
@@ -45,6 +48,8 @@ router.delete('/sms/campaigns/:id', admin, adminController.deleteSmsCampaign);
 router.get('/sms/campaigns/:id/export', admin, adminController.exportCampaignNonPurchasers);
 router.get('/sms/messages', admin, adminController.getSmsMessages);
 router.post('/sms/messages/:id/force-send', admin, adminController.forceSendSmsMessage);
+router.delete('/sms/messages/:id', admin, adminController.deleteSmsMessage);
+router.post('/sms/messages/delete-recipient', admin, adminController.deleteRecipientMessages);
 
 router.get('/excel/columns', admin, adminController.getExcelColumns);
 router.post('/excel/columns', admin, adminController.createExcelColumn);

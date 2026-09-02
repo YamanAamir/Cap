@@ -181,6 +181,62 @@ exports.createDiscountCode = async (req, res) => {
   }
 };
 
+exports.updateDiscountCode = async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    const { code, type, value, expiresAt, phoneNumber, isActive } = req.body;
+    const data = {};
+    if (code !== undefined) data.code = code.toUpperCase();
+    if (type !== undefined) data.type = type;
+    if (value !== undefined) data.value = parseFloat(value);
+    if (expiresAt !== undefined) data.expiresAt = new Date(expiresAt);
+    if (phoneNumber !== undefined) data.phoneNumber = phoneNumber || null;
+    if (isActive !== undefined) data.isActive = !!isActive;
+
+    const updated = await prisma.discountCode.update({
+      where: { id },
+      data,
+    });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.deleteDiscountCode = async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    const discount = await prisma.discountCode.findUnique({
+      where: { id },
+      include: { orders: true }
+    });
+
+    if (!discount) {
+      return res.status(404).json({ message: 'Discount code not found' });
+    }
+
+    if (discount.orders && discount.orders.length > 0) {
+      return res.status(400).json({ 
+        message: 'This coupon has already been used in completed/placed orders and cannot be deleted.' 
+      });
+    }
+
+    // Disconnect from any campaign enrollments before deleting
+    await prisma.smsCampaignEnrollment.updateMany({
+      where: { discountCodeId: id },
+      data: { discountCodeId: null }
+    });
+
+    await prisma.discountCode.delete({
+      where: { id }
+    });
+
+    res.json({ message: 'Discount code deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 exports.validateDiscountCode = async (req, res) => {
   try {
     const { code, phone, totalPrice } = req.body;
@@ -546,6 +602,19 @@ exports.getSmsMessages = async (req, res) => {
   try {
     const { campaignId, status, dateFrom, dateTo, search, orderStatus } = req.query;
 
+    // Auto-cleanup: Cancel any pending/scheduled messages for customers who already placed active orders
+    await prisma.smsMessage.updateMany({
+      where: {
+        status: { in: ['SCHEDULED', 'PENDING'] },
+        customer: {
+          orders: {
+            some: { status: { not: 'CANCELLED' } }
+          }
+        }
+      },
+      data: { status: 'CANCELLED' }
+    });
+
     const where = {};
     if (campaignId) {
       where.enrollment = { campaignId: parseInt(campaignId) };
@@ -561,20 +630,24 @@ exports.getSmsMessages = async (req, res) => {
     if (search) {
       where.OR = [
         { phone: { contains: search } },
-        { customer: { name: { contains: search } } }
+        { customer: { name: { contains: search } } },
+        { customer: { email: { contains: search } } }
       ];
     }
     
     if (orderStatus) {
-      if (orderStatus === 'CANCELLED') {
+      if (orderStatus === 'NOT_CANCELLED' || orderStatus === 'ACTIVE') {
         where.customer = {
           ...where.customer,
-          orders: { some: { status: 'CANCELLED' } }
+          orders: { some: { status: { not: 'CANCELLED' } } }
         };
-      } else if (orderStatus === 'NOT_CANCELLED') {
+      } else if (orderStatus === 'CANCELLED') {
         where.customer = {
           ...where.customer,
-          orders: { none: { status: 'CANCELLED' } }
+          orders: {
+            some: { status: 'CANCELLED' },
+            none: { status: { not: 'CANCELLED' } }
+          }
         };
       } else if (orderStatus === 'NO_ORDER') {
         where.customer = {
@@ -586,18 +659,94 @@ exports.getSmsMessages = async (req, res) => {
 
     const messages = await prisma.smsMessage.findMany({
       where,
-      orderBy: { scheduledFor: 'desc' },
-      take: 500, // Increased limit for better filtration visibility
+      orderBy: { id: 'desc' }, // Newest first
+      take: 500,
       include: { 
         customer: { 
-          select: { name: true, phone: true, school: true, orders: { select: { status: true } } } 
+          select: { 
+            id: true, 
+            name: true, 
+            phone: true, 
+            email: true, 
+            school: true, 
+            orders: { select: { id: true, status: true, orderNumber: true } } 
+          } 
         },
         enrollment: {
-          select: { campaignId: true, campaign: { select: { name: true } } }
+          select: { 
+            campaignId: true, 
+            campaign: { select: { id: true, name: true, slug: true } } 
+          }
         }
       },
     });
     res.json(messages);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.deleteSmsMessage = async (req, res) => {
+  const id = parseInt(req.params.id);
+  try {
+    const msg = await prisma.smsMessage.findUnique({
+      where: { id }
+    });
+
+    if (!msg) {
+      return res.status(404).json({ message: 'Message not found' });
+    }
+
+    // Delete ONLY the targeted SMS message (Customer & DiscountCode are NEVER deleted)
+    await prisma.smsMessage.delete({ where: { id } });
+
+    res.json({ message: 'Message deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.deleteRecipientMessages = async (req, res) => {
+  try {
+    const { messageIds, phone, customerId } = req.body;
+
+    let targetIds = [];
+    if (Array.isArray(messageIds) && messageIds.length > 0) {
+      targetIds = messageIds.map(id => parseInt(id)).filter(id => !isNaN(id));
+    } else if (phone) {
+      const clean = phone.replace(/\D/g, '');
+      const localPhone = clean.length >= 8 ? clean.slice(-8) : clean;
+      const msgs = await prisma.smsMessage.findMany({
+        where: {
+          OR: [
+            { phone: phone },
+            { phone: clean },
+            { phone: localPhone },
+            { phone: `45${localPhone}` },
+            { phone: `+45${localPhone}` }
+          ]
+        },
+        select: { id: true }
+      });
+      targetIds = msgs.map(m => m.id);
+    } else if (customerId) {
+      const msgs = await prisma.smsMessage.findMany({
+        where: { customerId: parseInt(customerId) },
+        select: { id: true }
+      });
+      targetIds = msgs.map(m => m.id);
+    }
+
+    if (targetIds.length === 0) {
+      return res.status(404).json({ message: 'No messages found to delete' });
+    }
+
+    // Delete ONLY the target SMS messages (Customer, Orders, & DiscountCodes are NEVER touched)
+    await prisma.smsMessage.deleteMany({
+      where: { id: { in: targetIds } }
+    });
+
+    res.json({ message: `${targetIds.length} message(s) deleted successfully` });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

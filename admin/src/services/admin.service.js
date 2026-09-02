@@ -19,6 +19,8 @@ export const deleteOrderStatusDef = (id) => api.delete(`/admin/order-statuses/${
 // Discount Codes
 export const getDiscountCodes = () => api.get('/admin/discount-codes').then(r => r.data);
 export const createDiscountCode = (data) => api.post('/admin/discount-codes', data).then(r => r.data);
+export const updateDiscountCode = (id, data) => api.put(`/admin/discount-codes/${id}`, data).then(r => r.data);
+export const deleteDiscountCode = (id) => api.delete(`/admin/discount-codes/${id}`).then(r => r.data);
 
 // Production
 export const getProductionBatches = () => api.get('/admin/production/batches').then(r => r.data);
@@ -35,6 +37,8 @@ export const deleteSmsCampaign = (id, force = false) => api.delete(`/admin/sms/c
 export const getSmsMessages = (params = {}) => api.get('/admin/sms/messages', { params }).then(r => r.data);
 export const exportCampaignNonPurchasers = (id) => api.get(`/admin/sms/campaigns/${id}/export`, { responseType: 'blob' }).then(r => r.data);
 export const forceSendSmsMessage = (id) => api.post(`/admin/sms/messages/${id}/force-send`).then(r => r.data);
+export const deleteSmsMessage = (id) => api.delete(`/admin/sms/messages/${id}`).then(r => r.data);
+export const deleteRecipientMessages = (data) => api.post('/admin/sms/messages/delete-recipient', data).then(r => r.data);
 
 // Excel
 export const getExcelColumns = () => api.get('/admin/excel/columns').then(res => res.data);
