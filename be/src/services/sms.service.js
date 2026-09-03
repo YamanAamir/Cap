@@ -89,6 +89,26 @@ const sendSms = async (phone, message) => {
 
 const processPendingSms = async () => {
   const now = new Date();
+
+  // Auto-restore future messages for opted-in customers who have NO active orders
+  // (Fixes premature cancellations caused by abandoned checkout attempts)
+  try {
+    await prisma.smsMessage.updateMany({
+      where: {
+        status: 'CANCELLED',
+        scheduledFor: { gte: now },
+        customer: {
+          smsOptOut: false,
+          smsMarketingConsent: true,
+          orders: { none: { status: { not: 'CANCELLED' } } }
+        }
+      },
+      data: { status: 'SCHEDULED' }
+    });
+  } catch (err) {
+    console.error('[SMS] Error auto-restoring prematurely cancelled messages:', err.message);
+  }
+
   console.log(`\n[SMS] processPendingSms triggered at ${now.toISOString()}`);
   const pending = await prisma.smsMessage.findMany({
     where: {

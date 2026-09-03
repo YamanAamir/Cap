@@ -615,6 +615,22 @@ exports.getSmsMessages = async (req, res) => {
       data: { status: 'CANCELLED' }
     });
 
+    // Auto-restore: Re-activate future scheduled messages for opted-in customers who have NO active orders
+    await prisma.smsMessage.updateMany({
+      where: {
+        status: 'CANCELLED',
+        scheduledFor: { gte: new Date() },
+        customer: {
+          smsOptOut: false,
+          smsMarketingConsent: true,
+          orders: {
+            none: { status: { not: 'CANCELLED' } }
+          }
+        }
+      },
+      data: { status: 'SCHEDULED' }
+    });
+
     const where = {};
     if (campaignId) {
       where.enrollment = { campaignId: parseInt(campaignId) };

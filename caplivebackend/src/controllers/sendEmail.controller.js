@@ -3564,13 +3564,8 @@ const stripePayment = async (req, res) => {
 
   try {
     const { upsertCustomerFromOrder, applyDiscountCode, getStatusBySlug } = require('../services/core.service');
-    const { cancelPendingCampaignMessages } = require('../services/sms.service');
 
     const customer = await upsertCustomerFromOrder(customerDetails, email);
-    
-    if (customer && customer.id) {
-      await cancelPendingCampaignMessages(customer.id);
-    }
     
     let finalPrice = parseFloat(totalPrice);
     let discountRecord = null;
@@ -3886,6 +3881,14 @@ const stripeWebhook = async (req, res) => {
           });
         }
 
+        // Cancel pending marketing SMS campaigns now that order is confirmed
+        if (orderData.customerId) {
+          const { cancelPendingCampaignMessages } = require('../services/sms.service');
+          await cancelPendingCampaignMessages(orderData.customerId).catch(err => {
+            console.error("Failed to cancel pending campaign messages after order creation:", err);
+          });
+        }
+
         await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${tempOrderId}`;
 
         console.log(`⚡ Stripe Webhook: Dispatching order confirmation emails for Order Number: ${order.orderNumber} to Customer: ${order.customerEmail}...`);
@@ -4027,6 +4030,14 @@ const createInstallmentOrder = async (req, res) => {
         installmentDetails: installmentDetails ? JSON.stringify(installmentDetails) : null,
       },
     });
+
+    // Cancel pending marketing SMS campaigns now that installment order is confirmed
+    if (customer && customer.id) {
+      const { cancelPendingCampaignMessages } = require('../services/sms.service');
+      await cancelPendingCampaignMessages(customer.id).catch(err => {
+        console.error("Failed to cancel pending campaign messages after installment order:", err);
+      });
+    }
 
     // Send confirmation email
     try {
