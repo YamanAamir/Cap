@@ -1,5 +1,4 @@
-const { PrismaClient } = require("@prisma/client");
-const prisma = new PrismaClient();
+const prisma = require("../utils/prisma");
 const nodemailer = require("nodemailer");
 const Stripe = require("stripe");
 
@@ -3823,7 +3822,14 @@ const stripeWebhook = async (req, res) => {
           if (plan) {
             const downPayment = plan.downPaymentAmount || 399;
             const remainingAmount = Math.max(0, orderData.finalPrice - downPayment);
-            const installmentRows = plan.installments || [];
+            let installmentRows = plan.installments;
+            if (typeof installmentRows === 'string') {
+              try { installmentRows = JSON.parse(installmentRows); } catch { installmentRows = []; }
+            }
+            if (!Array.isArray(installmentRows)) {
+              installmentRows = [];
+            }
+
             const installmentCount = installmentRows.length;
             const installmentAmount = installmentCount > 0 ? (remainingAmount / installmentCount).toFixed(2) : 0;
             
@@ -3839,7 +3845,7 @@ const stripeWebhook = async (req, res) => {
             for (let i = 0; i < installmentCount; i++) {
               generatedInstallments.push({
                 amount: parseFloat(installmentAmount),
-                label: installmentRows[i].label || `${i + 2}. rate`,
+                label: installmentRows[i]?.label || `${i + 2}. rate`,
                 status: 'Pending',
                 paidAt: null
               });

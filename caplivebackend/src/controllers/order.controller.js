@@ -2,6 +2,75 @@ const prisma = require('../utils/prisma');
 const { Prisma } = require('@prisma/client');
 const { sendCustomerStatusEmail } = require('../services/core.service');
 
+// Auto-fix orders whose installmentDetails were corrupted into 100+ rates by character-count string bug
+const fixCorruptedInstallments = async (order) => {
+  if (!order || !order.installmentDetails) return order;
+
+  let details = order.installmentDetails;
+  if (typeof details === 'string') {
+    try { details = JSON.parse(details); } catch { return order; }
+  }
+
+  if (details && Array.isArray(details.installments) && details.installments.length > 20) {
+    let plan = order.installmentPlan;
+    if (!plan && order.installmentPlanId) {
+      plan = await prisma.installmentPlan.findUnique({ where: { id: order.installmentPlanId } });
+    }
+
+    let planRows = plan ? plan.installments : [];
+    if (typeof planRows === 'string') {
+      try { planRows = JSON.parse(planRows); } catch { planRows = []; }
+    }
+    if (!Array.isArray(planRows) || planRows.length === 0) {
+      planRows = [{ label: 'Rate 2' }, { label: 'Rate 3' }];
+    }
+
+    const downPayment = plan?.downPaymentAmount || details.downPayment || 399;
+    const remainingAmount = Math.max(0, (order.totalPrice || 0) - downPayment);
+    const installmentCount = planRows.length;
+    const installmentAmount = installmentCount > 0 ? (remainingAmount / installmentCount).toFixed(2) : 0;
+
+    const firstPaidAt = details.installments[0]?.paidAt || order.orderDate || new Date().toISOString();
+
+    const correctedInstallments = [
+      {
+        amount: downPayment,
+        label: "1. betaling (ved bestilling)",
+        status: 'Paid',
+        paidAt: firstPaidAt
+      }
+    ];
+
+    for (let i = 0; i < installmentCount; i++) {
+      const prevInst = details.installments[i + 1];
+      correctedInstallments.push({
+        amount: parseFloat(installmentAmount),
+        label: planRows[i]?.label || `${i + 2}. rate`,
+        status: (prevInst && prevInst.status === 'Paid') ? 'Paid' : 'Pending',
+        paidAt: (prevInst && prevInst.status === 'Paid') ? prevInst.paidAt : null
+      });
+    }
+
+    const fixedDetails = {
+      downPayment,
+      installments: correctedInstallments
+    };
+
+    try {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { installmentDetails: JSON.stringify(fixedDetails) }
+      });
+    } catch (e) {
+      console.error('Failed to update fixed installment details:', e);
+    }
+
+    order.installmentDetails = fixedDetails;
+  }
+
+  return order;
+};
+
 const getOrders = async (req, res) => {
   try {
     const {
@@ -44,7 +113,7 @@ const getOrders = async (req, res) => {
     const orderBy = {};
     orderBy[sortBy] = order;
 
-    const [orders, totalCount] = await prisma.$transaction([
+    const [rawOrders, totalCount] = await prisma.$transaction([
       prisma.order.findMany({
         where,
         skip,
@@ -60,6 +129,8 @@ const getOrders = async (req, res) => {
       }),
       prisma.order.count({ where }),
     ]);
+
+    const orders = await Promise.all(rawOrders.map(fixCorruptedInstallments));
 
     res.status(200).json({
       orders,
@@ -79,7 +150,7 @@ const getOrders = async (req, res) => {
 const getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
-    const order = await prisma.order.findUnique({
+    let order = await prisma.order.findUnique({
       where: { id: parseInt(id) },
       include: {
         orderStatus: true,
@@ -94,6 +165,8 @@ const getOrderById = async (req, res) => {
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
+
+    order = await fixCorruptedInstallments(order);
 
     res.status(200).json(order);
   } catch (error) {
