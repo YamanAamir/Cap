@@ -392,6 +392,14 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
                 { name: 'Node Guld', icon: NodeGold },
                 { name: 'Sport Guld', icon: SportGold },
                 { name: 'Teater Guld', icon: TeaterGold },
+                { name: 'STX New Guld Simli Guld', icon: StxGoldDiamant },
+                { name: 'STX New Guld Guld', icon: StxGold },
+                { name: 'HTX New Guld Simli Guld', icon: HtxGoldDiam },
+                { name: 'HTX New Guld Guld', icon: HtxGold },
+                { name: 'HHX New Guld Simli Guld', icon: HhxGoldDiamant },
+                { name: 'HHX New Guld Guld', icon: HhxGold },
+                { name: 'HF New Guld Simli Guld', icon: HfGoldDiamant },
+                { name: 'HF New Guld Guld', icon: HfGold },
             ],
             Sølv: [
                 { name: 'Danmark', icon: Denmark },
@@ -431,6 +439,14 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
                 { name: 'Node Sølv', icon: NodeSilver },
                 { name: 'Sport Sølv', icon: SportSilver },
                 { name: 'Teater Sølv', icon: TeaterSilver },
+                { name: 'STX New Sølv Simli Sølv', icon: StxSilverDiamant },
+                { name: 'STX New Sølv Sølv', icon: StxSilver },
+                { name: 'HTX New Sølv Simli Sølv', icon: HtxSilverDiamant },
+                { name: 'HTX New Sølv Sølv', icon: HtxSilver },
+                { name: 'HHX New Sølv Simli Sølv', icon: HhxSilverDiamant },
+                { name: 'HHX New Sølv Sølv', icon: HhxSilver },
+                { name: 'HF New Sølv Simli Sølv', icon: HfSilverDiamant },
+                { name: 'HF New Sølv Sølv', icon: HfSilver },
             ]
         },
         Prestige: {
@@ -920,8 +936,15 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
     useEffect(() => { forOptionChange('Type', selectedType); }, [selectedType]);
     useEffect(() => {
         let message;
-        if (selectedType && selectedType.startsWith('UDEN_STEN')) {
-            message = selectedType;
+        if (selectedType && (selectedType.startsWith('UDEN_STEN') || selectedType.includes(' New '))) {
+            const isGold = selectedEmblem.name === 'Guld' || selectedEmblem.value === 'Guld';
+            let typeName = selectedType;
+            if (isGold && typeName.includes('Sølv')) {
+                typeName = typeName.replace(/\bSølv\b/g, 'Guld');
+            } else if (!isGold && typeName.includes('Guld')) {
+                typeName = typeName.replace(/\bGuld\b/g, 'Sølv');
+            }
+            message = typeName;
         } else if (selectedType) {
             const isGold = selectedEmblem.name === 'Guld' || selectedEmblem.value === 'Guld';
             let typeName = selectedType;

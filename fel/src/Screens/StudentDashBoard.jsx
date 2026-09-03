@@ -287,6 +287,14 @@ const StudentDashboard = () => {
         "Sport Guld": 0,
         "Teater Guld": 0,
         "Twin Guld": 0,
+        "STX New Guld Simli Guld": 69,
+        "STX New Guld Guld": 0,
+        "HTX New Guld Simli Guld": 69,
+        "HTX New Guld Guld": 0,
+        "HHX New Guld Simli Guld": 69,
+        "HHX New Guld Guld": 0,
+        "HF New Guld Simli Guld": 69,
+        "HF New Guld Guld": 0,
 
         // Gold program-specific emblems
         "HHX Guld Simli": 69,
@@ -320,6 +328,14 @@ const StudentDashboard = () => {
         "Sport Sølv": 0,
         "Teater Sølv": 0,
         "Twin Sølv": 0,
+        "STX New Sølv Simli Sølv": 69,
+        "STX New Sølv Sølv": 0,
+        "HTX New Sølv Simli Sølv": 69,
+        "HTX New Sølv Sølv": 0,
+        "HHX New Sølv Simli Sølv": 69,
+        "HHX New Sølv Sølv": 0,
+        "HF New Sølv Simli Sølv": 69,
+        "HF New Sølv Sølv": 0,
 
         // Silver program-specific emblems
         "HHX Sølv Simli": 69,
@@ -735,6 +751,14 @@ const StudentDashboard = () => {
         "Sport Guld": 0,
         "Teater Guld": 0,
         "Twin Guld": 0,
+        "STX New Guld Simli Guld": 69,
+        "STX New Guld Guld": 0,
+        "HTX New Guld Simli Guld": 69,
+        "HTX New Guld Guld": 0,
+        "HHX New Guld Simli Guld": 69,
+        "HHX New Guld Guld": 0,
+        "HF New Guld Simli Guld": 69,
+        "HF New Guld Guld": 0,
 
         // Gold program-specific emblems
         "HHX Guld Simli": 69,
@@ -768,6 +792,14 @@ const StudentDashboard = () => {
         "Sport Sølv": 0,
         "Teater Sølv": 0,
         "Twin Sølv": 0,
+        "STX New Sølv Simli Sølv": 69,
+        "STX New Sølv Sølv": 0,
+        "HTX New Sølv Simli Sølv": 69,
+        "HTX New Sølv Sølv": 0,
+        "HHX New Sølv Simli Sølv": 69,
+        "HHX New Sølv Sølv": 0,
+        "HF New Sølv Simli Sølv": 69,
+        "HF New Sølv Sølv": 0,
 
         // Silver program-specific emblems
         "HHX Sølv Simli": 69,
@@ -1177,6 +1209,14 @@ const StudentDashboard = () => {
         "Sport Guld": 0,
         "Teater Guld": 0,
         "Twin Guld": 0,
+        "STX New Guld Simli Guld": 0,
+        "STX New Guld Guld": 0,
+        "HTX New Guld Simli Guld": 0,
+        "HTX New Guld Guld": 0,
+        "HHX New Guld Simli Guld": 0,
+        "HHX New Guld Guld": 0,
+        "HF New Guld Simli Guld": 0,
+        "HF New Guld Guld": 0,
 
         // Guld program-specific emblems
         "HHX Guld Simli": 0,
@@ -1208,6 +1248,14 @@ const StudentDashboard = () => {
         "Sport Sølv": 0,
         "Teater Sølv": 0,
         "Twin Sølv": 0,
+        "STX New Sølv Simli Sølv": 0,
+        "STX New Sølv Sølv": 0,
+        "HTX New Sølv Simli Sølv": 0,
+        "HTX New Sølv Sølv": 0,
+        "HHX New Sølv Simli Sølv": 0,
+        "HHX New Sølv Sølv": 0,
+        "HF New Sølv Simli Sølv": 0,
+        "HF New Sølv Sølv": 0,
 
         // Sølv program-specific emblems
         "HHX Sølv Simli": 0,

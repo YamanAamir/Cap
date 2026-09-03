@@ -629,6 +629,64 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
                 { name: 'Node Guld', icon: NodeGold },
                 { name: 'Sport Guld', icon: SportGold },
                 { name: 'Teater Guld', icon: TeaterGold },
+                { name: 'STX New Guld Simli Guld', icon: StxGoldDiamant },
+                { name: 'STX New Guld Guld', icon: StxGold },
+                { name: 'HTX New Guld Simli Guld', icon: HtxGoldDiam },
+                { name: 'HTX New Guld Guld', icon: HtxGold },
+                { name: 'HHX New Guld Simli Guld', icon: HhxGoldDiamant },
+                { name: 'HHX New Guld Guld', icon: HhxGold },
+                { name: 'HF New Guld Simli Guld', icon: HfGoldDiamant },
+                { name: 'HF New Guld Guld', icon: HfGold },
+            ].filter(Boolean),
+
+            Sølv: [
+                { name: 'Danmark', icon: Denmark },
+                { name: 'Sweden', icon: Sweden },
+                { name: 'Palæstina', icon: Palestine },
+                { name: 'Tyrkiet', icon: Turkey },
+                { name: 'Pakistan', icon: Pakistan },
+                { name: 'Kurdistan', icon: Kurdistan },
+                { name: 'Irak', icon: Iraq },
+                { name: 'Iran', icon: Iran },
+                { name: 'Somalia', icon: Somalia },
+                { name: 'Somaliland', icon: Somaliland },
+                { name: 'Libanon', icon: Lebanon },
+                { name: 'Afghanistan', icon: Afghanistan },
+                { name: 'Albanien', icon: Albania },
+                { name: 'Serbien', icon: Serbia },
+                { name: 'Bosnien', icon: Bosnia },
+                { name: 'Marokko', icon: Morocco },
+                ...(getSilverEmblem() || []),
+                { name: 'F Key Sølv', icon: FKeySilver },
+                { name: 'DNA Sølv', icon: DnaSilver },
+                { name: 'Pi Sølv', icon: PiSilver },
+                { name: 'IT Sølv', icon: ItSilver },
+                // { name: 'IB Sølv', icon: IbSilver },
+                // { name: 'IB Sølv Simli', icon: IbSølvSimli },
+                { name: 'Halvmåne Sølv', icon: HalvmoneSilver },
+                { name: 'Halvmåne Sølv Simli', icon: HalvmoneSilverSimli },
+                { name: 'Merkurstav Sølv', icon: MerkurstavSilver },
+                { name: 'Merkurstav Sølv Simli', icon: MerkurstavSilverDiamant },
+                { name: 'Hjerte Sølv', icon: HjerteSilv },
+                //   { name: 'Hjerte Sølv Simli', icon: HjerteSilverSimli },    
+                { name: 'Atom Sølv', icon: AtomSilver },
+                { name: 'Ahornblad Sølv', icon: AhornbladSilver },
+                { name: 'Anker Sølv', icon: AnkerSilver },
+                { name: 'Globus Sølv', icon: GlobusSilver },
+                { name: 'Lotus Sølv', icon: LotusSilver },
+                { name: 'Node Sølv', icon: NodeSilver },
+                { name: 'Sport Sølv', icon: SportSilver },
+                { name: 'Teater Sølv', icon: TeaterSilver },
+                { name: 'STX New Sølv Simli Sølv', icon: StxSilverDiamant },
+                { name: 'STX New Sølv Sølv', icon: StxSilver },
+                { name: 'HTX New Sølv Simli Sølv', icon: HtxSilverDiamant },
+                { name: 'HTX New Sølv Sølv', icon: HtxSilver },
+                { name: 'HHX New Sølv Simli Sølv', icon: HhxSilverDiamant },
+                { name: 'HHX New Sølv Sølv', icon: HhxSilver },
+                { name: 'HF New Sølv Simli Sølv', icon: HfSilverDiamant },
+                { name: 'HF New Sølv Sølv', icon: HfSilver },
+            ].filter(Boolean)
+        },
 
 
 
@@ -860,8 +918,7 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
 
 
     useEffect(() => {
-        let message = selectedType;
-
+        if (!selectedType) return;
         const sendMessageToIframes = (msg) => {
             ['preview-iframe', 'preview-iframe2'].forEach((id) => {
                 const iframe = document.getElementById(id);
@@ -871,7 +928,25 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
             });
         };
 
-        sendMessageToIframes(message + " " + selectedEmblem.value);
+        if (selectedType.startsWith('UDEN_STEN') || selectedType.includes(' New ')) {
+            const isGold = selectedEmblem?.name === 'Guld' || selectedEmblem?.value === 'Guld';
+            let typeName = selectedType;
+            if (isGold && typeName.includes('Sølv')) {
+                typeName = typeName.replace(/\bSølv\b/g, 'Guld');
+            } else if (!isGold && typeName.includes('Guld')) {
+                typeName = typeName.replace(/\bGuld\b/g, 'Sølv');
+            }
+            sendMessageToIframes(typeName);
+        } else {
+            const isGold = selectedEmblem?.name === 'Guld' || selectedEmblem?.value === 'Guld';
+            let typeName = selectedType;
+            if (isGold && typeName.includes('Sølv')) {
+                typeName = typeName.replace(/\bSølv\b/g, 'Guld');
+            } else if (!isGold && typeName.includes('Guld')) {
+                typeName = typeName.replace(/\bGuld\b/g, 'Sølv');
+            }
+            sendMessageToIframes(`${typeName} ${selectedEmblem.value}`);
+        }
         sendMessageToIframes("type camera");
     }, [selectedType, selectedEmblem]);
 
