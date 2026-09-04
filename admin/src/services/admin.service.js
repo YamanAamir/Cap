@@ -14,7 +14,7 @@ export const deleteCustomer = (id) => api.delete(`/admin/customers/${id}`).then(
 export const getOrderStatuses = () => api.get('/admin/order-statuses').then(r => r.data);
 export const createOrderStatus = (data) => api.post('/admin/order-statuses', data).then(r => r.data);
 export const updateOrderStatusDef = (id, data) => api.patch(`/admin/order-statuses/${id}`, data).then(r => r.data);
-export const deleteOrderStatusDef = (id) => api.delete(`/admin/order-statuses/${id}`).then(r => r.data);
+export const deleteOrderStatusDef = (id, permanent = false) => api.delete(`/admin/order-statuses/${id}?permanent=${permanent}`).then(r => r.data);
 
 // Discount Codes
 export const getDiscountCodes = () => api.get('/admin/discount-codes').then(r => r.data);

@@ -85,7 +85,12 @@ exports.getOrderStatuses = async (req, res) => {
   try {
     const statuses = await prisma.orderStatus.findMany({ 
       orderBy: { sortOrder: 'asc' },
-      include: { emailTemplate: true }
+      include: { 
+        emailTemplate: true,
+        _count: {
+          select: { orders: true }
+        }
+      }
     });
     res.json(statuses);
   } catch (err) {
@@ -97,11 +102,21 @@ exports.createOrderStatus = async (req, res) => {
   try {
     const { name, sortOrder, isInternal, isVisibleToProduction, triggersProduction, color, customerEmailTemplateId, isInstallmentTrigger, installmentTriggerIndex } = req.body;
     const slug = slugify(name);
+
+    let finalSortOrder = sortOrder;
+    if (finalSortOrder === undefined || finalSortOrder === null || finalSortOrder === 0) {
+      const maxStatus = await prisma.orderStatus.findFirst({
+        orderBy: { sortOrder: 'desc' },
+        select: { sortOrder: true }
+      });
+      finalSortOrder = (maxStatus?.sortOrder || 0) + 1;
+    }
+
     const status = await prisma.orderStatus.create({
       data: { 
         name, 
         slug, 
-        sortOrder: sortOrder ?? 0, 
+        sortOrder: finalSortOrder, 
         isInternal: !!isInternal, 
         isVisibleToProduction: isVisibleToProduction !== undefined ? !!isVisibleToProduction : true,
         triggersProduction: !!triggersProduction, 
@@ -110,7 +125,10 @@ exports.createOrderStatus = async (req, res) => {
         isInstallmentTrigger: !!isInstallmentTrigger,
         installmentTriggerIndex: isInstallmentTrigger && installmentTriggerIndex !== undefined && installmentTriggerIndex !== '' ? parseInt(installmentTriggerIndex) : null,
       },
-      include: { emailTemplate: true }
+      include: { 
+        emailTemplate: true,
+        _count: { select: { orders: true } }
+      }
     });
     res.status(201).json(status);
   } catch (err) {
@@ -135,7 +153,10 @@ exports.updateOrderStatus = async (req, res) => {
     const status = await prisma.orderStatus.update({ 
       where: { id: parseInt(req.params.id) }, 
       data,
-      include: { emailTemplate: true }
+      include: { 
+        emailTemplate: true,
+        _count: { select: { orders: true } }
+      }
     });
     res.json(status);
   } catch (err) {
@@ -145,7 +166,28 @@ exports.updateOrderStatus = async (req, res) => {
 
 exports.deleteOrderStatus = async (req, res) => {
   try {
-    await prisma.orderStatus.update({ where: { id: parseInt(req.params.id) }, data: { isActive: false } });
+    const statusId = parseInt(req.params.id);
+    const { permanent = 'false' } = req.query;
+
+    if (permanent === 'true') {
+      const orderCount = await prisma.order.count({
+        where: { statusId }
+      });
+      if (orderCount > 0) {
+        return res.status(400).json({
+          message: `Cannot permanently delete status because ${orderCount} order(s) are currently assigned to it. You can keep it deactivated instead.`
+        });
+      }
+      await prisma.orderStatus.delete({
+        where: { id: statusId }
+      });
+      return res.json({ message: 'Status permanently deleted' });
+    }
+
+    await prisma.orderStatus.update({ 
+      where: { id: statusId }, 
+      data: { isActive: false } 
+    });
     res.json({ message: 'Status deactivated' });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -820,7 +862,19 @@ exports.deleteExcelColumn = async (req, res) => {
 // Email Templates
 exports.getEmailTemplates = async (req, res) => {
   try {
-    const templates = await prisma.emailTemplate.findMany();
+    const templates = await prisma.emailTemplate.findMany({
+      include: {
+        statuses: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            isActive: true,
+          },
+        },
+      },
+      orderBy: { id: 'asc' },
+    });
     res.json(templates);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -859,14 +913,41 @@ exports.createEmailTemplate = async (req, res) => {
 
 exports.deleteEmailTemplate = async (req, res) => {
   try {
-    await prisma.orderStatus.updateMany({
-      where: { customerEmailTemplateId: parseInt(req.params.id) },
-      data: { customerEmailTemplateId: null }
+    const templateId = parseInt(req.params.id);
+    if (isNaN(templateId)) {
+      return res.status(400).json({ message: 'Invalid template ID' });
+    }
+
+    const template = await prisma.emailTemplate.findUnique({
+      where: { id: templateId },
+      include: {
+        statuses: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            isActive: true,
+          },
+        },
+      },
     });
+
+    if (!template) {
+      return res.status(404).json({ message: 'Email template not found' });
+    }
+
+    if (template.statuses && template.statuses.length > 0) {
+      const statusNames = template.statuses.map(s => `"${s.name}"`).join(', ');
+      return res.status(400).json({
+        message: `This email template is currently attached to Order Status(es): ${statusNames}. Please remove or change the template in Order Statuses first before deleting.`,
+        attachedStatuses: template.statuses,
+      });
+    }
+
     await prisma.emailTemplate.delete({
-      where: { id: parseInt(req.params.id) },
+      where: { id: templateId },
     });
-    res.json({ message: 'Template deleted' });
+    res.json({ message: 'Template deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

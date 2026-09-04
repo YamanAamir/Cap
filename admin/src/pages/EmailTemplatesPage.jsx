@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getEmailTemplates, updateEmailTemplate, createEmailTemplate, deleteEmailTemplate } from '../services/admin.service';
-import { Loader2, Save, Mail, Plus, Trash2, X, Info } from 'lucide-react';
+import { Loader2, Save, Mail, Plus, Trash2, X, Info, AlertTriangle, ExternalLink, Lock } from 'lucide-react';
 import ConfirmModal from '../components/common/ConfirmModal';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 const EmailTemplatesPage = () => {
+  const navigate = useNavigate();
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(null);
@@ -13,7 +15,8 @@ const EmailTemplatesPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', subject: '', body: '' });
   const [isDeleting, setIsDeleting] = useState(false);
-  const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, template: null });
+  const [inUseModal, setInUseModal] = useState({ isOpen: false, template: null });
 
   const load = () => {
     setLoading(true);
@@ -36,8 +39,12 @@ const EmailTemplatesPage = () => {
       await updateEmailTemplate(key, edited[key]);
       toast.success('Template saved!');
       load();
-    } catch (e) { toast.error('Save failed'); }
-    finally { setSaving(null); }
+    } catch (e) {
+      const errorMsg = e.response?.data?.message || 'Save failed';
+      toast.error(errorMsg);
+    } finally {
+      setSaving(null);
+    }
   };
 
   const handleCreate = async (e) => {
@@ -50,24 +57,34 @@ const EmailTemplatesPage = () => {
       toast.success('Template created!');
       load();
     } catch (e) {
-      toast.error('Creation failed');
+      const errorMsg = e.response?.data?.message || 'Creation failed';
+      toast.error(errorMsg);
     } finally {
       setSaving(null);
     }
   };
 
+  const handleDeleteClick = (tpl) => {
+    if (tpl.statuses && tpl.statuses.length > 0) {
+      setInUseModal({ isOpen: true, template: tpl });
+    } else {
+      setConfirmModal({ isOpen: true, template: tpl });
+    }
+  };
+
   const executeDelete = async () => {
-    if (!confirmModal.id) return;
+    if (!confirmModal.template) return;
     setIsDeleting(true);
     try {
-      await deleteEmailTemplate(confirmModal.id);
-      toast.success('Template deleted!');
+      await deleteEmailTemplate(confirmModal.template.id);
+      toast.success(`Template "${confirmModal.template.name || confirmModal.template.key}" deleted!`);
+      setConfirmModal({ isOpen: false, template: null });
       load();
     } catch (e) {
-      toast.error('Deletion failed');
+      const errorMsg = e.response?.data?.message || 'Deletion failed';
+      toast.error(errorMsg);
     } finally {
       setIsDeleting(false);
-      setConfirmModal({ isOpen: false, id: null });
     }
   };
 
@@ -172,83 +189,202 @@ const EmailTemplatesPage = () => {
       )}
 
       <div className="space-y-6">
-        {templates.map(tpl => (
-          <div key={tpl.key} className="bg-white border border-slate-200 rounded overflow-hidden">
-            <div className="px-5 py-3 bg-[#fafafa] border-b border-slate-200 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4 text-slate-400" />
-                <p className="font-bold text-slate-700 text-sm">
-                  {isSystemTemplate(tpl.key) ? labels[tpl.key] : tpl.name || tpl.key}
-                </p>
-                {isSystemTemplate(tpl.key) && (
-                  <span className="bg-slate-200 text-slate-600 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ml-2">System</span>
-                )}
+        {templates.map(tpl => {
+          const isSystem = isSystemTemplate(tpl.key);
+          const attachedStatuses = tpl.statuses || [];
+          const isInUse = attachedStatuses.length > 0;
+
+          return (
+            <div key={tpl.key} className="bg-white border border-slate-200 rounded overflow-hidden">
+              <div className="px-5 py-3.5 bg-[#fafafa] border-b border-slate-200 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Mail className="h-4 w-4 text-slate-400 shrink-0" />
+                  <p className="font-bold text-slate-700 text-sm">
+                    {isSystem ? labels[tpl.key] : tpl.name || tpl.key}
+                  </p>
+                  {isSystem && (
+                    <span className="bg-slate-200 text-slate-700 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded flex items-center gap-1">
+                      <Lock className="w-2.5 h-2.5" /> System Core
+                    </span>
+                  )}
+                  {isInUse ? (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {attachedStatuses.map(st => (
+                        <span 
+                          key={st.id} 
+                          className="text-[10px] font-bold px-2 py-0.5 rounded border flex items-center gap-1 shadow-xs"
+                          style={{ 
+                            backgroundColor: (st.color || '#6366f1') + '15', 
+                            color: st.color || '#6366f1',
+                            borderColor: (st.color || '#6366f1') + '40'
+                          }}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: st.color || '#6366f1' }} />
+                          Used in: {st.name}
+                        </span>
+                      ))}
+                    </div>
+                  ) : !isSystem ? (
+                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded">
+                      Unassigned
+                    </span>
+                  ) : null}
+                </div>
+                <button 
+                  onClick={() => handleDeleteClick(tpl)} 
+                  className="p-1.5 px-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex items-center gap-1.5 text-xs font-semibold"
+                  title={isInUse ? "Template is currently in use" : "Delete Template"}
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                  <span className="text-red-600">Delete</span>
+                </button>
               </div>
-              {!isSystemTemplate(tpl.key) && (
-                 <button onClick={() => setConfirmModal({ isOpen: true, id: tpl.id })} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
-                   <Trash2 className="h-4 w-4" />
-                 </button>
-              )}
-            </div>
-            
-            <div className="p-5 space-y-4">
-              {!isSystemTemplate(tpl.key) && (
+              
+              <div className="p-5 space-y-4">
+                {!isSystem && (
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Template Name</label>
+                    <input
+                      type="text"
+                      value={edited[tpl.key]?.name || ''}
+                      onChange={e => setEdited({ ...edited, [tpl.key]: { ...edited[tpl.key], name: e.target.value } })}
+                      className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 font-bold text-slate-800"
+                    />
+                  </div>
+                )}
                 <div>
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Template Name</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Subject</label>
                   <input
                     type="text"
-                    value={edited[tpl.key]?.name || ''}
-                    onChange={e => setEdited({ ...edited, [tpl.key]: { ...edited[tpl.key], name: e.target.value } })}
+                    value={edited[tpl.key]?.subject || ''}
+                    onChange={e => setEdited({ ...edited, [tpl.key]: { ...edited[tpl.key], subject: e.target.value } })}
                     className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 font-bold text-slate-800"
                   />
                 </div>
-              )}
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Subject</label>
-                <input
-                  type="text"
-                  value={edited[tpl.key]?.subject || ''}
-                  onChange={e => setEdited({ ...edited, [tpl.key]: { ...edited[tpl.key], subject: e.target.value } })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 font-bold text-slate-800"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Body</label>
-                <textarea
-                  value={edited[tpl.key]?.body || ''}
-                  onChange={e => setEdited({ ...edited, [tpl.key]: { ...edited[tpl.key], body: e.target.value } })}
-                  className="w-full rounded border border-slate-200 px-3 py-2 text-sm text-slate-600 focus:outline-none focus:border-blue-500 min-h-[160px] resize-y font-mono"
-                />
-              </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Body</label>
+                  <textarea
+                    value={edited[tpl.key]?.body || ''}
+                    onChange={e => setEdited({ ...edited, [tpl.key]: { ...edited[tpl.key], body: e.target.value } })}
+                    className="w-full rounded border border-slate-200 px-3 py-2 text-sm text-slate-600 focus:outline-none focus:border-blue-500 min-h-[160px] resize-y font-mono"
+                  />
+                </div>
 
-              <button 
-                onClick={() => handleSave(tpl.key)} 
-                disabled={saving === tpl.key} 
-                className={cn(
-                  "flex items-center gap-2 text-white text-xs font-bold px-5 py-2.5 rounded shadow-sm transition-colors",
-                  saving === tpl.key ? "bg-slate-400 cursor-not-allowed" : "bg-[#1e3a8a] hover:bg-blue-800"
-                )}
-              >
-                {saving === tpl.key ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                SAVE CHANGES
-              </button>
+                <button 
+                  onClick={() => handleSave(tpl.key)} 
+                  disabled={saving === tpl.key} 
+                  className={cn(
+                    "flex items-center gap-2 text-white text-xs font-bold px-5 py-2.5 rounded shadow-sm transition-colors",
+                    saving === tpl.key ? "bg-slate-400 cursor-not-allowed" : "bg-[#1e3a8a] hover:bg-blue-800"
+                  )}
+                >
+                  {saving === tpl.key ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  SAVE CHANGES
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
+      {/* Delete Confirmation Modal for Unassigned Templates */}
       <ConfirmModal
         isOpen={confirmModal.isOpen}
-        title="Delete Template"
-        message="Are you sure you want to delete this template? Any Order Statuses linked to it will no longer send an email."
-        confirmText="Delete"
+        title={isSystemTemplate(confirmModal.template?.key) ? "Delete System Core Template" : "Delete Email Template"}
+        message={
+          isSystemTemplate(confirmModal.template?.key)
+            ? `Are you sure you want to delete the system core template "${labels[confirmModal.template?.key] || confirmModal.template?.name || confirmModal.template?.key}"? If removed, default fallback content will be used.`
+            : `Are you sure you want to delete "${confirmModal.template?.name || confirmModal.template?.key}"? This action cannot be undone.`
+        }
+        confirmText="Delete Template"
         isDestructive={true}
         isLoading={isDeleting}
         onConfirm={executeDelete}
-        onCancel={() => setConfirmModal({ isOpen: false, id: null })}
+        onCancel={() => setConfirmModal({ isOpen: false, template: null })}
       />
+
+      {/* Warning Modal when Template is currently attached to Order Status(es) */}
+      {inUseModal.isOpen && inUseModal.template && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 border border-amber-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-amber-100 bg-amber-50/80">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">Cannot Delete Email Template</h3>
+                  <p className="text-xs text-amber-800 font-medium">Template is currently in use</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setInUseModal({ isOpen: false, template: null })}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-md transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-slate-600 leading-relaxed">
+                The template <span className="font-bold text-slate-800">"{labels[inUseModal.template.key] || inUseModal.template.name || inUseModal.template.key}"</span> cannot be deleted because it is currently attached to the following <span className="font-bold text-slate-800">Order Status(es)</span>:
+              </p>
+
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 space-y-2">
+                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">Attached Statuses:</div>
+                <div className="flex flex-wrap gap-2">
+                  {inUseModal.template.statuses?.map(st => (
+                    <div 
+                      key={st.id}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold border shadow-xs"
+                      style={{ 
+                        backgroundColor: (st.color || '#6366f1') + '15', 
+                        color: st.color || '#6366f1',
+                        borderColor: (st.color || '#6366f1') + '40'
+                      }}
+                    >
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: st.color || '#6366f1' }} />
+                      {st.name}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3.5 text-xs text-amber-900 leading-relaxed space-y-1">
+                <span className="font-bold block text-amber-950">Required Action to Delete:</span>
+                <p>
+                  Please go to <strong>Order Statuses</strong>, edit or unassign this email template from the status(es) above, and then return here to delete it.
+                </p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-5 py-4 bg-[#fafafa] border-t border-slate-100 flex items-center justify-between gap-3">
+              <button
+                onClick={() => setInUseModal({ isOpen: false, template: null })}
+                className="px-4 py-2 rounded text-sm font-bold text-slate-600 hover:bg-slate-200 transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  setInUseModal({ isOpen: false, template: null });
+                  navigate('/dashboard/statuses');
+                }}
+                className="flex items-center gap-2 px-4 py-2 rounded text-sm font-bold text-white bg-[#1e3a8a] hover:bg-blue-800 transition-colors shadow-sm"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Go to Order Statuses
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default EmailTemplatesPage;
+
