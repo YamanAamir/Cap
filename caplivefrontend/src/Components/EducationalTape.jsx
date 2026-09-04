@@ -167,7 +167,6 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
             handleApplyEmbroideryText();
         }
     };
-    };
 
     useEffect(() => {
         preloadAlphabetMaps();
