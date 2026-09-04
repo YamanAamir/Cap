@@ -824,13 +824,33 @@ exports.updateExcelColumns = async (req, res) => {
   try {
     const { columns } = req.body;
     for (const col of columns) {
+      const data = { headerLabel: col.headerLabel, sortOrder: col.sortOrder, isVisible: col.isVisible };
+      if (col.fieldKey !== undefined) data.fieldKey = col.fieldKey;
       await prisma.excelColumnConfig.update({
         where: { id: col.id },
-        data: { headerLabel: col.headerLabel, sortOrder: col.sortOrder, isVisible: col.isVisible },
+        data,
       });
     }
     const updated = await prisma.excelColumnConfig.findMany({ orderBy: { sortOrder: 'asc' } });
     res.json(updated);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.updateExcelColumn = async (req, res) => {
+  try {
+    const { fieldKey, headerLabel, sortOrder, isVisible } = req.body;
+    const data = {};
+    if (fieldKey !== undefined) data.fieldKey = fieldKey;
+    if (headerLabel !== undefined) data.headerLabel = headerLabel;
+    if (sortOrder !== undefined) data.sortOrder = sortOrder;
+    if (isVisible !== undefined) data.isVisible = isVisible;
+    const column = await prisma.excelColumnConfig.update({
+      where: { id: parseInt(req.params.id) },
+      data,
+    });
+    res.json(column);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

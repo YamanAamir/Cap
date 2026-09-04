@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { getExcelColumns, createExcelColumn, updateExcelColumns, deleteExcelColumn } from '../services/admin.service';
+import { getExcelColumns, createExcelColumn, updateExcelColumn, updateExcelColumns, deleteExcelColumn } from '../services/admin.service';
 import api from '../services/api';
-import { Loader2, Save, FileSpreadsheet, Plus, Trash2, X, GripVertical } from 'lucide-react';
+import { Loader2, Save, FileSpreadsheet, Plus, Trash2, X, GripVertical, Pencil } from 'lucide-react';
 import ConfirmModal from '../components/common/ConfirmModal';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -42,6 +42,8 @@ const ExcelTemplatesPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ headerLabel: '', fieldKey: '' });
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null });
+  const [editModal, setEditModal] = useState({ isOpen: false, column: null, headerLabel: '', fieldKey: '' });
+  const [isUpdating, setIsUpdating] = useState(false);
   const [draggedItem, setDraggedItem] = useState(null);
 
   const load = async () => {
@@ -108,6 +110,7 @@ const ExcelTemplatesPage = () => {
   useEffect(() => { load(); }, []);
 
   const getLabelForFieldKey = (key) => {
+    if (!key) return '';
     const baseMatch = BASE_FIELDS.find(f => f.value === key);
     if (baseMatch) return baseMatch.label;
     
@@ -157,6 +160,35 @@ const ExcelTemplatesPage = () => {
       toast.error('Failed to add column');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleOpenEdit = (col) => {
+    setEditModal({
+      isOpen: true,
+      column: col,
+      headerLabel: col.headerLabel || '',
+      fieldKey: col.fieldKey || ''
+    });
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editModal.column) return;
+    setIsUpdating(true);
+    try {
+      await updateExcelColumn(editModal.column.id, {
+        headerLabel: editModal.headerLabel,
+        fieldKey: editModal.fieldKey
+      });
+      toast.success('Column updated successfully!');
+      setEditModal({ isOpen: false, column: null, headerLabel: '', fieldKey: '' });
+      load();
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to update column';
+      toast.error(msg);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -246,7 +278,7 @@ const ExcelTemplatesPage = () => {
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">Column Header</label>
               <input 
                 type="text" 
-                placeholder="e.g. Cap Color"
+                placeholder="e.g. Cap Color" 
                 value={form.headerLabel} 
                 onChange={e => setForm({ ...form, headerLabel: e.target.value })} 
                 required 
@@ -293,7 +325,7 @@ const ExcelTemplatesPage = () => {
           <div className="w-10"></div>
           <div className="flex-1 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Column Header</div>
           <div className="flex-1 text-[11px] font-bold text-slate-500 uppercase tracking-widest">Data Path</div>
-          <div className="w-12 text-center text-[11px] font-bold text-slate-500 uppercase tracking-widest">Actions</div>
+          <div className="w-20 text-center text-[11px] font-bold text-slate-500 uppercase tracking-widest">Actions</div>
         </div>
         
         <ul className="divide-y divide-slate-100">
@@ -309,7 +341,7 @@ const ExcelTemplatesPage = () => {
               onDragOver={(e) => handleDragOver(e, idx)}
               onDragEnd={handleDragEnd}
             >
-              <div className="w-10 flex justify-center cursor-move text-slate-300 hover:text-slate-500">
+              <div className="w-10 flex justify-center cursor-move text-slate-300 hover:text-slate-500" title="Drag to reorder">
                 <GripVertical className="w-5 h-5" />
               </div>
               <div className="flex-1 pr-4">
@@ -325,7 +357,14 @@ const ExcelTemplatesPage = () => {
                   {getLabelForFieldKey(col.fieldKey)}
                 </div>
               </div>
-              <div className="w-12 flex justify-center">
+              <div className="w-20 flex items-center justify-center gap-1">
+                <button 
+                  onClick={() => handleOpenEdit(col)} 
+                  className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                  title="Edit Column"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
                 <button 
                   onClick={() => setConfirmModal({ isOpen: true, id: col.id })} 
                   className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
@@ -346,6 +385,97 @@ const ExcelTemplatesPage = () => {
         </ul>
       </div>
 
+      {/* Edit Column Modal */}
+      {editModal.isOpen && editModal.column && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-[#fafafa]">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <Pencil className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">Edit Excel Column</h3>
+                  <p className="text-xs text-slate-500">Configure header title and mapped order data</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setEditModal({ isOpen: false, column: null, headerLabel: '', fieldKey: '' })}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit}>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">
+                    Column Header (Title in Excel)
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Size, Customer Name, Color..."
+                    value={editModal.headerLabel} 
+                    onChange={e => setEditModal({ ...editModal, headerLabel: e.target.value })} 
+                    required 
+                    className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 font-bold text-slate-700 bg-white" 
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">
+                    Data Path / Mapped Value
+                  </label>
+                  <select
+                    value={editModal.fieldKey}
+                    onChange={e => setEditModal({ ...editModal, fieldKey: e.target.value })}
+                    required
+                    className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 font-medium text-slate-700 bg-white"
+                  >
+                    <option value="" disabled>Select a data path...</option>
+                    <optgroup label="Standard Order Fields">
+                      {BASE_FIELDS.map(f => (
+                        <option key={f.value} value={f.value}>{f.label}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Configurator Options">
+                      {configOptions.map(f => (
+                        <option key={f.value} value={f.value}>{f.label}</option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
+
+                <div className="p-3 rounded bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
+                  <span className="text-slate-500">Current Mapped Field:</span>
+                  <span className="font-bold text-slate-700">{getLabelForFieldKey(editModal.fieldKey)}</span>
+                </div>
+              </div>
+
+              <div className="px-6 py-4 bg-[#fafafa] border-t border-slate-100 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditModal({ isOpen: false, column: null, headerLabel: '', fieldKey: '' })}
+                  className="px-4 py-2 rounded text-sm font-bold text-slate-600 hover:bg-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdating}
+                  className="px-5 py-2 rounded text-sm font-bold text-white bg-[#1e3a8a] hover:bg-blue-800 transition-colors flex items-center gap-2 shadow-sm"
+                >
+                  {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
       <ConfirmModal
         isOpen={confirmModal.isOpen}
         title="Delete Column"

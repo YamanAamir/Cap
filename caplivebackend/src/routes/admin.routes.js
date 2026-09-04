@@ -57,6 +57,8 @@ router.post('/sms/recipient/update-phone', admin, adminController.updateRecipien
 router.get('/excel/columns', admin, adminController.getExcelColumns);
 router.post('/excel/columns', admin, adminController.createExcelColumn);
 router.put('/excel/columns', admin, adminController.updateExcelColumns);
+router.patch('/excel/columns/:id', admin, adminController.updateExcelColumn);
+router.put('/excel/columns/:id', admin, adminController.updateExcelColumn);
 router.delete('/excel/columns/:id', admin, adminController.deleteExcelColumn);
 
 router.get('/email-templates', admin, adminController.getEmailTemplates);

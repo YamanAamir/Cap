@@ -45,6 +45,7 @@ export const updateSmsMessage = (id, data) => api.patch(`/admin/sms/messages/${i
 // Excel
 export const getExcelColumns = () => api.get('/admin/excel/columns').then(res => res.data);
 export const createExcelColumn = (data) => api.post('/admin/excel/columns', data).then(res => res.data);
+export const updateExcelColumn = (id, data) => api.patch(`/admin/excel/columns/${id}`, data).then(res => res.data);
 export const updateExcelColumns = (columns) => api.put('/admin/excel/columns', { columns }).then(res => res.data);
 export const deleteExcelColumn = (id) => api.delete(`/admin/excel/columns/${id}`).then(res => res.data);
 
