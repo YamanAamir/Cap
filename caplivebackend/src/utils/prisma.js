@@ -40,6 +40,14 @@ const prisma = prismaRaw.$extends({
         }
       }
     },
+    smsCampaign: {
+      allowedDays: {
+        needs: { allowedDays: true },
+        compute(campaign) {
+          return safeParseJson(campaign.allowedDays);
+        }
+      }
+    },
     systemSetting: {
       value: {
         needs: { value: true },
