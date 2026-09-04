@@ -19,6 +19,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
     firstName: '',
     lastName: '',
     email: '',
+    countryCode: '',
     phone: '',
     Skolenavn: '',
     address: '',
@@ -545,15 +546,26 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
 
   // Validate customer details
   const validateCustomerDetails = () => {
-    const required = ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'postalCode'];
+    const required = ['firstName', 'lastName', 'email', 'countryCode', 'phone', 'address', 'city', 'postalCode'];
     const allFilled = required.every(field => (customerDetails[field] || '').trim() !== '');
     if (!allFilled) {
-      alert('Udfyld venligst alle påkrævede felter.');
+      alert('Udfyld venligst alle påkrævede felter (inklusive landekode og telefonnummer).');
       return false;
     }
     if (!isValidEmail(customerDetails.email)) {
       setEmailError('Indtast venligst en gyldig e-mailadresse');
       refs.email.current?.focus();
+      return false;
+    }
+    const cleanCountryCode = (customerDetails.countryCode || '').replace(/\D/g, '');
+    if (!cleanCountryCode) {
+      alert('Indtast venligst landekode (f.eks. 45).');
+      return false;
+    }
+    const cleanPhone = (customerDetails.phone || '').replace(/\D/g, '');
+    if (cleanPhone.length !== 8) {
+      alert('Telefonnummer skal være præcis 8 cifre.');
+      refs.phone.current?.focus();
       return false;
     }
     setEmailError('');
@@ -573,8 +585,22 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
     setIsLoading(true);
 
     const orderDate = new Date().toISOString(); // ✅ local definition
+    const cleanCountryCode = (customerDetails.countryCode || '').replace(/\D/g, '');
+    const cleanPhone = (customerDetails.phone || '').replace(/\D/g, '');
+    if (!cleanCountryCode || cleanPhone.length !== 8) {
+      alert('Udfyld venligst landekode og et 8-cifret telefonnummer.');
+      setIsLoading(false);
+      return;
+    }
+    const fullFormattedPhone = `+${cleanCountryCode}${cleanPhone}`;
+
     const orderData = {
-      customerDetails,
+      customerDetails: {
+        ...customerDetails,
+        countryCode: cleanCountryCode,
+        phone: cleanPhone,
+        fullPhone: fullFormattedPhone,
+      },
       selectedOptions: buildFilteredOptions(selectedOptions),
       totalPrice: finalPrice,
       currency: "DKK",
@@ -654,6 +680,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       lastName: '',
       email: '',
       phone: '',
+      countryCode: '',
       Skolenavn: '',
       address: '',
       city: '',
@@ -895,16 +922,34 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
                   Telefonnr. *
                 </label>
-                <input
-                  ref={refs.phone}
-                  name="phone"
-                  type="tel"
-                  value={customerDetails.phone || ""}
-                  onChange={(e) => handleInputChange("phone", e.target.value)}
-                  onKeyPress={(e) => handleKeyPress(e, "phone")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
-                  placeholder="Indtast dit tlf nr."
-                />
+                <div className="flex gap-2">
+                  <div className="relative w-20 shrink-0">
+                    <span className="absolute left-2.5 top-2.5 font-bold text-gray-400">+</span>
+                    <input
+                      type="tel"
+                      maxLength={4}
+                      value={customerDetails.countryCode || ""}
+                      onChange={(e) => handleInputChange("countryCode", e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+                      className="w-full pl-6 pr-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 font-medium"
+                      placeholder="45"
+                      required
+                    />
+                  </div>
+                  <div className="relative flex-1">
+                    <input
+                      ref={refs.phone}
+                      name="phone"
+                      type="tel"
+                      maxLength={8}
+                      value={customerDetails.phone || ""}
+                      onChange={(e) => handleInputChange("phone", e.target.value.replace(/[^0-9]/g, '').slice(0, 8))}
+                      onKeyPress={(e) => handleKeyPress(e, "phone")}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
+                      placeholder="8 cifre (f.eks. 12345678)"
+                      required
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* Address */}
@@ -1024,7 +1069,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
               </p>
               <p className="text-sm">
                 <span className="font-medium text-gray-700">Telefonnr.:</span>{" "}
-                {customerDetails.phone}
+                {customerDetails.countryCode ? `+${customerDetails.countryCode}` : ''} {customerDetails.phone}
               </p>
               {customerDetails.Skolenavn && (
                 <p className="text-sm">

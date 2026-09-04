@@ -1809,13 +1809,35 @@ exports.getConfiguratorSettings = async (req, res) => {
       where: { key: 'configurator_settings' }
     });
 
+    // Parse the JSON string from DB, reset corrupted data
+    if (setting && typeof setting.value === 'string') {
+      let parsed = null;
+      try {
+        parsed = JSON.parse(setting.value);
+      } catch (e) {
+        parsed = null; // corrupted — will reset below
+      }
+      // If parse failed OR result is not a plain object, treat as corrupted
+      if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        console.warn('[Settings] Corrupted configurator_settings in DB — resetting to DEFAULT_CONFIG');
+        await prisma.systemSetting.update({
+          where: { key: 'configurator_settings' },
+          data: { value: JSON.stringify(DEFAULT_CONFIG) }
+        });
+        setting = { value: DEFAULT_CONFIG };
+      } else {
+        setting.value = parsed;
+      }
+    }
+
     if (!setting) {
-      setting = await prisma.systemSetting.create({
+      await prisma.systemSetting.create({
         data: {
           key: 'configurator_settings',
-          value: DEFAULT_CONFIG
+          value: JSON.stringify(DEFAULT_CONFIG)
         }
       });
+      setting = { value: DEFAULT_CONFIG };
     }
 
     // Auto-migrate database values from budgethue/basic to basichue
@@ -1856,7 +1878,7 @@ exports.getConfiguratorSettings = async (req, res) => {
       if (migrated) {
         await prisma.systemSetting.update({
           where: { key: 'configurator_settings' },
-          data: { value: val }
+          data: { value: JSON.stringify(val) }
         });
         setting.value = val;
       }
@@ -1938,17 +1960,48 @@ exports.getConfiguratorSettings = async (req, res) => {
   }
 };
 
+exports.getBasePrices = async (req, res) => {
+  try {
+    const setting = await prisma.systemSetting.findUnique({
+      where: { key: 'configurator_settings' }
+    });
+
+    let basePrices = null;
+
+    if (setting && typeof setting.value === 'string') {
+      try {
+        const parsed = JSON.parse(setting.value);
+        basePrices = (parsed && typeof parsed === 'object') ? parsed.basePrices : null;
+      } catch (e) {
+        basePrices = null;
+      }
+    }
+
+    // Fallback to DEFAULT_CONFIG if nothing in DB
+    if (!basePrices) {
+      basePrices = DEFAULT_CONFIG.basePrices;
+    }
+
+    res.json({ basePrices });
+  } catch (error) {
+    console.error('Error fetching base prices:', error);
+    res.status(500).json({ message: 'Failed to fetch base prices' });
+  }
+};
+
 exports.updateConfiguratorSettings = async (req, res) => {
   try {
     const newConfig = req.body;
+    const serialized = JSON.stringify(newConfig);
 
-    const setting = await prisma.systemSetting.upsert({
+    await prisma.systemSetting.upsert({
       where: { key: 'configurator_settings' },
-      update: { value: newConfig },
-      create: { key: 'configurator_settings', value: newConfig }
+      update: { value: serialized },
+      create: { key: 'configurator_settings', value: serialized }
     });
 
-    res.json(setting.value);
+    // Return the original object (not the raw string from DB)
+    res.json(newConfig);
   } catch (error) {
     console.error('Error updating configurator settings:', error);
     res.status(500).json({ message: 'Failed to update settings' });

@@ -39,6 +39,8 @@ export const exportCampaignNonPurchasers = (id) => api.get(`/admin/sms/campaigns
 export const forceSendSmsMessage = (id) => api.post(`/admin/sms/messages/${id}/force-send`).then(r => r.data);
 export const deleteSmsMessage = (id) => api.delete(`/admin/sms/messages/${id}`).then(r => r.data);
 export const deleteRecipientMessages = (data) => api.post('/admin/sms/messages/delete-recipient', data).then(r => r.data);
+export const updateRecipientPhone = (data) => api.post('/admin/sms/recipient/update-phone', data).then(r => r.data);
+export const updateSmsMessage = (id, data) => api.patch(`/admin/sms/messages/${id}`, data).then(r => r.data);
 
 // Excel
 export const getExcelColumns = () => api.get('/admin/excel/columns').then(res => res.data);

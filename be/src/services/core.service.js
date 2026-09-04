@@ -84,10 +84,16 @@ StudentLife Production`,
 
 
 
-const normalizePhone = (p) => {
+const normalizePhone = (p, defaultCountryCode = '45') => {
   if (!p) return null;
   // Strip all non-digit characters
-  const digits = p.replace(/\D/g, '');
+  let digits = String(p).replace(/\D/g, '');
+  if (digits.startsWith('00')) {
+    digits = digits.slice(2);
+  }
+  if (digits.length === 8) {
+    digits = `${defaultCountryCode}${digits}`;
+  }
   return digits || null;
 };
 
@@ -103,14 +109,21 @@ const phonesMatch = (a, b) => {
 
 const upsertCustomerFromOrder = async (customerDetails, email) => {
   const name = `${customerDetails?.firstName || ''} ${customerDetails?.lastName || ''}`.trim() || customerDetails?.name || 'Customer';
-  const rawPhone = customerDetails?.phone || null;
-  const phone = normalizePhone(rawPhone);
+  const countryCode = (customerDetails?.countryCode || '45').replace(/\D/g, '') || '45';
+  let rawPhone = customerDetails?.phone || null;
+  if (rawPhone && customerDetails?.countryCode) {
+    const cleanRaw = rawPhone.replace(/\D/g, '');
+    if (cleanRaw.length === 8) {
+      rawPhone = `${countryCode}${cleanRaw}`;
+    }
+  }
+  const phone = normalizePhone(rawPhone, countryCode);
 
   // 1. Try to find by email first
   let customer = await prisma.customer.findUnique({ where: { email } });
 
   if (customer) {
-    // Update name and phone (only set phone if not already set, to avoid overwriting)
+    // Update name and phone (only set phone if not already set, or update if format improved)
     const updateData = { name };
     if (phone && !customer.phone) {
       updateData.phone = phone;
@@ -121,6 +134,9 @@ const upsertCustomerFromOrder = async (customerDetails, email) => {
       if (!conflict) {
         updateData.phone = phone;
       }
+    } else if (phone && customer.phone && customer.phone.length === 8 && phone.length > 8) {
+      // Upgrade customer phone to have full country code
+      updateData.phone = phone;
     }
     customer = await prisma.customer.update({
       where: { id: customer.id },
@@ -132,10 +148,10 @@ const upsertCustomerFromOrder = async (customerDetails, email) => {
     const existingByPhone = allWithPhone.find(c => phonesMatch(c.phone, phone));
 
     if (existingByPhone) {
-      // Update the existing customer's email/name instead of creating a duplicate
+      // Update the existing customer's email/name/phone instead of creating a duplicate
       customer = await prisma.customer.update({
         where: { id: existingByPhone.id },
-        data: { name, email },
+        data: { name, email, phone },
       });
     } else {
       // 3. Truly new customer - safe to create
@@ -144,6 +160,7 @@ const upsertCustomerFromOrder = async (customerDetails, email) => {
           name,
           email,
           phone,
+          school: customerDetails?.Skolenavn || null,
           orderEmailConsent: customerDetails?.orderEmailConsent !== false,
           smsMarketingConsent: !!customerDetails?.smsMarketingConsent,
           emailMarketingConsent: !!customerDetails?.emailMarketingConsent,
@@ -157,6 +174,7 @@ const upsertCustomerFromOrder = async (customerDetails, email) => {
         name,
         email,
         phone: null,
+        school: customerDetails?.Skolenavn || null,
         orderEmailConsent: customerDetails?.orderEmailConsent !== false,
         smsMarketingConsent: !!customerDetails?.smsMarketingConsent,
         emailMarketingConsent: !!customerDetails?.emailMarketingConsent,

@@ -885,11 +885,13 @@ exports.getSettings = async (req, res) => {
 exports.updateSetting = async (req, res) => {
   try {
     const { key, value } = req.body;
+    const serialized = typeof value === 'string' ? value : JSON.stringify(value);
     const setting = await prisma.systemSetting.upsert({
       where: { key },
-      update: { value },
-      create: { key, value },
+      update: { value: serialized },
+      create: { key, value: serialized },
     });
+    // setting.value is auto-parsed by prisma.js extension; return as-is
     res.json(setting);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -962,21 +964,146 @@ exports.forceSendSmsMessage = async (req, res) => {
       include: { customer: true }
     });
     if (!msg) return res.status(404).json({ message: 'Message not found' });
-    if (msg.status === 'SENT' || msg.status === 'DELIVERED') return res.status(400).json({ message: 'Message already sent' });
-    if (!msg.customer.smsMarketingConsent || msg.customer.smsOptOut) {
-      await prisma.smsMessage.update({ where: { id: messageId }, data: { status: 'CANCELLED' } });
-      return res.status(400).json({ message: 'Customer opted out or has no consent' });
+
+    // When admin manually clicks "Force Send", ensure consent is active for this send
+    if (msg.customer && (msg.customer.smsOptOut || !msg.customer.smsMarketingConsent)) {
+      await prisma.customer.update({
+        where: { id: msg.customer.id },
+        data: { smsMarketingConsent: true, smsOptOut: false }
+      }).catch(() => {});
     }
-    const { sendSms } = require('../services/sms.service');
-    const result = await sendSms(msg.phone, msg.message);
+
+    const { sendSms, normalizeRecipientPhone } = require('../services/sms.service');
+    // Prefer the SMS campaign message phone
+    const rawTargetPhone = msg.phone || msg.customer?.phone;
+    const normalizedPhone = normalizeRecipientPhone(rawTargetPhone);
+
+    const result = await sendSms(normalizedPhone, msg.message);
     if (result.sent) {
-      await prisma.smsMessage.update({ where: { id: messageId }, data: { status: 'SENT', sentAt: new Date(), gatewayId: result.gatewayId } });
+      await prisma.smsMessage.update({
+        where: { id: messageId },
+        data: {
+          phone: normalizedPhone,
+          status: 'SENT',
+          sentAt: new Date(),
+          gatewayId: result.gatewayId
+        }
+      });
       res.json({ success: true, message: 'Message sent successfully' });
     } else {
-      await prisma.smsMessage.update({ where: { id: messageId }, data: { status: 'FAILED' } });
+      await prisma.smsMessage.update({
+        where: { id: messageId },
+        data: {
+          phone: normalizedPhone,
+          status: 'FAILED'
+        }
+      });
       res.status(500).json({ success: false, message: result.error || 'Failed to send SMS' });
     }
   } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.updateRecipientPhone = async (req, res) => {
+  try {
+    const { customerId, phone: currentPhone, newPhone } = req.body;
+    if (!newPhone) {
+      return res.status(400).json({ message: 'New phone number is required' });
+    }
+
+    const { normalizeRecipientPhone } = require('../services/sms.service');
+    const normalizedNewPhone = normalizeRecipientPhone(newPhone);
+    const cleanDigits = normalizedNewPhone.replace(/\D/g, '');
+
+    if (!cleanDigits || cleanDigits.length < 8) {
+      return res.status(400).json({ message: 'Invalid phone number (minimum 8 digits required)' });
+    }
+
+    let targetCustomerId = customerId ? parseInt(customerId) : null;
+
+    if (!targetCustomerId && currentPhone) {
+      const existingCustomer = await prisma.customer.findFirst({
+        where: {
+          OR: [
+            { phone: currentPhone },
+            { phone: normalizeRecipientPhone(currentPhone) },
+            { phone: currentPhone.replace(/\D/g, '') },
+          ]
+        }
+      });
+      if (existingCustomer) {
+        targetCustomerId = existingCustomer.id;
+      }
+    }
+
+    // ONLY update SMS campaign messages for this recipient (do NOT touch customer profile or discount codes)
+    const updateConditions = [];
+    if (targetCustomerId) {
+      updateConditions.push({ customerId: targetCustomerId });
+    }
+    if (currentPhone) {
+      updateConditions.push({ phone: currentPhone });
+      updateConditions.push({ phone: normalizeRecipientPhone(currentPhone) });
+      updateConditions.push({ phone: currentPhone.replace(/\D/g, '') });
+    }
+
+    if (updateConditions.length > 0) {
+      await prisma.smsMessage.updateMany({
+        where: { OR: updateConditions },
+        data: {
+          phone: normalizedNewPhone
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `SMS campaign phone number updated to +${normalizedNewPhone}`,
+      normalizedPhone: normalizedNewPhone
+    });
+  } catch (err) {
+    console.error('Failed to update recipient phone:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.updateSmsMessage = async (req, res) => {
+  try {
+    const messageId = parseInt(req.params.id);
+    const { message, phone, scheduledFor } = req.body;
+
+    if (!messageId) {
+      return res.status(400).json({ message: 'Invalid message ID' });
+    }
+
+    const updateData = {};
+    if (message !== undefined) {
+      if (!message.trim()) {
+        return res.status(400).json({ message: 'Message text cannot be empty' });
+      }
+      updateData.message = message.trim();
+    }
+    if (phone !== undefined) {
+      const { normalizeRecipientPhone } = require('../services/sms.service');
+      updateData.phone = normalizeRecipientPhone(phone);
+    }
+    if (scheduledFor !== undefined) {
+      updateData.scheduledFor = new Date(scheduledFor);
+    }
+
+    const updated = await prisma.smsMessage.update({
+      where: { id: messageId },
+      data: updateData
+    });
+
+    res.json({
+      success: true,
+      message: 'Message updated successfully',
+      data: updated
+    });
+  } catch (err) {
+    console.error('Failed to update SMS message:', err);
     res.status(500).json({ message: err.message });
   }
 };

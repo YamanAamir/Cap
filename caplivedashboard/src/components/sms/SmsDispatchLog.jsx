@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { getSmsMessages, forceSendSmsMessage, deleteSmsMessage, deleteRecipientMessages } from '../../services/admin.service';
-import {  Clock, Send, Search, Filter, RefreshCcw, AlertCircle, CheckCircle, XCircle, Loader2 , ChevronDown, ChevronRight, Trash2 } from 'lucide-react';
+import { getSmsMessages, forceSendSmsMessage, deleteSmsMessage, deleteRecipientMessages, updateRecipientPhone, updateSmsMessage } from '../../services/admin.service';
+import {  Clock, Send, Search, Filter, RefreshCcw, AlertCircle, CheckCircle, XCircle, Loader2 , ChevronDown, ChevronRight, Trash2, Edit2, X } from 'lucide-react';
 import ConfirmModal from '../common/ConfirmModal';
 import { cn } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
@@ -13,6 +13,7 @@ const STATUS_ICONS = {
   PENDING: <RefreshCcw className="h-3 w-3 animate-spin" />,
   REJECTED: <AlertCircle className="h-3 w-3" />,
   UNDELIVERED: <AlertCircle className="h-3 w-3" />,
+  UNDELIVERABLE: <AlertCircle className="h-3 w-3" />,
   FAILED: <XCircle className="h-3 w-3" />,
   CANCELLED: <XCircle className="h-3 w-3" />
 };
@@ -26,6 +27,7 @@ const getStatusBadgeClasses = (status) => {
     case 'PENDING': return 'bg-yellow-50 text-yellow-600 border-yellow-200';
     case 'REJECTED': 
     case 'UNDELIVERED':
+    case 'UNDELIVERABLE':
     case 'FAILED': return 'bg-red-50 text-red-600 border-red-200';
     case 'CANCELLED': return 'bg-gray-50 text-gray-500 border-gray-200';
     default: return 'bg-slate-50 text-slate-500 border-slate-200';
@@ -40,6 +42,18 @@ export default function SmsDispatchLog({ campaigns }) {
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, msgId: null });
   const [deleteMessageModal, setDeleteMessageModal] = useState({ isOpen: false, msgId: null });
   const [deleteRecipientModal, setDeleteRecipientModal] = useState({ isOpen: false, group: null });
+  const [editPhoneModal, setEditPhoneModal] = useState({
+    isOpen: false,
+    group: null,
+    phone: '',
+    isSaving: false
+  });
+  const [editMessageModal, setEditMessageModal] = useState({
+    isOpen: false,
+    msg: null,
+    text: '',
+    isSaving: false
+  });
   const [deleting, setDeleting] = useState(false);
   
   const [currentPage, setCurrentPage] = useState(1);
@@ -123,6 +137,56 @@ export default function SmsDispatchLog({ campaigns }) {
     } finally {
       setDeleting(false);
       setDeleteRecipientModal({ isOpen: false, group: null });
+    }
+  };
+
+  const handleSaveRecipientPhone = async (e) => {
+    if (e) e.preventDefault();
+    if (!editPhoneModal.group) return;
+    
+    const cleanDigits = editPhoneModal.phone.replace(/\D/g, '');
+    
+    if (!cleanDigits || cleanDigits.length < 8) {
+      toast.error('Indtast venligst et gyldigt telefonnummer (mindst 8 cifre)');
+      return;
+    }
+    
+    setEditPhoneModal(prev => ({ ...prev, isSaving: true }));
+    
+    try {
+      await updateRecipientPhone({
+        customerId: editPhoneModal.group.customer?.id,
+        phone: editPhoneModal.group.phone,
+        newPhone: editPhoneModal.phone.trim()
+      });
+      toast.success('Telefonnummer opdateret');
+      setEditPhoneModal({ isOpen: false, group: null, phone: '', isSaving: false });
+      loadMessages();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Kunne ikke opdatere telefonnummer');
+      setEditPhoneModal(prev => ({ ...prev, isSaving: false }));
+    }
+  };
+
+  const handleSaveMessage = async (e) => {
+    if (e) e.preventDefault();
+    if (!editMessageModal.msg) return;
+
+    const trimmed = editMessageModal.text.trim();
+    if (!trimmed) {
+      toast.error('SMS-besked må ikke være tom');
+      return;
+    }
+
+    setEditMessageModal(prev => ({ ...prev, isSaving: true }));
+    try {
+      await updateSmsMessage(editMessageModal.msg.id, { message: trimmed });
+      toast.success('SMS-besked opdateret');
+      setEditMessageModal({ isOpen: false, msg: null, text: '', isSaving: false });
+      loadMessages();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Kunne ikke opdatere besked');
+      setEditMessageModal(prev => ({ ...prev, isSaving: false }));
     }
   };
 
@@ -313,7 +377,33 @@ export default function SmsDispatchLog({ campaigns }) {
                       </td>
                       <td className="px-4 py-3">
                         <div className="font-bold text-slate-800">{group.customer?.name || 'Unknown'}</div>
-                        <div className="text-xs font-mono text-slate-600">{formatPhone(group.phone)}</div>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-xs font-mono text-slate-600">{formatPhone(group.phone)}</span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const raw = group.phone || '';
+                              const clean = raw.replace(/\D/g, '');
+                              const initial = clean.startsWith('45')
+                                ? `+${clean}`
+                                : clean.length === 8
+                                  ? `+45${clean}`
+                                  : raw.startsWith('+')
+                                    ? raw
+                                    : (clean ? `+${clean}` : '');
+                              setEditPhoneModal({
+                                isOpen: true,
+                                group,
+                                phone: initial,
+                                isSaving: false
+                              });
+                            }}
+                            title="Edit recipient phone number"
+                            className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </button>
+                        </div>
                         {group.customer?.school && <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{group.customer.school}</div>}
                       </td>
                       <td className="px-4 py-3 text-slate-700 font-medium">
@@ -417,7 +507,22 @@ export default function SmsDispatchLog({ campaigns }) {
                           <div className="flex items-center justify-between gap-3">
                             <span className="truncate" title={msg.message}>{msg.message}</span>
                             <div className="flex items-center gap-1.5 shrink-0">
-                              {(msg.status === 'SCHEDULED' || msg.status === 'PENDING') && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditMessageModal({
+                                    isOpen: true,
+                                    msg,
+                                    text: msg.message,
+                                    isSaving: false
+                                  });
+                                }}
+                                title="Rediger SMS-besked"
+                                className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                              </button>
+                              {msg.status !== 'DELIVERED' && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); setConfirmModal({ isOpen: true, msgId: msg.id }); }}
                                   disabled={forceSendingId === msg.id}
@@ -567,6 +672,160 @@ export default function SmsDispatchLog({ campaigns }) {
         isLoading={deleting}
         isDestructive={true}
       />
+
+      {/* Edit Recipient Phone Modal */}
+      {editPhoneModal.isOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setEditPhoneModal({ isOpen: false, group: null, phone: '', isSaving: false })}
+        >
+          <div 
+            className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div>
+                <h3 className="font-bold text-slate-800 text-base">Rediger Telefonnummer</h3>
+                <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                  {editPhoneModal.group?.customer?.name || 'Recipient'} &bull; <span className="font-mono">{formatPhone(editPhoneModal.group?.phone)}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setEditPhoneModal({ isOpen: false, group: null, phone: '', isSaving: false })}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveRecipientPhone} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  Nyt Telefonnummer *
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={editPhoneModal.phone}
+                    onChange={(e) => setEditPhoneModal({ ...editPhoneModal, phone: e.target.value })}
+                    className="w-full px-3.5 py-2.5 text-base border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-slate-800 font-semibold tracking-wide"
+                    placeholder="+4512345678"
+                    required
+                    autoFocus
+                    disabled={editPhoneModal.isSaving}
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                  Rediger telefonnummeret til SMS-afsendelse (f.eks. +4561785979). Nummeret opdateres udelukkende på disse SMS-beskeder.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditPhoneModal({ isOpen: false, group: null, phone: '', isSaving: false })}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                  disabled={editPhoneModal.isSaving}
+                >
+                  Annuller
+                </button>
+                <button
+                  type="submit"
+                  disabled={editPhoneModal.isSaving}
+                  className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {editPhoneModal.isSaving ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Gemmer...
+                    </>
+                  ) : (
+                    'Gem Telefonnummer'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Edit SMS Message Modal */}
+      {editMessageModal.isOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setEditMessageModal({ isOpen: false, msg: null, text: '', isSaving: false })}
+        >
+          <div 
+            className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-lg overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div>
+                <h3 className="font-bold text-slate-800 text-base">Rediger SMS-besked</h3>
+                <p className="text-xs text-slate-500 mt-0.5 font-medium">
+                  Msg #{editMessageModal.msg?.id} &bull; <span className="font-mono">{formatPhone(editMessageModal.msg?.phone)}</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setEditMessageModal({ isOpen: false, msg: null, text: '', isSaving: false })}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveMessage} className="p-6 space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                    Beskedtekst *
+                  </label>
+                  <span className="text-[11px] font-mono text-slate-400">
+                    {editMessageModal.text.length} tegn (ca. {Math.max(1, Math.ceil(editMessageModal.text.length / 160))} SMS)
+                  </span>
+                </div>
+                <textarea
+                  rows={5}
+                  value={editMessageModal.text}
+                  onChange={(e) => setEditMessageModal({ ...editMessageModal, text: e.target.value })}
+                  className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 font-medium leading-relaxed resize-y"
+                  placeholder="Indtast SMS besked..."
+                  required
+                  autoFocus
+                  disabled={editMessageModal.isSaving}
+                />
+                <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                  Redigeringen gemmes på denne specifikke besked. Hvis beskeden er planlagt eller force-sendes, sendes den opdaterede tekst.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setEditMessageModal({ isOpen: false, msg: null, text: '', isSaving: false })}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                  disabled={editMessageModal.isSaving}
+                >
+                  Annuller
+                </button>
+                <button
+                  type="submit"
+                  disabled={editMessageModal.isSaving}
+                  className="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {editMessageModal.isSaving ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Gemmer...
+                    </>
+                  ) : (
+                    'Gem Besked'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

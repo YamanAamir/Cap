@@ -47,9 +47,12 @@ router.put('/sms/campaigns/:id', admin, adminController.updateSmsCampaign);
 router.delete('/sms/campaigns/:id', admin, adminController.deleteSmsCampaign);
 router.get('/sms/campaigns/:id/export', admin, adminController.exportCampaignNonPurchasers);
 router.get('/sms/messages', admin, adminController.getSmsMessages);
+router.patch('/sms/messages/:id', admin, adminController.updateSmsMessage);
+router.put('/sms/messages/:id', admin, adminController.updateSmsMessage);
 router.post('/sms/messages/:id/force-send', admin, adminController.forceSendSmsMessage);
 router.delete('/sms/messages/:id', admin, adminController.deleteSmsMessage);
 router.post('/sms/messages/delete-recipient', admin, adminController.deleteRecipientMessages);
+router.post('/sms/recipient/update-phone', admin, adminController.updateRecipientPhone);
 
 router.get('/excel/columns', admin, adminController.getExcelColumns);
 router.post('/excel/columns', admin, adminController.createExcelColumn);

@@ -35,13 +35,28 @@ const SmsSignupScreen = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    
+    const cleanCountryCode = (form.countryCode || '').replace(/\D/g, '');
+    const cleanPhone = (form.phone || '').replace(/\D/g, '');
+
+    if (!cleanCountryCode) {
+      setError('Indtast venligst landekode (f.eks. 45).');
+      return;
+    }
+    if (cleanPhone.length !== 8) {
+      setError('Telefonnummer skal være præcis 8 cifre.');
+      return;
+    }
+
     setLoading(true);
     try {
+      const fullPhone = `+${cleanCountryCode}${cleanPhone}`;
       const data = await submitSmsSignup({
         name: form.name,
         email: form.email,
-        phone: form.countryCode + form.phone,
-        localPhone: form.phone,
+        phone: fullPhone,
+        localPhone: cleanPhone,
+        countryCode: cleanCountryCode,
         school: form.school,
         gdprConsent: form.gdprConsent,
         campaignId: campaign.id,
@@ -181,15 +196,16 @@ const SmsSignupScreen = () => {
           </div>
 
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Telefon</label>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5">Telefon *</label>
             <div className="flex gap-2">
               <div className="relative w-24 shrink-0">
                 <span className="absolute left-3 top-3 font-bold text-slate-400">+</span>
                 <input
                   required
                   type="tel"
+                  maxLength={4}
                   value={form.countryCode}
-                  onChange={(e) => setForm({ ...form, countryCode: e.target.value.replace(/[^0-9]/g, '') })}
+                  onChange={(e) => setForm({ ...form, countryCode: e.target.value.replace(/[^0-9]/g, '').slice(0, 4) })}
                   className="w-full pl-7 pr-3 py-3 rounded border border-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-bold text-slate-800 transition-shadow bg-[#fafafa] focus:bg-white"
                   placeholder="45"
                   disabled={loading}
@@ -199,15 +215,16 @@ const SmsSignupScreen = () => {
                 <input
                   required
                   type="tel"
+                  maxLength={8}
                   value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/[^0-9]/g, '') })}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/[^0-9]/g, '').slice(0, 8) })}
                   className="w-full px-4 py-3 rounded border border-slate-200 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm font-bold text-slate-800 transition-shadow bg-[#fafafa] focus:bg-white"
-                  placeholder="12345678"
+                  placeholder="8 cifre (f.eks. 12345678)"
                   disabled={loading}
                 />
               </div>
             </div>
-            <p className="text-xs text-slate-500 mt-1.5">Indtast landekode og telefonnummer</p>
+            <p className="text-xs text-slate-500 mt-1.5">Indtast landekode og præcis 8-cifret telefonnummer</p>
           </div>
 
           <label className={`flex items-start gap-3 cursor-pointer p-4 rounded border transition-colors ${

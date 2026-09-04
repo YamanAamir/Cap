@@ -1,6 +1,19 @@
 const prisma = require('../utils/prisma');
 const { generateDiscountCode } = require('../utils/helpers');
 
+const normalizeRecipientPhone = (phone, defaultCountryCode = '45') => {
+  if (!phone) return '';
+  let clean = String(phone).replace(/\D/g, '');
+  if (clean.startsWith('00')) {
+    clean = clean.slice(2);
+  }
+  // Standard Danish mobile numbers are 8 digits
+  if (clean.length === 8) {
+    clean = `${defaultCountryCode}${clean}`;
+  }
+  return clean;
+};
+
 const scheduleCampaignMessages = async (enrollmentId, customer, discountCode) => {
   const enrollment = await prisma.smsCampaignEnrollment.findUnique({
     where: { id: enrollmentId },
@@ -19,6 +32,8 @@ const scheduleCampaignMessages = async (enrollmentId, customer, discountCode) =>
     link: campaignSlug ? `${frontendBaseUrl}/sms-signup/${campaignSlug}` : '',
   };
 
+  const recipientPhone = normalizeRecipientPhone(customer.phone);
+
   for (const step of enrollment.campaign.steps) {
     const message = step.message
       .replace(/\{\{name\}\}/g, vars.name)
@@ -33,7 +48,7 @@ const scheduleCampaignMessages = async (enrollmentId, customer, discountCode) =>
       data: {
         customerId: customer.id,
         enrollmentId,
-        phone: customer.phone,
+        phone: recipientPhone,
         message,
         scheduledFor,
         status: scheduledFor <= new Date() ? 'PENDING' : 'SCHEDULED',
@@ -43,14 +58,21 @@ const scheduleCampaignMessages = async (enrollmentId, customer, discountCode) =>
 };
 
 const sendSms = async (phone, message) => {
-  console.log(`\n[SMS] Attempting to send to ${phone}...`);
+  const normalizedPhone = normalizeRecipientPhone(phone);
+  console.log(`\n[SMS] Attempting to send to ${normalizedPhone} (raw: ${phone})...`);
+  
+  if (!normalizedPhone) {
+    console.error('[SMS] Send failed: Invalid or empty phone number');
+    return { sent: false, error: 'Invalid or empty phone number' };
+  }
+
   if (process.env.GATEWAYAPI_TOKEN) {
     try {
       const fetch = (await import('node-fetch')).default;
-      const recipientNumber = parseInt(phone.replace(/\D/g, ''), 10);
+      const recipientNumber = parseInt(normalizedPhone, 10);
       
       const payload = {
-        sender: process.env.GATEWAYAPI_SENDER,
+        sender: process.env.GATEWAYAPI_SENDER || 'StudentLife',
         message: message,
         recipient: recipientNumber
       };
@@ -83,7 +105,7 @@ const sendSms = async (phone, message) => {
     }
   }
 
-  console.log(`[SMS STUB] To: ${phone} | Message: ${message}`);
+  console.log(`[SMS STUB] To: ${normalizedPhone} | Message: ${message}`);
   return { sent: true, provider: 'stub', gatewayId: 'stub_' + Date.now() };
 };
 
@@ -152,7 +174,21 @@ const cancelPendingCampaignMessages = async (customerId) => {
 };
 
 const handleSmsOptOut = async (phone) => {
-  const customer = await prisma.customer.findFirst({ where: { phone } });
+  const normalized = normalizeRecipientPhone(phone);
+  const clean = (phone || '').replace(/\D/g, '');
+  const local = clean.length >= 8 ? clean.slice(-8) : clean;
+
+  const customer = await prisma.customer.findFirst({
+    where: {
+      OR: [
+        { phone: normalized },
+        { phone: clean },
+        { phone: local },
+        { phone: `+${normalized}` },
+        { phone: `45${local}` }
+      ]
+    }
+  });
   if (!customer) return false;
 
   await prisma.customer.update({
@@ -169,9 +205,13 @@ const handleSmsOptOut = async (phone) => {
 };
 
 const registerSmsSignup = async ({ name, phone, email, school, gdprConsent, campaignId, localPhone: providedLocalPhone }) => {
-  phone = phone.replace(/^\+/, '');
-  const localPhone = providedLocalPhone ? providedLocalPhone.replace(/^\+/, '') : (phone.length > 8 ? phone.slice(-8) : phone);
-  console.log(`\n[SMS] registerSmsSignup called for: ${name} (${phone}, local: ${localPhone}) - Campaign: ${campaignId}`);
+  const cleanDigits = String(phone || '').replace(/\D/g, '');
+  const normalizedPhone = normalizeRecipientPhone(phone);
+  const localPhone = providedLocalPhone 
+    ? String(providedLocalPhone).replace(/\D/g, '') 
+    : (cleanDigits.length > 8 ? cleanDigits.slice(-8) : cleanDigits);
+
+  console.log(`\n[SMS] registerSmsSignup called for: ${name} (normalized: ${normalizedPhone}, local: ${localPhone}) - Campaign: ${campaignId}`);
   if (!gdprConsent) {
     console.error('[SMS] GDPR consent missing');
     throw new Error('GDPR consent is required');
@@ -185,9 +225,19 @@ const registerSmsSignup = async ({ name, phone, email, school, gdprConsent, camp
     campaign = await prisma.smsCampaign.findFirst({ where: { isActive: true } });
   }
 
-  // Find if customer already exists by phone or email
-  let customer = await prisma.customer.findFirst({ where: { phone } });
-  if (!customer) {
+  // Find if customer already exists by phone (check normalized, raw, and local) or email
+  let customer = await prisma.customer.findFirst({
+    where: {
+      OR: [
+        { phone: normalizedPhone },
+        { phone: cleanDigits },
+        { phone: localPhone },
+        { phone: `+${normalizedPhone}` },
+        { phone: `45${localPhone}` }
+      ]
+    }
+  });
+  if (!customer && email) {
     customer = await prisma.customer.findUnique({ where: { email } });
   }
 
@@ -209,6 +259,7 @@ const registerSmsSignup = async ({ name, phone, email, school, gdprConsent, camp
       where: { id: customer.id },
       data: {
         name,
+        phone: normalizedPhone, // Always store standardized phone with country code
         school: school || customer.school,
         smsMarketingConsent: true,
         smsConsentAt: new Date(),
@@ -222,7 +273,7 @@ const registerSmsSignup = async ({ name, phone, email, school, gdprConsent, camp
       data: {
         name,
         email,
-        phone,
+        phone: normalizedPhone,
         school,
         smsMarketingConsent: true,
         smsConsentAt: new Date(),
@@ -235,7 +286,6 @@ const registerSmsSignup = async ({ name, phone, email, school, gdprConsent, camp
   if (campaign && campaign.discountValue && campaign.discountValue > 0 && campaign.discountType) {
     let expiryDays = 20; // default to 20 days
     let actualType = campaign.discountType;
-    let isYears = false;
     
     if (actualType.includes(':')) {
       const parts = actualType.split(':');
@@ -252,7 +302,7 @@ const registerSmsSignup = async ({ name, phone, email, school, gdprConsent, camp
         type: actualType,
         value: campaign.discountValue,
         expiresAt,
-        phoneNumber: phone,
+        phoneNumber: normalizedPhone,
         customerId: customer.id,
         source: 'QR',
       },
@@ -277,6 +327,7 @@ const registerSmsSignup = async ({ name, phone, email, school, gdprConsent, camp
 };
 
 module.exports = {
+  normalizeRecipientPhone,
   scheduleCampaignMessages,
   sendSms,
   processPendingSms,
@@ -284,3 +335,4 @@ module.exports = {
   handleSmsOptOut,
   registerSmsSignup,
 };
+
