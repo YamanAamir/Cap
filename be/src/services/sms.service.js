@@ -14,6 +14,55 @@ const normalizeRecipientPhone = (phone, defaultCountryCode = '45') => {
   return clean;
 };
 
+const DAY_MAP = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+
+const calculateStepSchedule = (enrolledAt, dayOffset, campaign = {}) => {
+  const enrollmentDate = new Date(enrolledAt || new Date());
+  
+  // If Day 0 and immediate sending is enabled, send immediately
+  const sendImmediate = campaign.sendImmediateOnEnrollment !== false;
+  if (dayOffset === 0 && sendImmediate) {
+    return new Date(enrollmentDate);
+  }
+
+  // Target date offset from enrolledAt
+  const target = new Date(enrollmentDate);
+  target.setDate(target.getDate() + dayOffset);
+
+  // Allowed days parsing
+  let allowed = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+  if (campaign.allowedDays) {
+    try {
+      const parsed = typeof campaign.allowedDays === 'string' 
+        ? JSON.parse(campaign.allowedDays) 
+        : campaign.allowedDays;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        allowed = parsed.map(d => String(d).toUpperCase());
+      }
+    } catch (e) {
+      // fallback to all days
+    }
+  }
+
+  // If the target day of week is not allowed, advance day by day until an allowed day is found
+  let safetyLoop = 0;
+  while (!allowed.includes(DAY_MAP[target.getDay()]) && safetyLoop < 14) {
+    target.setDate(target.getDate() + 1);
+    safetyLoop++;
+  }
+
+  // Determine time: weekday vs weekend
+  const isWeekend = target.getDay() === 0 || target.getDay() === 6; // Sunday or Saturday
+  const timeStr = isWeekend 
+    ? (campaign.weekendSendTime || '12:00')
+    : (campaign.weekdaySendTime || '16:00');
+
+  const [hours, minutes] = timeStr.split(':').map(n => parseInt(n, 10) || 0);
+  target.setHours(hours, minutes, 0, 0);
+
+  return target;
+};
+
 const scheduleCampaignMessages = async (enrollmentId, customer, discountCode) => {
   const enrollment = await prisma.smsCampaignEnrollment.findUnique({
     where: { id: enrollmentId },
@@ -41,8 +90,7 @@ const scheduleCampaignMessages = async (enrollmentId, customer, discountCode) =>
       .replace(/\{\{expiryDate\}\}/g, vars.expiryDate)
       .replace(/\{\{link\}\}/g, vars.link);
 
-    const scheduledFor = new Date(enrollment.enrolledAt);
-    scheduledFor.setDate(scheduledFor.getDate() + step.dayOffset);
+    const scheduledFor = calculateStepSchedule(enrollment.enrolledAt, step.dayOffset, enrollment.campaign);
 
     await prisma.smsMessage.create({
       data: {
@@ -328,6 +376,7 @@ const registerSmsSignup = async ({ name, phone, email, school, gdprConsent, camp
 
 module.exports = {
   normalizeRecipientPhone,
+  calculateStepSchedule,
   scheduleCampaignMessages,
   sendSms,
   processPendingSms,

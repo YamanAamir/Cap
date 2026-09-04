@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'react-hot-toast';
 import { getSmsCampaigns, createSmsCampaign, updateSmsCampaign, exportCampaignNonPurchasers, deleteSmsCampaign } from '../services/admin.service';
-import { Plus, Loader2, MessageSquare, Clock, ChevronDown, ChevronUp, Link as LinkIcon, Send, Download, X, Save, QrCode, Trash2 } from 'lucide-react';
+import { Plus, Loader2, MessageSquare, Clock, ChevronDown, ChevronUp, Link as LinkIcon, Send, Download, X, Save, QrCode, Trash2, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import SmsDispatchLog from '../components/sms/SmsDispatchLog';
 
@@ -19,6 +19,18 @@ const AVAILABLE_PLACEHOLDERS = [
   { label: '{{expiryDate}}', token: '{{expiryDate}}', desc: 'Expiry date' },
   { label: '{{link}}', token: '{{link}}', desc: 'Campaign signup URL' },
 ];
+
+const DAYS_OF_WEEK = [
+  { key: 'MON', label: 'Mon', full: 'Monday' },
+  { key: 'TUE', label: 'Tue', full: 'Tuesday' },
+  { key: 'WED', label: 'Wed', full: 'Wednesday' },
+  { key: 'THU', label: 'Thu', full: 'Thursday' },
+  { key: 'FRI', label: 'Fri', full: 'Friday' },
+  { key: 'SAT', label: 'Sat', full: 'Saturday' },
+  { key: 'SUN', label: 'Sun', full: 'Sunday' },
+];
+
+const DEFAULT_ALLOWED_DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
 const SmsCampaignsPage = () => {
   const [campaigns, setCampaigns] = useState([]);
@@ -39,6 +51,10 @@ const SmsCampaignsPage = () => {
   const [newDiscountType, setNewDiscountType] = useState('PERCENTAGE');
   const [newDiscountValue, setNewDiscountValue] = useState(10);
   const [newDiscountExpiryDays, setNewDiscountExpiryDays] = useState(20);
+  const [newWeekdaySendTime, setNewWeekdaySendTime] = useState('16:00');
+  const [newWeekendSendTime, setNewWeekendSendTime] = useState('12:00');
+  const [newAllowedDays, setNewAllowedDays] = useState(DEFAULT_ALLOWED_DAYS);
+  const [newSendImmediateOnEnrollment, setNewSendImmediateOnEnrollment] = useState(true);
   const [forceDelete, setForceDelete] = useState(false);
 
   const load = async () => {
@@ -48,7 +64,15 @@ const SmsCampaignsPage = () => {
       setCampaigns(c);
       // Initialize drafts
       const drafts = {};
-      c.forEach(camp => { drafts[camp.id] = JSON.parse(JSON.stringify(camp)); });
+      c.forEach(camp => { 
+        drafts[camp.id] = {
+          ...JSON.parse(JSON.stringify(camp)),
+          weekdaySendTime: camp.weekdaySendTime || '16:00',
+          weekendSendTime: camp.weekendSendTime || '12:00',
+          allowedDays: (Array.isArray(camp.allowedDays) && camp.allowedDays.length > 0) ? camp.allowedDays : DEFAULT_ALLOWED_DAYS,
+          sendImmediateOnEnrollment: camp.sendImmediateOnEnrollment !== undefined ? camp.sendImmediateOnEnrollment : true,
+        };
+      });
       setDraftCampaigns(drafts);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
@@ -68,12 +92,12 @@ const SmsCampaignsPage = () => {
       const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', "campaign_ + campaignId + _non_purchasers.csv");
+      link.setAttribute('download', `campaign_${campaignId}_non_purchasers.csv`);
       document.body.appendChild(link);
       link.click();
       link.parentNode.removeChild(link);
     } catch (err) {
-      alert('Failed to export non-purchasers');
+      toast.error('Failed to export non-purchasers');
     }
   };
 
@@ -86,14 +110,22 @@ const SmsCampaignsPage = () => {
         steps: DEFAULT_STEPS,
         discountType: newDiscountEnabled ? newDiscountType : undefined,
         discountValue: newDiscountEnabled ? parseFloat(newDiscountValue) : undefined,
-        discountExpiryDays: newDiscountEnabled ? parseInt(newDiscountExpiryDays) : undefined
+        discountExpiryDays: newDiscountEnabled ? parseInt(newDiscountExpiryDays) : undefined,
+        weekdaySendTime: newWeekdaySendTime || '16:00',
+        weekendSendTime: newWeekendSendTime || '12:00',
+        allowedDays: newAllowedDays && newAllowedDays.length > 0 ? newAllowedDays : DEFAULT_ALLOWED_DAYS,
+        sendImmediateOnEnrollment: newSendImmediateOnEnrollment,
       });
       setNewName('');
       setNewDiscountEnabled(false);
+      setNewWeekdaySendTime('16:00');
+      setNewWeekendSendTime('12:00');
+      setNewAllowedDays(DEFAULT_ALLOWED_DAYS);
+      setNewSendImmediateOnEnrollment(true);
       setShowCreate(false);
       load();
     } catch (e) {
-      alert(e.response?.data?.message || 'Failed to create campaign');
+      toast.error(e.response?.data?.message || 'Failed to create campaign');
     } finally {
       setCreating(false);
     }
@@ -142,12 +174,26 @@ const SmsCampaignsPage = () => {
     const original = campaigns.find(c => c.id === campaignId);
     const draft = draftCampaigns[campaignId];
     if (!original || !draft) return false;
+
+    const origAllowedDays = JSON.stringify(original.allowedDays || DEFAULT_ALLOWED_DAYS);
+    const draftAllowedDays = JSON.stringify(draft.allowedDays || DEFAULT_ALLOWED_DAYS);
+    const origSendImmediate = original.sendImmediateOnEnrollment !== undefined ? original.sendImmediateOnEnrollment : true;
+    const draftSendImmediate = draft.sendImmediateOnEnrollment !== undefined ? draft.sendImmediateOnEnrollment : true;
+    const origWeekday = original.weekdaySendTime || '16:00';
+    const draftWeekday = draft.weekdaySendTime || '16:00';
+    const origWeekend = original.weekendSendTime || '12:00';
+    const draftWeekend = draft.weekendSendTime || '12:00';
+
     return JSON.stringify(original.steps) !== JSON.stringify(draft.steps) || 
            original.slug !== draft.slug ||
            original.name !== draft.name ||
            original.discountType !== draft.discountType ||
            original.discountValue !== draft.discountValue ||
-           original.discountExpiryDays !== draft.discountExpiryDays;
+           original.discountExpiryDays !== draft.discountExpiryDays ||
+           origWeekday !== draftWeekday ||
+           origWeekend !== draftWeekend ||
+           origAllowedDays !== draftAllowedDays ||
+           origSendImmediate !== draftSendImmediate;
   };
 
   const clearDraftChanges = (campaignId) => {
@@ -155,7 +201,13 @@ const SmsCampaignsPage = () => {
     if (original) {
       setDraftCampaigns(prev => ({
         ...prev,
-        [campaignId]: JSON.parse(JSON.stringify(original))
+        [campaignId]: {
+          ...JSON.parse(JSON.stringify(original)),
+          weekdaySendTime: original.weekdaySendTime || '16:00',
+          weekendSendTime: original.weekendSendTime || '12:00',
+          allowedDays: (Array.isArray(original.allowedDays) && original.allowedDays.length > 0) ? original.allowedDays : DEFAULT_ALLOWED_DAYS,
+          sendImmediateOnEnrollment: original.sendImmediateOnEnrollment !== undefined ? original.sendImmediateOnEnrollment : true,
+        }
       }));
     }
   };
@@ -175,7 +227,11 @@ const SmsCampaignsPage = () => {
         slug: draft.slug,
         discountType: draft.discountType,
         discountValue: draft.discountValue,
-        discountExpiryDays: draft.discountExpiryDays
+        discountExpiryDays: draft.discountExpiryDays,
+        weekdaySendTime: draft.weekdaySendTime || '16:00',
+        weekendSendTime: draft.weekendSendTime || '12:00',
+        allowedDays: draft.allowedDays || DEFAULT_ALLOWED_DAYS,
+        sendImmediateOnEnrollment: draft.sendImmediateOnEnrollment !== undefined ? draft.sendImmediateOnEnrollment : true,
       }, applyToExisting);
       toast.success('Campaign updated successfully');
       setSaveModal({ isOpen: false, campaignId: null, applyToExisting: false, isSaving: false });
@@ -286,6 +342,96 @@ const SmsCampaignsPage = () => {
                 {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'LAUNCH'}
               </button>
             </div>
+
+            {/* Dispatch Schedule & Timing */}
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded space-y-4">
+              <div className="flex items-center gap-2 text-slate-700">
+                <Clock className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-bold">Dispatch Schedule & Timing</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                    Weekday Send Time (Mon - Fri)
+                  </label>
+                  <input 
+                    type="time" 
+                    value={newWeekdaySendTime}
+                    onChange={(e) => setNewWeekdaySendTime(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded text-sm bg-white focus:outline-none focus:border-blue-500 font-mono"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-1 block">Recommended: 16:00 (after school/work hours)</span>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">
+                    Weekend Send Time (Sat - Sun)
+                  </label>
+                  <input 
+                    type="time" 
+                    value={newWeekendSendTime}
+                    onChange={(e) => setNewWeekendSendTime(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded text-sm bg-white focus:outline-none focus:border-blue-500 font-mono"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-1 block">Recommended: 12:00 (around midday)</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1.5">
+                  Allowed Dispatch Days
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {DAYS_OF_WEEK.map(day => {
+                    const isSelected = newAllowedDays.includes(day.key);
+                    return (
+                      <button
+                        key={day.key}
+                        type="button"
+                        onClick={() => {
+                          if (isSelected) {
+                            if (newAllowedDays.length > 1) {
+                              setNewAllowedDays(newAllowedDays.filter(d => d !== day.key));
+                            } else {
+                              toast.error('At least one day must be selected');
+                            }
+                          } else {
+                            setNewAllowedDays([...newAllowedDays, day.key]);
+                          }
+                        }}
+                        className={cn(
+                          "px-3 py-1.5 rounded text-xs font-bold transition-colors border",
+                          isSelected 
+                            ? "bg-blue-600 text-white border-blue-600 shadow-sm" 
+                            : "bg-white text-slate-500 border-slate-200 hover:bg-slate-100"
+                        )}
+                      >
+                        {day.full}
+                      </button>
+                    );
+                  })}
+                </div>
+                <span className="text-[10px] text-slate-400 mt-1 block">If a scheduled message falls on a disabled day, it will automatically shift to the next allowed day.</span>
+              </div>
+
+              <div className="pt-2 border-t border-slate-200">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={newSendImmediateOnEnrollment}
+                    onChange={(e) => setNewSendImmediateOnEnrollment(e.target.checked)}
+                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-xs font-semibold text-slate-700">
+                    Send Day 0 Welcome SMS immediately upon signup
+                  </span>
+                </label>
+                <span className="text-[10px] text-slate-400 ml-5 block">
+                  When enabled, the first welcome SMS (Day 0) is sent immediately upon registration. Subsequent follow-up messages (Day 5, 15, etc.) will follow the scheduled time and days.
+                </span>
+              </div>
+            </div>
             
             <div className="p-4 bg-slate-50 border border-slate-200 rounded">
               <label className="flex items-center gap-2 cursor-pointer mb-3">
@@ -369,15 +515,19 @@ const SmsCampaignsPage = () => {
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-slate-800">{campaign.name}</h3>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
                       <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-bold uppercase", campaign.isActive ? "bg-[#e8f5e9] text-[#2e7d32]" : "bg-slate-100 text-slate-500")}>
                         {campaign.isActive ? 'Active Pipeline' : 'Paused'}
+                      </span>
+                      <span className="text-[11px] font-bold text-slate-600 flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded">
+                        <Clock className="h-3 w-3 text-slate-500" />
+                        Weekdays: {campaign.weekdaySendTime || '16:00'} | Weekends: {campaign.weekendSendTime || '12:00'}
                       </span>
                       <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
                         <UsersIcon className="h-3 w-3" /> {campaign._count?.enrollments ?? 0}
                       </span>
                       <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
-                        <Send className="h-3 w-3" /> {campaign.steps?.length ?? 0}
+                        <Send className="h-3 w-3" /> {campaign.steps?.length ?? 0} {campaign.steps?.length === 1 ? 'step' : 'steps'}
                       </span>
                     </div>
                   </div>
@@ -417,7 +567,7 @@ const SmsCampaignsPage = () => {
               {/* Timeline UI for expanded state */}
               {expanded === campaign.id && draftCampaigns[campaign.id] && (
                 <div className="p-6 bg-[#fafafa] border-t border-slate-200">
-                  <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                     <div className="flex-1">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Campaign Name</label>
                       <input 
@@ -471,6 +621,106 @@ const SmsCampaignsPage = () => {
                         min="0"
                         disabled={!draftCampaigns[campaign.id].discountType}
                       />
+                    </div>
+                  </div>
+
+                  {/* Dispatch Schedule & Timing in Draft Editor */}
+                  <div className="mb-6 p-4 bg-white border border-slate-200 rounded-lg space-y-4">
+                    <div className="flex items-center gap-2 text-slate-700 border-b border-slate-100 pb-2">
+                      <Clock className="h-4 w-4 text-blue-600" />
+                      <span className="text-xs font-bold uppercase tracking-wider">Dispatch Schedule & Timing</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">
+                          Weekday Send Time (Mon - Fri)
+                        </label>
+                        <input 
+                          type="time" 
+                          value={draftCampaigns[campaign.id].weekdaySendTime || '16:00'}
+                          onChange={(e) => setDraftCampaigns(prev => ({ ...prev, [campaign.id]: { ...prev[campaign.id], weekdaySendTime: e.target.value } }))}
+                          className="w-full px-3 py-2 border border-slate-200 rounded text-sm bg-white focus:outline-none focus:border-blue-500 font-mono"
+                        />
+                        <span className="text-[10px] text-slate-400 mt-1 block">Recommended: 16:00 (after school/work hours)</span>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">
+                          Weekend Send Time (Sat - Sun)
+                        </label>
+                        <input 
+                          type="time" 
+                          value={draftCampaigns[campaign.id].weekendSendTime || '12:00'}
+                          onChange={(e) => setDraftCampaigns(prev => ({ ...prev, [campaign.id]: { ...prev[campaign.id], weekendSendTime: e.target.value } }))}
+                          className="w-full px-3 py-2 border border-slate-200 rounded text-sm bg-white focus:outline-none focus:border-blue-500 font-mono"
+                        />
+                        <span className="text-[10px] text-slate-400 mt-1 block">Recommended: 12:00 (around midday)</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">
+                        Allowed Dispatch Days
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {DAYS_OF_WEEK.map(day => {
+                          const currentAllowed = draftCampaigns[campaign.id].allowedDays || DEFAULT_ALLOWED_DAYS;
+                          const isSelected = currentAllowed.includes(day.key);
+                          return (
+                            <button
+                              key={day.key}
+                              type="button"
+                              onClick={() => {
+                                let updatedDays;
+                                if (isSelected) {
+                                  if (currentAllowed.length > 1) {
+                                    updatedDays = currentAllowed.filter(d => d !== day.key);
+                                  } else {
+                                    toast.error('At least one day must be selected');
+                                    return;
+                                  }
+                                } else {
+                                  updatedDays = [...currentAllowed, day.key];
+                                }
+                                setDraftCampaigns(prev => ({
+                                  ...prev,
+                                  [campaign.id]: {
+                                    ...prev[campaign.id],
+                                    allowedDays: updatedDays
+                                  }
+                                }));
+                              }}
+                              className={cn(
+                                "px-3 py-1.5 rounded text-xs font-bold transition-colors border",
+                                isSelected 
+                                  ? "bg-blue-600 text-white border-blue-600 shadow-sm" 
+                                  : "bg-white text-slate-500 border-slate-200 hover:bg-slate-100"
+                              )}
+                            >
+                              {day.full}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <span className="text-[10px] text-slate-400 mt-1 block">If a scheduled message falls on a disabled day, it will automatically shift to the next allowed day.</span>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input 
+                          type="checkbox" 
+                          checked={draftCampaigns[campaign.id].sendImmediateOnEnrollment !== undefined ? draftCampaigns[campaign.id].sendImmediateOnEnrollment : true}
+                          onChange={(e) => setDraftCampaigns(prev => ({ ...prev, [campaign.id]: { ...prev[campaign.id], sendImmediateOnEnrollment: e.target.checked } }))}
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="text-xs font-semibold text-slate-700">
+                          Send Day 0 Welcome SMS immediately upon signup
+                        </span>
+                      </label>
+                      <span className="text-[10px] text-slate-400 ml-5 block">
+                        When enabled, the first welcome SMS (Day 0) is sent immediately upon registration. Subsequent follow-up messages (Day 5, 15, etc.) will follow the scheduled time and days.
+                      </span>
                     </div>
                   </div>
                   
@@ -553,7 +803,7 @@ const SmsCampaignsPage = () => {
                                 </button>
                                 <span className="text-[10px] font-bold text-slate-400">
                                   {step.message.length} chars ({Math.ceil(step.message.length / 160)} SMS)
-                               </span>
+                                </span>
                               </div>
                             </div>
                             
@@ -782,12 +1032,6 @@ const UsersIcon = (props) => (
     <circle cx="9" cy="7" r="4" />
     <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
     <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-  </svg>
-);
-const CodeIcon = (props) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <polyline points="16 18 22 12 16 6" />
-    <polyline points="8 6 2 12 8 18" />
   </svg>
 );
 

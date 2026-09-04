@@ -119,16 +119,20 @@ model DiscountCode {
 }
 
 model SmsCampaign {
-  id            Int                     @id @default(autoincrement())
-  name          String
-  slug          String?                  @unique @default(uuid())
-  isActive      Boolean                 @default(true)
-  discountType  String?                 // 'PERCENTAGE' or 'AMOUNT'
-  discountValue Float?
-  createdAt     DateTime                @default(now())
-  updatedAt     DateTime                @updatedAt
-  steps         SmsCampaignStep[]
-  enrollments   SmsCampaignEnrollment[]
+  id                        Int                     @id @default(autoincrement())
+  name                      String
+  slug                      String?                 @unique @default(uuid())
+  isActive                  Boolean                 @default(true)
+  discountType              String?                 // 'PERCENTAGE' or 'AMOUNT'
+  discountValue             Float?
+  weekdaySendTime           String?                 @default("16:00")
+  weekendSendTime           String?                 @default("12:00")
+  allowedDays               Json?
+  sendImmediateOnEnrollment Boolean                 @default(true)
+  createdAt                 DateTime                @default(now())
+  updatedAt                 DateTime                @updatedAt
+  steps                     SmsCampaignStep[]
+  enrollments               SmsCampaignEnrollment[]
 }
 
 model SmsCampaignStep {

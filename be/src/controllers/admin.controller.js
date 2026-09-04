@@ -372,7 +372,17 @@ exports.getSmsCampaigns = async (req, res) => {
 
 exports.createSmsCampaign = async (req, res) => {
   try {
-    const { name, steps = [], discountType, discountValue, discountExpiryDays } = req.body;
+    const { 
+      name, 
+      steps = [], 
+      discountType, 
+      discountValue, 
+      discountExpiryDays,
+      weekdaySendTime,
+      weekendSendTime,
+      allowedDays,
+      sendImmediateOnEnrollment
+    } = req.body;
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') + '-' + Math.floor(Math.random() * 1000);
 
     let finalType = discountType;
@@ -385,7 +395,11 @@ exports.createSmsCampaign = async (req, res) => {
         name,
         slug,
         discountType: finalType,
-        discountValue: discountValue !== undefined ? parseFloat(discountValue) : null,
+        discountValue: discountValue !== undefined && discountValue !== null && discountValue !== '' ? parseFloat(discountValue) : null,
+        weekdaySendTime: weekdaySendTime || '16:00',
+        weekendSendTime: weekendSendTime || '12:00',
+        allowedDays: allowedDays !== undefined ? allowedDays : ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
+        sendImmediateOnEnrollment: sendImmediateOnEnrollment !== undefined ? !!sendImmediateOnEnrollment : true,
         steps: {
           create: steps.map((s, i) => ({
             dayOffset: parseInt(s.dayOffset) || 0,
@@ -419,11 +433,36 @@ exports.getSmsCampaignBySlug = async (req, res) => {
 
 exports.updateSmsCampaign = async (req, res) => {
   try {
-    const { name, slug, isActive, steps, applyToExisting, discountType, discountValue, discountExpiryDays } = req.body;
+    const { 
+      name, 
+      slug, 
+      isActive, 
+      steps, 
+      applyToExisting, 
+      discountType, 
+      discountValue, 
+      discountExpiryDays,
+      weekdaySendTime,
+      weekendSendTime,
+      allowedDays,
+      sendImmediateOnEnrollment
+    } = req.body;
     const id = parseInt(req.params.id);
 
-    if (name !== undefined || isActive !== undefined || slug !== undefined || discountType !== undefined || discountValue !== undefined || discountExpiryDays !== undefined) {
-      
+    const hasBasicUpdates = (
+      name !== undefined || 
+      isActive !== undefined || 
+      slug !== undefined || 
+      discountType !== undefined || 
+      discountValue !== undefined || 
+      discountExpiryDays !== undefined ||
+      weekdaySendTime !== undefined ||
+      weekendSendTime !== undefined ||
+      allowedDays !== undefined ||
+      sendImmediateOnEnrollment !== undefined
+    );
+
+    if (hasBasicUpdates) {
       let finalType = discountType;
       if (discountType && discountExpiryDays) {
         finalType = `${discountType}:${discountExpiryDays}`;
@@ -438,7 +477,11 @@ exports.updateSmsCampaign = async (req, res) => {
           ...(isActive !== undefined && { isActive }),
           ...(slug !== undefined && { slug }),
           ...(discountType !== undefined && { discountType: finalType }),
-          ...(discountValue !== undefined && { discountValue: discountValue !== null ? parseFloat(discountValue) : null })
+          ...(discountValue !== undefined && { discountValue: discountValue !== null && discountValue !== '' ? parseFloat(discountValue) : null }),
+          ...(weekdaySendTime !== undefined && { weekdaySendTime }),
+          ...(weekendSendTime !== undefined && { weekendSendTime }),
+          ...(allowedDays !== undefined && { allowedDays }),
+          ...(sendImmediateOnEnrollment !== undefined && { sendImmediateOnEnrollment: !!sendImmediateOnEnrollment }),
         }
       });
     }
@@ -454,105 +497,107 @@ exports.updateSmsCampaign = async (req, res) => {
           isActive: s.isActive !== false,
         })),
       });
+    }
 
-      if (applyToExisting) {
-        // Fetch the updated campaign to get current details (slug, discount type, value, etc)
-        const campaign = await prisma.smsCampaign.findUnique({ where: { id } });
+    if (applyToExisting) {
+      const { calculateStepSchedule } = require('../services/sms.service');
+      // Fetch updated campaign with steps
+      const updatedCampaign = await prisma.smsCampaign.findUnique({
+        where: { id },
+        include: { steps: { where: { isActive: true }, orderBy: { sortOrder: 'asc' } } }
+      });
 
-        // Fetch all enrollments for this campaign
-        const enrollments = await prisma.smsCampaignEnrollment.findMany({
-          where: { campaignId: id },
-          include: { customer: true, discountCode: true }
+      // Fetch all enrollments for this campaign
+      const enrollments = await prisma.smsCampaignEnrollment.findMany({
+        where: { campaignId: id },
+        include: { customer: true, discountCode: true }
+      });
+
+      const enrollmentIds = enrollments.map(e => e.id);
+      if (enrollmentIds.length > 0) {
+        // Delete all currently pending or scheduled messages for these enrollments
+        await prisma.smsMessage.deleteMany({
+          where: {
+            enrollmentId: { in: enrollmentIds },
+            status: { in: ['PENDING', 'SCHEDULED'] }
+          }
         });
 
-        // Delete all currently pending or scheduled messages for these enrollments
-        const enrollmentIds = enrollments.map(e => e.id);
-        if (enrollmentIds.length > 0) {
-          await prisma.smsMessage.deleteMany({
-            where: {
-              enrollmentId: { in: enrollmentIds },
-              status: { in: ['PENDING', 'SCHEDULED'] }
-            }
-          });
+        // Parse actual discount type and expiry days
+        let actualType = null;
+        let expiryDays = 20;
+        if (updatedCampaign && updatedCampaign.discountType) {
+          if (updatedCampaign.discountType.includes(':')) {
+            const parts = updatedCampaign.discountType.split(':');
+            actualType = parts[0];
+            expiryDays = parseInt(parts[1]) || 20;
+          } else {
+            actualType = updatedCampaign.discountType;
+          }
+        }
 
-          // Parse actual discount type and expiry days
-          let actualType = null;
-          let expiryDays = 20;
-          if (campaign && campaign.discountType) {
-            if (campaign.discountType.includes(':')) {
-              const parts = campaign.discountType.split(':');
-              actualType = parts[0];
-              expiryDays = parseInt(parts[1]) || 20;
-            } else {
-              actualType = campaign.discountType;
+        // Re-generate future messages based on new schedule and steps
+        const newMessages = [];
+        for (const enrollment of enrollments) {
+          if (enrollment.discountCode && !enrollment.discountCode.usedAt) {
+            const discountUpdateData = {};
+            if (actualType !== undefined) {
+              discountUpdateData.type = actualType;
+            }
+            if (updatedCampaign.discountValue !== undefined) {
+              discountUpdateData.value = updatedCampaign.discountValue !== null ? parseFloat(updatedCampaign.discountValue) : null;
+            }
+            if (expiryDays !== undefined) {
+              const expiresAt = new Date(enrollment.enrolledAt);
+              expiresAt.setDate(expiresAt.getDate() + expiryDays);
+              discountUpdateData.expiresAt = expiresAt;
+            }
+
+            if (Object.keys(discountUpdateData).length > 0) {
+              enrollment.discountCode = await prisma.discountCode.update({
+                where: { id: enrollment.discountCode.id },
+                data: discountUpdateData
+              });
             }
           }
 
-          // Re-generate future messages based on new steps
-          const newMessages = [];
-          for (const enrollment of enrollments) {
-            // Update the discount code details if it exists and is unused
-            if (enrollment.discountCode && !enrollment.discountCode.usedAt) {
-              const discountUpdateData = {};
-              if (actualType !== undefined) {
-                discountUpdateData.type = actualType;
-              }
-              if (campaign.discountValue !== undefined) {
-                discountUpdateData.value = campaign.discountValue !== null ? parseFloat(campaign.discountValue) : null;
-              }
-              if (expiryDays !== undefined) {
-                const expiresAt = new Date(enrollment.enrolledAt);
-                expiresAt.setDate(expiresAt.getDate() + expiryDays);
-                discountUpdateData.expiresAt = expiresAt;
-              }
+          for (const step of updatedCampaign.steps) {
+            const scheduledFor = calculateStepSchedule(enrollment.enrolledAt, parseInt(step.dayOffset) || 0, updatedCampaign);
 
-              if (Object.keys(discountUpdateData).length > 0) {
-                enrollment.discountCode = await prisma.discountCode.update({
-                  where: { id: enrollment.discountCode.id },
-                  data: discountUpdateData
-                });
-              }
-            }
+            // Only queue messages that are in the future
+            if (scheduledFor > new Date()) {
+              const customer = enrollment.customer;
+              const discountCode = enrollment.discountCode;
+              const frontendBaseUrl = process.env.FRONTEND_BASE_URL || 'https://studenterhue.studentlife.dk/studentlife';
+              const campaignSlug = updatedCampaign.slug || '';
 
-            for (const step of steps) {
-              const scheduledFor = new Date(enrollment.enrolledAt);
-              scheduledFor.setDate(scheduledFor.getDate() + (parseInt(step.dayOffset) || 0));
+              const vars = {
+                name: customer.name,
+                discountCode: discountCode?.code || '',
+                expiryDate: discountCode ? new Date(discountCode.expiresAt).toLocaleDateString('da-DK') : '',
+                link: campaignSlug ? `${frontendBaseUrl}/sms-signup/${campaignSlug}` : ''
+              };
 
-              // Only queue messages that are in the future to avoid spamming old steps
-              if (scheduledFor > new Date()) {
-                const customer = enrollment.customer;
-                const discountCode = enrollment.discountCode;
-                const frontendBaseUrl = process.env.FRONTEND_BASE_URL || 'https://studenterhue.studentlife.dk/studentlife';
-                const campaignSlug = campaign.slug || '';
+              const parsedMessage = step.message
+                .replace(/\{\{name\}\}/g, vars.name)
+                .replace(/\{\{discountCode\}\}/g, vars.discountCode)
+                .replace(/\{\{expiryDate\}\}/g, vars.expiryDate)
+                .replace(/\{\{link\}\}/g, vars.link);
 
-                const vars = {
-                  name: customer.name,
-                  discountCode: discountCode?.code || '',
-                  expiryDate: discountCode ? new Date(discountCode.expiresAt).toLocaleDateString('da-DK') : '',
-                  link: campaignSlug ? `${frontendBaseUrl}/sms-signup/${campaignSlug}` : ''
-                };
-
-                const parsedMessage = step.message
-                  .replace(/\{\{name\}\}/g, vars.name)
-                  .replace(/\{\{discountCode\}\}/g, vars.discountCode)
-                  .replace(/\{\{expiryDate\}\}/g, vars.expiryDate)
-                  .replace(/\{\{link\}\}/g, vars.link);
-
-                newMessages.push({
-                  customerId: enrollment.customerId,
-                  enrollmentId: enrollment.id,
-                  phone: enrollment.customer.phone,
-                  message: parsedMessage,
-                  scheduledFor,
-                  status: 'SCHEDULED'
-                });
-              }
+              newMessages.push({
+                customerId: enrollment.customerId,
+                enrollmentId: enrollment.id,
+                phone: enrollment.customer.phone,
+                message: parsedMessage,
+                scheduledFor,
+                status: 'SCHEDULED'
+              });
             }
           }
+        }
 
-          if (newMessages.length > 0) {
-            await prisma.smsMessage.createMany({ data: newMessages });
-          }
+        if (newMessages.length > 0) {
+          await prisma.smsMessage.createMany({ data: newMessages });
         }
       }
     }

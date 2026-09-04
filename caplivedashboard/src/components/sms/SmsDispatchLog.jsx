@@ -147,7 +147,7 @@ export default function SmsDispatchLog({ campaigns }) {
     const cleanDigits = editPhoneModal.phone.replace(/\D/g, '');
     
     if (!cleanDigits || cleanDigits.length < 8) {
-      toast.error('Indtast venligst et gyldigt telefonnummer (mindst 8 cifre)');
+      toast.error('Please enter a valid phone number (at least 8 digits)');
       return;
     }
     
@@ -159,11 +159,11 @@ export default function SmsDispatchLog({ campaigns }) {
         phone: editPhoneModal.group.phone,
         newPhone: editPhoneModal.phone.trim()
       });
-      toast.success('Telefonnummer opdateret');
+      toast.success('Phone number updated successfully');
       setEditPhoneModal({ isOpen: false, group: null, phone: '', isSaving: false });
       loadMessages();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Kunne ikke opdatere telefonnummer');
+      toast.error(err.response?.data?.message || 'Failed to update phone number');
       setEditPhoneModal(prev => ({ ...prev, isSaving: false }));
     }
   };
@@ -174,18 +174,18 @@ export default function SmsDispatchLog({ campaigns }) {
 
     const trimmed = editMessageModal.text.trim();
     if (!trimmed) {
-      toast.error('SMS-besked må ikke være tom');
+      toast.error('SMS message cannot be empty');
       return;
     }
 
     setEditMessageModal(prev => ({ ...prev, isSaving: true }));
     try {
       await updateSmsMessage(editMessageModal.msg.id, { message: trimmed });
-      toast.success('SMS-besked opdateret');
+      toast.success('SMS message updated successfully');
       setEditMessageModal({ isOpen: false, msg: null, text: '', isSaving: false });
       loadMessages();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Kunne ikke opdatere besked');
+      toast.error(err.response?.data?.message || 'Failed to update message');
       setEditMessageModal(prev => ({ ...prev, isSaving: false }));
     }
   };
@@ -517,7 +517,7 @@ export default function SmsDispatchLog({ campaigns }) {
                                     isSaving: false
                                   });
                                 }}
-                                title="Rediger SMS-besked"
+                                title="Edit SMS message"
                                 className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
                               >
                                 <Edit2 className="h-3.5 w-3.5" />
@@ -685,7 +685,7 @@ export default function SmsDispatchLog({ campaigns }) {
           >
             <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div>
-                <h3 className="font-bold text-slate-800 text-base">Rediger Telefonnummer</h3>
+                <h3 className="font-bold text-slate-800 text-base">Edit Phone Number</h3>
                 <p className="text-xs text-slate-500 mt-0.5 font-medium">
                   {editPhoneModal.group?.customer?.name || 'Recipient'} &bull; <span className="font-mono">{formatPhone(editPhoneModal.group?.phone)}</span>
                 </p>
@@ -701,7 +701,7 @@ export default function SmsDispatchLog({ campaigns }) {
             <form onSubmit={handleSaveRecipientPhone} className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                  Nyt Telefonnummer *
+                  New Phone Number *
                 </label>
                 <div className="relative">
                   <input
@@ -716,7 +716,7 @@ export default function SmsDispatchLog({ campaigns }) {
                   />
                 </div>
                 <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
-                  Rediger telefonnummeret til SMS-afsendelse (f.eks. +4561785979). Nummeret opdateres udelukkende på disse SMS-beskeder.
+                  Edit recipient phone number for SMS dispatch (e.g. +4561785979). Updates only campaign SMS messages.
                 </p>
               </div>
 
@@ -727,7 +727,7 @@ export default function SmsDispatchLog({ campaigns }) {
                   className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                   disabled={editPhoneModal.isSaving}
                 >
-                  Annuller
+                  Cancel
                 </button>
                 <button
                   type="submit"
@@ -737,10 +737,10 @@ export default function SmsDispatchLog({ campaigns }) {
                   {editPhoneModal.isSaving ? (
                     <>
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Gemmer...
+                      Saving...
                     </>
                   ) : (
-                    'Gem Telefonnummer'
+                    'Save Phone Number'
                   )}
                 </button>
               </div>
@@ -748,6 +748,7 @@ export default function SmsDispatchLog({ campaigns }) {
           </div>
         </div>
       )}
+
       {/* Edit SMS Message Modal */}
       {editMessageModal.isOpen && (
         <div 
@@ -760,7 +761,7 @@ export default function SmsDispatchLog({ campaigns }) {
           >
             <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div>
-                <h3 className="font-bold text-slate-800 text-base">Rediger SMS-besked</h3>
+                <h3 className="font-bold text-slate-800 text-base">Edit SMS Message</h3>
                 <p className="text-xs text-slate-500 mt-0.5 font-medium">
                   Msg #{editMessageModal.msg?.id} &bull; <span className="font-mono">{formatPhone(editMessageModal.msg?.phone)}</span>
                 </p>
@@ -777,10 +778,10 @@ export default function SmsDispatchLog({ campaigns }) {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                    Beskedtekst *
+                    Message Content *
                   </label>
                   <span className="text-[11px] font-mono text-slate-400">
-                    {editMessageModal.text.length} tegn (ca. {Math.max(1, Math.ceil(editMessageModal.text.length / 160))} SMS)
+                    {editMessageModal.text.length} chars (approx. {Math.max(1, Math.ceil(editMessageModal.text.length / 160))} SMS)
                   </span>
                 </div>
                 <textarea
@@ -788,13 +789,13 @@ export default function SmsDispatchLog({ campaigns }) {
                   value={editMessageModal.text}
                   onChange={(e) => setEditMessageModal({ ...editMessageModal, text: e.target.value })}
                   className="w-full px-3.5 py-2.5 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 font-medium leading-relaxed resize-y"
-                  placeholder="Indtast SMS besked..."
+                  placeholder="Enter SMS message text..."
                   required
                   autoFocus
                   disabled={editMessageModal.isSaving}
                 />
                 <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
-                  Redigeringen gemmes på denne specifikke besked. Hvis beskeden er planlagt eller force-sendes, sendes den opdaterede tekst.
+                  Saved directly to this message. If scheduled or force sent, the updated message text will be dispatched.
                 </p>
               </div>
 
@@ -805,7 +806,7 @@ export default function SmsDispatchLog({ campaigns }) {
                   className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                   disabled={editMessageModal.isSaving}
                 >
-                  Annuller
+                  Cancel
                 </button>
                 <button
                   type="submit"
@@ -815,10 +816,10 @@ export default function SmsDispatchLog({ campaigns }) {
                   {editMessageModal.isSaving ? (
                     <>
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Gemmer...
+                      Saving...
                     </>
                   ) : (
-                    'Gem Besked'
+                    'Save Message'
                   )}
                 </button>
               </div>
