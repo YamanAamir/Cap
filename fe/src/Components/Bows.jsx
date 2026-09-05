@@ -943,6 +943,8 @@ const getSilverEmblem = () => {
         }
 
         sendMessageToIframes(message);
+        const newEmblemMsg = (selectedEmblem.name === 'Guld' || selectedEmblem.value === 'Guld') ? 'gold new' : 'silver new';
+        sendMessageToIframes(newEmblemMsg);
         if (cameraTriggers.current["rosetfarve"]) {
             sendMessageToIframes("rosetfarve camera");
         } else {

@@ -8,10 +8,14 @@ import img6 from '../assets/stars/6-star.webp';
 import coverColorOptionsimg2 from '../assets/cover images/none.webp';
 import whiteGlitter from '../assets/button images/white glitter.webp';
 import blackGlitter from '../assets/button images/black glitter.webp';
-import topDesign1 from '../assets/topDesignImg/1Gold.png';
-import topDesign2 from '../assets/topDesignImg/2.png';
-import topDesign3 from '../assets/topDesignImg/3.png';
-import topDesign4 from '../assets/topDesignImg/4.png';
+import topDesign1Gold from '../assets/topDesignImg/1Gold.webp';
+import topDesign2Gold from '../assets/topDesignImg/2Gold.webp';
+import topDesign3Gold from '../assets/topDesignImg/3Gold.webp';
+import topDesign4Gold from '../assets/topDesignImg/4Gold.webp';
+import topDesign1Silver from '../assets/topDesignImg/1Silver.webp';
+import topDesign2Silver from '../assets/topDesignImg/2Silver.webp';
+import topDesign3Silver from '../assets/topDesignImg/3Silver.webp';
+import topDesign4Silver from '../assets/topDesignImg/4Silver.webp';
 
 import international from '../assets/flagbandimages/international.webp';
 import usakinaden from '../assets/flagbandimages/USAKINADEN.webp';
@@ -34,7 +38,7 @@ import Morocco from '../assets/Countries/morocco.webp';
 import Pakistan from '../assets/Countries/pakistan.webp';
 import Sweden from '../assets/Countries/sweden.webp';
 import Turkey from '../assets/Countries/turkey.webp';
-import Greenland from '../assets/Countries/greenland.png';
+import Greenland from '../assets/Countries/greenland.webp';
 import StxSilver from '../assets/images/stx silv.webp';
 import StxSilverDiamant from '../assets/images/stx silver diamant.webp';
 import StxGoldDiamant from '../assets/images/Stx gold diamant.webp';
@@ -68,10 +72,10 @@ import MerkurstavSilver from '../assets/images/merkurstav silver.webp';
 import MerkurstavGoldDiamant from '../assets/images/merkurstav gold diamant.webp';
 import MerkurstavGold from '../assets/images/merkurstav gold.webp';
 
-import GuxGold from '../assets/images/gux gold.jpg';
-import GuxGoldDiamant from '../assets/images/gux gold diamant.jpg';
-import GuxSilver from '../assets/images/gux silver.jpg';
-import GuxSilverDiamant from '../assets/images/gux silver diamant.jpg';
+import GuxGold from '../assets/images/gux gold.webp';
+import GuxGoldDiamant from '../assets/images/gux gold diamant.webp';
+import GuxSilver from '../assets/images/gux silver.webp';
+import GuxSilverDiamant from '../assets/images/gux silver diamant.webp';
 import HjerteGuld from '../assets/images/hjerte guld.webp';
 import HjerteSilv from '../assets/images/hjerte silv.webp';
 import AhornbladGold from '../assets/images/Ahornblad gold.webp';
@@ -89,10 +93,10 @@ import TeaterGold from '../assets/images/Teater gold.webp';
 import TwinSilver from '../assets/images/twin silver.webp';
 import TwinGold from '../assets/images/twin gold.webp';
 
-import UdenStenGuld from '../assets/images/uden_sten_guld.png';
-import UdenStenGuldSimli from '../assets/images/uden_sten_guld_simli.png';
-import UdenStenSoelvSimli from '../assets/images/uden_sten_soelv_simli.png';
-import UdenStenSoelv from '../assets/images/uden_sten_soelv.png';
+import UdenStenGuld from '../assets/images/uden_sten_guld.webp';
+import UdenStenGuldSimli from '../assets/images/uden_sten_guld_simli.webp';
+import UdenStenSoelvSimli from '../assets/images/uden_sten_soelv_simli.webp';
+import UdenStenSoelv from '../assets/images/uden_sten_soelv.webp';
 import NodeSilver from '../assets/images/Node silv.webp';
 import NodeGold from '../assets/images/Node gold.webp';
 import SportGold from '../assets/images/sport gold.webp';
@@ -266,8 +270,16 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
         selectedOptions.Kokarde || 'Signature'
     );
     const [selectedEmblem, setSelectedEmblem] = useState(
-        selectedOptions.Emblem || getInitialEmblem()
+        selectedOptions.Emblem || (current?.name ? current : getInitialEmblem())
     );
+
+    useEffect(() => {
+        if (current && !selectedOptions.Emblem) {
+            setSelectedEmblem(getCurrentEmblem());
+        }
+    }, [current]);
+
+    const isGoldEmblem = (selectedEmblem?.name === 'Guld' || selectedEmblem?.value === 'Guld' || selectedEmblem?.name === 'Gold' || selectedEmblem?.value === 'Gold');
     const [selectedType, setSelectedType] = useState(
         selectedOptions.Type || getInitialType()
     );
@@ -925,6 +937,8 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
             const iframe = document.getElementById(id);
             if (iframe?.contentWindow) {
                 iframe.contentWindow.postMessage(message, "*");
+                const newEmblemMsg = (selectedEmblem.name === 'Guld' || selectedEmblem.value === 'Guld') ? 'gold new' : 'silver new';
+                iframe.contentWindow.postMessage(newEmblemMsg, "*");
                 if (cameraTriggers.current["rosetfarve"]) {
                     iframe.contentWindow.postMessage("rosetfarve camera", "*");
                 }
@@ -1144,10 +1158,10 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
                 <div className="flex space-x-3 mt-4">
                     {[
                         { value: 'Ingen', label: 'Ingen', img: coverColorOptionsimg2 },
-                        { value: 'Top broderi 1', label: 'Top broderi 1', img: topDesign1 },
-                        { value: 'Top broderi 2', label: 'Top broderi 2', img: topDesign3 },
-                        { value: 'Top broderi 3', label: 'Top broderi 3', img: topDesign2 },
-                        { value: 'Top broderi 4', label: 'Top broderi 4', img: topDesign4 },
+                        { value: 'Top broderi 1', label: 'Top broderi 1', img: isGoldEmblem ? topDesign1Gold : topDesign1Silver },
+                        { value: 'Top broderi 2', label: 'Top broderi 2', img: isGoldEmblem ? topDesign3Gold : topDesign3Silver },
+                        { value: 'Top broderi 3', label: 'Top broderi 3', img: isGoldEmblem ? topDesign2Gold : topDesign2Silver },
+                        { value: 'Top broderi 4', label: 'Top broderi 4', img: isGoldEmblem ? topDesign4Gold : topDesign4Silver },
                     ].map((option) => (
                         <button
                             key={option.value}

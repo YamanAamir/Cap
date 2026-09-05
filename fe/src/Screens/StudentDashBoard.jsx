@@ -978,6 +978,7 @@ const StudentDashboard = () => {
                   }
                   program={program} visibilityConfig={visibilityConfig}
                   pakke={packageName}
+                  currentEmblem={globalEmblem}
                 />
               )}
               {activeMenu === "BETRÆK" && (
@@ -1377,6 +1378,7 @@ const StudentDashboard = () => {
                       }
                       program={program} visibilityConfig={visibilityConfig}
                       pakke={packageName}
+                      currentEmblem={globalEmblem}
                     />
                   )}
                   {activeMenu === "BETRÆK" && (

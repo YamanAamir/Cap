@@ -9,12 +9,17 @@ import {
     sendArabicTextToIframes,
 } from '../utils/embroideryAlphabet';
 
-import topDesign1 from '../assets/topDesignImg/1Gold.png';
-import topDesign2 from '../assets/topDesignImg/2.png';
-import topDesign3 from '../assets/topDesignImg/3.png';
-import topDesign4 from '../assets/topDesignImg/4.png';
+import topDesign1Gold from '../assets/topDesignImg/1Gold.webp';
+import topDesign2Gold from '../assets/topDesignImg/2Gold.webp';
+import topDesign3Gold from '../assets/topDesignImg/3Gold.webp';
+import topDesign4Gold from '../assets/topDesignImg/4Gold.webp';
+import topDesign1Silver from '../assets/topDesignImg/1Silver.webp';
+import topDesign2Silver from '../assets/topDesignImg/2Silver.webp';
+import topDesign3Silver from '../assets/topDesignImg/3Silver.webp';
+import topDesign4Silver from '../assets/topDesignImg/4Silver.webp';
 
-const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visibilityConfig = {} }) => {
+const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visibilityConfig = {}, currentEmblem }) => {
+    const isGold = (currentEmblem?.name === 'Guld' || currentEmblem?.value === 'Guld' || currentEmblem?.name === 'Gold' || currentEmblem?.value === 'Gold') ?? true;
     const isVisible = (key) => visibilityConfig?.['BRODERI_' + key] !== false;
     // Default value functions
     const cameraTriggers = useRef({});
@@ -459,10 +464,10 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
                 <div className="flex space-x-3 mt-4">
                     {[
                         { value: 'Ingen', label: 'Ingen', img: noneImg },
-                        { value: 'Top broderi 1', label: 'Top broderi 1', img: topDesign1 },
-                        { value: 'Top broderi 2', label: 'Top broderi 2', img: topDesign3 },
-                        { value: 'Top broderi 3', label: 'Top broderi 3', img: topDesign2 },
-                        { value: 'Top broderi 4', label: 'Top broderi 4', img: topDesign4 },
+                        { value: 'Top broderi 1', label: 'Top broderi 1', img: isGold ? topDesign1Gold : topDesign1Silver },
+                        { value: 'Top broderi 2', label: 'Top broderi 2', img: isGold ? topDesign3Gold : topDesign3Silver },
+                        { value: 'Top broderi 3', label: 'Top broderi 3', img: isGold ? topDesign2Gold : topDesign2Silver },
+                        { value: 'Top broderi 4', label: 'Top broderi 4', img: isGold ? topDesign4Gold : topDesign4Silver },
                     ].filter(opt => isVisible(`Top broderi_${opt.value}`)).map((option) => (
                         <button
                             key={option.value}

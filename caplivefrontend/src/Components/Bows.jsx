@@ -17,7 +17,7 @@ import Morocco from '../assets/Countries/morocco.webp';
 import Pakistan from '../assets/Countries/pakistan.webp';
 import Sweden from '../assets/Countries/sweden.webp';
 import Turkey from '../assets/Countries/turkey.webp';
-import Greenland from '../assets/Countries/greenland.png';
+import Greenland from '../assets/Countries/greenland.webp';
 import StxSilver from '../assets/images/stx silv.webp';
 import StxSilverDiamant from '../assets/images/stx silver diamant.webp';
 import StxGoldDiamant from '../assets/images/Stx gold diamant.webp';
@@ -51,10 +51,10 @@ import MerkurstavSilver from '../assets/images/merkurstav silver.webp';
 import MerkurstavGoldDiamant from '../assets/images/merkurstav gold diamant.webp';
 import MerkurstavGold from '../assets/images/merkurstav gold.webp';
 
-import GuxGold from '../assets/images/gux gold.jpg';
-import GuxGoldDiamant from '../assets/images/gux gold diamant.jpg';
-import GuxSilver from '../assets/images/gux silver.jpg';
-import GuxSilverDiamant from '../assets/images/gux silver diamant.jpg';
+import GuxGold from '../assets/images/gux gold.webp';
+import GuxGoldDiamant from '../assets/images/gux gold diamant.webp';
+import GuxSilver from '../assets/images/gux silver.webp';
+import GuxSilverDiamant from '../assets/images/gux silver diamant.webp';
 import HjerteGuld from '../assets/images/hjerte guld.webp';
 import HjerteSilv from '../assets/images/hjerte silv.webp';
 import AhornbladGold from '../assets/images/Ahornblad gold.webp';
@@ -64,10 +64,10 @@ import AnkerSilver from '../assets/images/anker silver.webp';
 import AtomGold from '../assets/images/atom gold.webp';
 import AtomSilver from '../assets/images/atom silver.webp';
 
-import UdenStenGuld from '../assets/images/uden_sten_guld.png';
-import UdenStenGuldSimli from '../assets/images/uden_sten_guld_simli.png';
-import UdenStenSoelvSimli from '../assets/images/uden_sten_soelv_simli.png';
-import UdenStenSoelv from '../assets/images/uden_sten_soelv.png';
+import UdenStenGuld from '../assets/images/uden_sten_guld.webp';
+import UdenStenGuldSimli from '../assets/images/uden_sten_guld_simli.webp';
+import UdenStenSoelvSimli from '../assets/images/uden_sten_soelv_simli.webp';
+import UdenStenSoelv from '../assets/images/uden_sten_soelv.webp';
 import DnaGold from '../assets/images/dna gold.webp';
 import DnaSilver from '../assets/images/dna silver.webp';
 import ItSilver from '../assets/images/It silver.webp';
@@ -101,10 +101,10 @@ import pauGold from '../assets/images/pau gold.webp';
 import pauSilver from '../assets/images/pau silver.webp';
 import ernæringsassistenGold from '../assets/images/ernaringsassisten gold.webp';
 import ernæringsassistenSilver from '../assets/images/ernaringsassisten silver.webp';
-import stuGold from '../assets/images/stu gold.jpg';
-import stuSilver from '../assets/images/stu silver.jpg';
-import stuGoldDiamant from '../assets/images/stu gold diamant.jpg';
-import stuSilverDiamant from '../assets/images/stu silver diamant.jpg';
+import stuGold from '../assets/images/stu gold.webp';
+import stuSilver from '../assets/images/stu silver.webp';
+import stuGoldDiamant from '../assets/images/stu gold diamant.webp';
+import stuSilverDiamant from '../assets/images/stu silver diamant.webp';
 
 // prestige
 import JupiterGold from '../assets/images/Jupiter gold.webp';
@@ -125,8 +125,8 @@ import IbSilver from '../assets/images/ib silver.webp';
 import IbGold from '../assets/images/Ib gold.webp';
 import IbGuldSimli from '../assets/images/IB Guld Simli.webp';
 import IbSølvSimli from '../assets/images/IB Sølv Simli.webp';
-import traktorGuld from '../assets/images/traktorGuld.jpg';
-import traktorSolv from '../assets/images/traktorSolv.jpg';
+import traktorGuld from '../assets/images/traktorGuld.webp';
+import traktorSolv from '../assets/images/traktorSolv.webp';
 import FKeyGold from '../assets/images/f key gold.webp';
 import FKeySilver from '../assets/images/f key silver.webp';
 import FiskenGold from '../assets/images/fisken gold.webp';
@@ -943,6 +943,8 @@ const getSilverEmblem = () => {
         }
 
         sendMessageToIframes(message);
+        const newEmblemMsg = (selectedEmblem.name === 'Guld' || selectedEmblem.value === 'Guld') ? 'gold new' : 'silver new';
+        sendMessageToIframes(newEmblemMsg);
         if (cameraTriggers.current["rosetfarve"]) {
             sendMessageToIframes("rosetfarve camera");
         } else {

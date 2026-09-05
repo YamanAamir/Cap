@@ -16,8 +16,8 @@ import silverblack from '../assets/button images/silverblack.webp';
 import blacksilver from '../assets/button images/blacksilver.webp';
 import silver from '../assets/button images/silver.webp';
 import gold from '../assets/button images/gold.webp';
-import stuBandImg from '../assets/button images/stu_band.jpg';
-import landmandBandImg from '../assets/images/landmandBandImg.png';
+import stuBandImg from '../assets/button images/stu_band.webp';
+import landmandBandImg from '../assets/images/landmandBandImg.webp';
 const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke, currentEmblem, visibilityConfig = {} }) => {
     // State variables with descriptive names
     const cameraTriggers = useRef({});
