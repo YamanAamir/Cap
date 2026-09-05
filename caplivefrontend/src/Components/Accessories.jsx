@@ -81,18 +81,20 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
             canvas.width = 1;
             canvas.height = 1;
             ctx.clearRect(0, 0, 1, 1);
-            sendMessageToIframes(messagePrefix + canvas.toDataURL('image/png'));
+            const emptyData = canvas.toDataURL('image/png');
+            sendMessageToIframes(messagePrefix + emptyData);
             return;
         }
 
-        const fontSize = 150;
+        const isMobile = typeof window !== 'undefined' && (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768);
+        const fontSize = isMobile ? 75 : 150;
         const fontFamily = 'Arial';
 
         ctx.font = `${fontSize}px ${fontFamily}`;
         const textWidth = ctx.measureText(text).width;
 
-        canvas.width = textWidth + 200;
-        canvas.height = 512;
+        canvas.width = Math.min(textWidth + (isMobile ? 100 : 200), isMobile ? 1400 : 2800);
+        canvas.height = isMobile ? 256 : 512;
 
         ctx.font = `${fontSize}px ${fontFamily}`;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -105,7 +107,11 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
 
         ctx.fillText(text, canvas.width / 2, canvas.height / 2);
 
-        sendMessageToIframes(`${messagePrefix}:${canvas.toDataURL('image/png', 10)}`);
+        const dataUrl = canvas.toDataURL('image/png');
+        canvas.width = 1;
+        canvas.height = 1;
+
+        sendMessageToIframes(`${messagePrefix}:${dataUrl}`);
     };
 
     const handleKorkardeTextChange = (text) => {

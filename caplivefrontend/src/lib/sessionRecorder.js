@@ -47,20 +47,53 @@ const flushEvents = async () => {
 };
 
 export const startRecording = () => {
+  // Session recording temporarily disabled
+  return;
+  
+  /*
   if (stopRecording) return; // Already recording
 
-  stopRecording = rrweb.record({
-    emit(event) {
-      events.push(event);
-    },
-    inlineStylesheet: true,
-  });
+  const isMobile = typeof window !== 'undefined' && (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768);
 
-  // Flush events periodically
-  setInterval(flushEvents, FLUSH_INTERVAL);
+  try {
+    stopRecording = rrweb.record({
+      emit(event) {
+        // Prevent unbounded memory accumulation on mobile
+        if (events.length > 400) {
+          events.splice(0, 100);
+        }
+        events.push(event);
+      },
+      inlineStylesheet: !isMobile,
+      recordCanvas: false,
+      collectFonts: false,
+      sampling: {
+        mousemove: isMobile ? false : 50,
+        mouseInteraction: {
+          MouseUp: false,
+          MouseDown: false,
+          Click: true,
+          ContextMenu: false,
+          DblClick: false,
+          Focus: false,
+          Blur: false,
+          TouchStart: false,
+          TouchEnd: false,
+        },
+        scroll: 300,
+        input: 'last',
+      },
+    });
 
-  // Attempt to flush remaining events when user leaves the page
-  window.addEventListener('beforeunload', () => {
-    flushEvents();
-  });
+    // Flush events periodically
+    setInterval(flushEvents, FLUSH_INTERVAL);
+
+    // Attempt to flush remaining events when user leaves the page
+    window.addEventListener('beforeunload', () => {
+      flushEvents();
+    });
+  } catch (err) {
+    console.warn('Session recording could not start:', err);
+  }
+  */
 };

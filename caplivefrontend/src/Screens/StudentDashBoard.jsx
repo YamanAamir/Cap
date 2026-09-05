@@ -775,10 +775,8 @@ const StudentDashboard = () => {
   }, [program, isIframeLoaded, isAppReady]);
 
   useEffect(() => {
-    const iframe_desktop = document.getElementById("preview-iframe");
-    const iframe_mobile = document.getElementById("preview-iframe2");
-
     if (isDesktop) {
+      const iframe_desktop = document.getElementById("preview-iframe");
       if (iframe_desktop && (!iframe_desktop.src || !iframe_desktop.src.includes('playcanv.as'))) {
         ////////DEV Student Life////////
         iframe_desktop.src = "https://playcanv.as/e/p/to6gFrqQ/";
@@ -787,6 +785,7 @@ const StudentDashboard = () => {
         // iframe_desktop.src = "https://playcanv.as/e/p/QIG7fh8C/";
       }
     } else {
+      const iframe_mobile = document.getElementById("preview-iframe2");
       if (iframe_mobile && (!iframe_mobile.src || !iframe_mobile.src.includes('playcanv.as'))) {
         ////////DEV Student Life////////
         iframe_mobile.src = "https://playcanv.as/e/p/9y9yBbyR/";
@@ -823,8 +822,9 @@ const StudentDashboard = () => {
 
   return (
     <div className="h-screen bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
-      {/* Desktop Layout (md and up) */}
-      <div className="hidden md:flex h-screen">
+      {isDesktop ? (
+        /* Desktop Layout */
+        <div className="flex h-screen">
         {/* Sidebar */}
         <aside className="bg-white/70 backdrop-blur-sm border-r border-slate-200 overflow-y-auto">
           <div className="p-6">
@@ -1133,15 +1133,14 @@ const StudentDashboard = () => {
             </div>
           </div>
         </div>
-      {/* moblail */}
-      <div className="md:hidden flex flex-col ">
-        {/* Mobile Preview Panel - Top */}
+      ) : (
+        /* Mobile Layout */
         <div className="flex flex-col h-screen">
           {/* Main content area that will scroll */}
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Preview section (Matches Image 2) - Updated to 300px height */}
             <div className="relative h-[300px] flex-shrink-0">
-              <div className="bg-white/70 backdrop-blur-sm border-b border-slate-200 h-full">
+              <div className="bg-[#f8f9fa] border-b border-slate-200 h-full">
                 <div className="absolute top-0 left-0 right-0 z-10 flex items-start justify-between p-4 bg-transparent pointer-events-none">
                   <div className="flex items-start space-x-3 pointer-events-auto">
                     <div className="w-10 h-10 bg-[#3b59ff] rounded-2xl flex items-center justify-center shadow-lg">
@@ -1158,7 +1157,7 @@ const StudentDashboard = () => {
                   </div>
                 </div>
 
-                <div className="h-full overflow-hidden relative">
+                <div className="h-full overflow-hidden relative" style={{ touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch' }}>
                   <iframe
                     id="preview-iframe2"
                     src=""
@@ -1166,6 +1165,7 @@ const StudentDashboard = () => {
                     frameBorder="0"
                     title="3D Student Card Preview"
                     onLoad={handleIframeLoad}
+                    style={{ touchAction: 'pan-x pan-y' }}
                   />
 
                   {/* Model Loading Overlay - Mobile */}
@@ -1428,9 +1428,7 @@ const StudentDashboard = () => {
             </button>
           </div>
         </div>
-
-        {/* Quote Modal */}
-      </div>
+      )}
       <QuoteModal
         isOpen={isQuoteModalOpen}
         onClose={() => setIsQuoteModalOpen(false)}

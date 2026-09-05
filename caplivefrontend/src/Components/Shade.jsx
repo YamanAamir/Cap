@@ -44,7 +44,7 @@ const Shade = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig
     const lastAppliedLine2Ref = useRef(selectedOptions['Skyggegravering Line 2'] || '');
     const lastAppliedLine3Ref = useRef(selectedOptions['Skyggegravering Line 3'] || '');
 
-    // Updated: Now sends 1×1 transparent image when text is empty
+    // Updated: Now sends 1×1 transparent image when text is empty and frees memory immediately
     const renderLineToCanvas = (text, canvasRef, messagePrefix) => {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext("2d");
@@ -60,14 +60,14 @@ const Shade = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig
             return;
         }
 
-        // --- FIXED FONT SIZE ---
-        const fontSize = 120;
+        const isMobile = typeof window !== 'undefined' && (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768);
+        const w = isMobile ? 1400 : 2800;
+        const h = isMobile ? 256 : 512;
+        const fontSize = isMobile ? 60 : 120;
         const fontFamily = "Arial";
 
-        ctx.font = `${fontSize}px ${fontFamily}`;
-
-        canvas.width = 2800;
-        canvas.height = 512;
+        canvas.width = w;
+        canvas.height = h;
 
         ctx.font = `${fontSize}px ${fontFamily}`;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -84,8 +84,11 @@ const Shade = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig
 
         ctx.fillText(text, 0, 0);
 
-        // STEP 5 — export
-        const base64Image = canvas.toDataURL("image/png", 10);
+        // STEP 5 — export & immediately free canvas buffer
+        const base64Image = canvas.toDataURL("image/png");
+        canvas.width = 1;
+        canvas.height = 1;
+
         const message = messagePrefix + base64Image;
         sendToActiveIframe(message);
     };
