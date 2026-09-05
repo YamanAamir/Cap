@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { sendToActiveIframe } from '../utils/iframeMessenger'
 
 // signature
 import Kurdistan from '../assets/Countries/kurdistan.webp';
@@ -853,12 +854,7 @@ const getSilverEmblem = () => {
         if (!message) return;
 
         const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                }
-            });
+            sendToActiveIframe(msg);
         };
 
         sendMessageToIframes(message);
@@ -902,12 +898,7 @@ const getSilverEmblem = () => {
         if (!message) return;
 
         const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                }
-            });
+            sendToActiveIframe(msg);
         };
 
         sendMessageToIframes(message);
@@ -934,13 +925,8 @@ const getSilverEmblem = () => {
         if (!message) return;
 
         const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id)
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, '*')
-                }
-            })
-        }
+            sendToActiveIframe(msg);
+        };
 
         sendMessageToIframes(message);
         const newEmblemMsg = (selectedEmblem.name === 'Guld' || selectedEmblem.value === 'Guld') ? 'gold new' : 'silver new';
@@ -961,12 +947,7 @@ const getSilverEmblem = () => {
 
     useEffect(() => {
         const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                }
-            });
+            sendToActiveIframe(msg);
         };
 
         // Country-flag mode: same string shape as Signature ("Teater Guld Guld") → "Kurdistan Guld"

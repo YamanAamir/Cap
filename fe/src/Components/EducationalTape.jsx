@@ -115,14 +115,19 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
         return map[selectedEmbroideryColor] || '#000000';
     };
     const [isApplyingText, setIsApplyingText] = useState(false);
+    const lastAppliedFrontTextRef = useRef(selectedOptions['Broderi foran'] || '');
 
     const handleApplyEmbroideryText = async () => {
         if (isApplyingText) return;
+        const upperText = sanitizeEmbroideryLetters(inputEmbroideryText, 20);
+        if (!upperText.trim()) return;
+        if (upperText === lastAppliedFrontTextRef.current) return;
+
         setIsApplyingText(true);
         // Yield to allow mobile browser to render button feedback
         await new Promise(r => setTimeout(r, 10));
         try {
-            const upperText = sanitizeEmbroideryLetters(inputEmbroideryText, 20);
+            lastAppliedFrontTextRef.current = upperText;
             setEmbroideryText(upperText);
             onOptionChange('Broderi foran', upperText);
             if (isArabicText(upperText)) {
@@ -132,6 +137,7 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
                 const result = await generateAllEmbroideryMaps(upperText);
                 sendEmbroideryMapsToIframes('front', result);
             }
+            sendMessageToIframes("broderifarve camera");
         } catch (err) {
             console.error('Error applying front embroidery:', err);
         } finally {
@@ -141,6 +147,8 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
 
     const handleClearEmbroideryText = async () => {
         if (isApplyingText) return;
+        if (!lastAppliedFrontTextRef.current && !inputEmbroideryText) return;
+
         setIsApplyingText(true);
         await new Promise(r => setTimeout(r, 10));
         try {
@@ -148,12 +156,15 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
             setInputEmbroideryText('');
             setEmbroideryText('');
             onOptionChange('Broderi foran', '');
-            if (wasArabic) {
-                sendArabicTextToIframes('clear');
-            } else {
-                const result = await generateAllEmbroideryMaps('');
-                sendEmbroideryMapsToIframes('front', result);
-                sendArabicTextToIframes('clear');
+            if (lastAppliedFrontTextRef.current) {
+                lastAppliedFrontTextRef.current = '';
+                if (wasArabic) {
+                    sendArabicTextToIframes('clear');
+                } else {
+                    const result = await generateAllEmbroideryMaps('');
+                    sendEmbroideryMapsToIframes('front', result);
+                    sendArabicTextToIframes('clear');
+                }
             }
         } catch (err) {
             console.error('Error clearing front embroidery:', err);

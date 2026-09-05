@@ -1,4 +1,5 @@
-﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { sendToActiveIframe } from '../utils/iframeMessenger';
 import { buildLiningExportDataUrl } from '../utils/liningCanvas';
 import LiningPhotoEditor from './LiningPhotoEditor';
 
@@ -157,12 +158,7 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, vi
 
     // ====================== Helper: Always send message ======================
     const sendMessage = (message) => {
-        ['preview-iframe', 'preview-iframe2'].forEach(id => {
-            const iframe = document.getElementById(id);
-            if (iframe?.contentWindow) {
-                iframe.contentWindow.postMessage(message, "*");
-            }
-        });
+        sendToActiveIframe(message);
     };
 
     // ====================== postMessage Effects ======================

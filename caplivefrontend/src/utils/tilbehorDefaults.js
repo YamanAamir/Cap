@@ -1,3 +1,5 @@
+import { sendToActiveIframe } from './iframeMessenger';
+
 const ALL_NO = {
     Hueæske: 'Standard',
     'Premium æske': '',
@@ -68,12 +70,7 @@ export const getTilbehorForTier = (tier, baseTilbehor = {}) => {
 };
 
 const sendMessageToIframes = (msg) => {
-    ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-        const iframe = document.getElementById(id);
-        if (iframe?.contentWindow) {
-            iframe.contentWindow.postMessage(msg, '*');
-        }
-    });
+    sendToActiveIframe(msg);
 };
 
 export const syncTilbehorToIframes = (tilbehor) => {

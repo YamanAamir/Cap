@@ -42,9 +42,22 @@ import pædagog from "../Default/pædagog";
 import pau from "../Default/pau";
 import ernæringsassisten from "../Default/ernæringsassisten";
 import { getTilbehorForTier, syncTilbehorToIframes } from "../utils/tilbehorDefaults";
+import { sendToActiveIframe, getActiveIframeId, isDesktopDevice } from "../utils/iframeMessenger";
 
 const StudentDashboard = () => {
   const [activeMenu, setActiveMenu] = useState("KOKARDE");
+  const [isDesktop, setIsDesktop] = useState(
+    typeof window !== 'undefined' ? window.innerWidth >= 768 : true
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   {/* jjjjjjjjjjjj */ }
   const activeMenuRef = useRef(activeMenu);
   useEffect(() => { activeMenuRef.current = activeMenu; }, [activeMenu]);
@@ -81,12 +94,7 @@ const StudentDashboard = () => {
         const msg = `${activeMenuRef.current} camera`;
         console.log("Sending group camera msg:", msg, "for group:", groupKey);
 
-        ['preview-iframe', 'preview-iframe2'].forEach(id => {
-          const iframe = document.getElementById(id);
-          if (iframe?.contentWindow) {
-            iframe.contentWindow.postMessage(msg, "*");
-          }
-        });
+        sendToActiveIframe(msg);
       }
     };
     document.addEventListener('click', handleClick);
@@ -486,56 +494,38 @@ const StudentDashboard = () => {
   }, [program, isIframeLoaded, isAppReady, packageName]);
 
   const sendProgramToIframe = () => {
-    // Get iframe by ID
-    const iframe = document.getElementById("preview-iframe");
-    const iframe2 = document.getElementById("preview-iframe2");
-    if (iframe && iframe.contentWindow) {
-      const message = "UDDANNELSESBÅNDMateriale:" + program.toLowerCase() + ":bomuld";
-      console.log("Sending message to iframe:", message);
-      iframe.contentWindow.postMessage(message, "*");
-      if (iframe2) iframe2.contentWindow.postMessage(message, "*");
+    const message = "UDDANNELSESBÅNDMateriale:" + program.toLowerCase() + ":bomuld";
+    console.log("Sending message to active iframe:", message);
+    sendToActiveIframe(message);
 
-      if (packageName === "standard" || packageName === "basichue") {
-        const penMsg = "Accessories Huekuglepen:no";
-        console.log("Sending pen message to iframe:", penMsg);
-        iframe.contentWindow.postMessage(penMsg, "*");
-        if (iframe2) iframe2.contentWindow.postMessage(penMsg, "*");
-      }
-    } else {
-      console.log("Iframe not ready or program not available");
+    if (packageName === "standard" || packageName === "basichue") {
+      const penMsg = "Accessories Huekuglepen:no";
+      console.log("Sending pen message to active iframe:", penMsg);
+      sendToActiveIframe(penMsg);
     }
-
-    // setTimeout(() => document.getElementById("preview-iframe")?.contentWindow?.postMessage("UDDANNELSESBÅNDMateriale:sosuhjælper:bomuld", "*"), 10000);
-
-
   };
 
   const handleIframeLoad = () => {
     console.log("Iframe loaded");
     setIsIframeLoaded(true);
 
-    // Inject a console.log proxy into the iframe to intercept
-    // "All Models & Assets Loaded Successfully!" and forward it as postMessage.
-    // This works when iframe is same-origin or when browser allows it.
-    ["preview-iframe", "preview-iframe2"].forEach((id) => {
-      try {
-        const iframe = document.getElementById(id);
-        if (!iframe?.contentWindow) return;
-        const iframeConsole = iframe.contentWindow.console;
-        const originalLog = iframeConsole.log.bind(iframeConsole);
-        iframeConsole.log = function (...args) {
-          originalLog(...args);
-          const msg = args.join(" ");
-          if (msg.includes("All Models & Assets Loaded Successfully!")) {
-            window.postMessage("All Models & Assets Loaded Successfully!", "*");
-          }
-        };
-        console.log(`✅ console.log proxy injected into ${id}`);
-      } catch (e) {
-        // Cross-origin: can't inject — postMessage listener is the fallback
-        console.log(`ℹ️ Cross-origin iframe (${id}), proxy not possible — relying on postMessage`);
-      }
-    });
+    const activeId = getActiveIframeId();
+    try {
+      const iframe = document.getElementById(activeId);
+      if (!iframe?.contentWindow) return;
+      const iframeConsole = iframe.contentWindow.console;
+      const originalLog = iframeConsole.log.bind(iframeConsole);
+      iframeConsole.log = function (...args) {
+        originalLog(...args);
+        const msg = args.join(" ");
+        if (msg.includes("All Models & Assets Loaded Successfully!")) {
+          window.postMessage("All Models & Assets Loaded Successfully!", "*");
+        }
+      };
+      console.log(`✅ console.log proxy injected into ${activeId}`);
+    } catch (e) {
+      console.log(`ℹ️ Cross-origin iframe (${activeId}), proxy not possible — relying on postMessage`);
+    }
   };
 
   // Ref to make sure we only start the loader-hide timer once
@@ -573,17 +563,8 @@ const StudentDashboard = () => {
           sendProgramToIframe();
         }
 
-        const iframes = ["preview-iframe", "preview-iframe2"]
-          .map((id) => document.getElementById(id))
-          .filter(Boolean);
-
-        if (iframes.length === 0) return;
-
         const send = (msg) => {
-          iframes.forEach((iframe) => {
-            if (iframe?.contentWindow)
-              iframe.contentWindow.postMessage(msg, "*");
-          });
+          sendToActiveIframe(msg);
         };
 
         // ===== BETRÆK =====
@@ -794,25 +775,27 @@ const StudentDashboard = () => {
   }, [program, isIframeLoaded, isAppReady]);
 
   useEffect(() => {
-    var iframe_desktop = document.getElementById("preview-iframe");
-    var iframe_mobile = document.getElementById("preview-iframe2");
-    
-    if (!iframe_desktop || !iframe_mobile) return;
+    const iframe_desktop = document.getElementById("preview-iframe");
+    const iframe_mobile = document.getElementById("preview-iframe2");
 
-    if (window.innerWidth >= 768) {
-      ////////DEV Student Life////////
-      iframe_desktop.src = "https://playcanv.as/e/p/to6gFrqQ/";
+    if (isDesktop) {
+      if (iframe_desktop && (!iframe_desktop.src || !iframe_desktop.src.includes('playcanv.as'))) {
+        ////////DEV Student Life////////
+        iframe_desktop.src = "https://playcanv.as/e/p/to6gFrqQ/";
 
-      ////////Production Student Life////////
-      // iframe_desktop.src = "https://playcanv.as/e/p/QIG7fh8C/";
+        ////////Production Student Life////////
+        // iframe_desktop.src = "https://playcanv.as/e/p/QIG7fh8C/";
+      }
     } else {
-      ////////DEV Student Life////////
-      iframe_mobile.src = "https://playcanv.as/e/p/9y9yBbyR/";
+      if (iframe_mobile && (!iframe_mobile.src || !iframe_mobile.src.includes('playcanv.as'))) {
+        ////////DEV Student Life////////
+        iframe_mobile.src = "https://playcanv.as/e/p/9y9yBbyR/";
 
-      ////////Production Student Life////////
-      // iframe_mobile.src = "https://playcanv.as/e/p/QIG7fh8C/";
+        ////////Production Student Life////////
+        // iframe_mobile.src = "https://playcanv.as/e/p/QIG7fh8C/";
+      }
     }
-  }, [configLoading]);
+  }, [configLoading, isDesktop]);
 
   if (configLoading) {
     return (
@@ -853,66 +836,25 @@ const StudentDashboard = () => {
                 <button
                   key={index}
                   onClick={() => {
-                    // console.log(selectedOptions.BETRÆK);
+                    console.log("Sending message to iframe:", `Page : ${index + 1}`);
+                    sendToActiveIframe(`Page : ${index + 1}`);
+                    console.log("Sending message to iframe:", "Tilvælg:no");
+                    sendToActiveIframe("Tilvælg:no");
+                    console.log("Sending menu selection message to iframe:", item.name);
+                    sendToActiveIframe(item.name);
+                    sendToActiveIframe(`${item.name} camera`);
 
-                    ["preview-iframe", "preview-iframe2"].forEach((id) => {
-                      const iframe = document.getElementById(id);
-                      if (iframe?.contentWindow) {
-                        console.log(
-                          "Sending message to iframe:",
-                          `Page : ${index + 1}`
-                        );
-                        iframe.contentWindow.postMessage(
-                          `Page : ${index + 1}`,
-                          "*"
-                        );
-                        console.log("Sending message to iframe:", "Tilvælg:no");
-                        iframe.contentWindow.postMessage("Tilvælg:no", "*");
-
-                        console.log("Sending menu selection message to iframe:", item.name);
-                        iframe.contentWindow.postMessage(item.name, "*");
-                        iframe.contentWindow.postMessage(`${item.name} camera`, "*");
-                      } else {
-                        console.log(
-                          "Iframe not ready or program not available"
-                        );
-                      }
-                    });
                     if (errors && Object.keys(errors).length > 0) {
                       return;
                     }
                     setActiveMenu(item.name);
 
                     if (item.name !== "EKSTRABETRÆK") {
-                      ["preview-iframe", "preview-iframe2"].forEach((id) => {
-                        const iframe = document.getElementById(id);
-                        if (iframe?.contentWindow) {
-                          iframe.contentWindow.postMessage(
-                            `CoverColor:${selectedOptions.BETRÆK.Farve}`,
-                            "*"
-                          );
-                          iframe.contentWindow.postMessage(
-                            `Topkant:${selectedOptions.BETRÆK.Topkant}`,
-                            "*"
-                          );
-                          iframe.contentWindow.postMessage(
-                            `Kantband:${selectedOptions.BETRÆK.Kantbånd}`,
-                            "*"
-                          );
-                          iframe.contentWindow.postMessage(
-                            `Star:${selectedOptions.BETRÆK.Stjerner}`,
-                            "*"
-                          );
-                          iframe.contentWindow.postMessage(
-                            `Flagband:${selectedOptions.BETRÆK.Flagbånd}`,
-                            "*"
-                          );
-                        } else {
-                          console.log(
-                            "Iframe not ready or program not available"
-                          );
-                        }
-                      });
+                      sendToActiveIframe(`CoverColor:${selectedOptions.BETRÆK.Farve}`);
+                      sendToActiveIframe(`Topkant:${selectedOptions.BETRÆK.Topkant}`);
+                      sendToActiveIframe(`Kantband:${selectedOptions.BETRÆK.Kantbånd}`);
+                      sendToActiveIframe(`Star:${selectedOptions.BETRÆK.Stjerner}`);
+                      sendToActiveIframe(`Flagband:${selectedOptions.BETRÆK.Flagbånd}`);
                     }
                   }}
                   className={`flex items-center px-2 py-3 rounded-xl transition-all duration-200 group ${activeMenu === item.name
@@ -950,7 +892,7 @@ const StudentDashboard = () => {
           <div className="w-[40%] bg-white/50 backdrop-blur-sm flex flex-col h-full border-r border-slate-200" id="desktop-config-panel">
             {/* jjjjjjjjjjjj */}
             <div className="p-6 space-y-8 flex-1 overflow-y-auto">
-              {activeMenu === "KOKARDE" && (
+              {isDesktop && activeMenu === "KOKARDE" && (
                 <Bows
                   selectedOptions={selectedOptions.KOKARDE}
                   onOptionChange={(key, value) =>
@@ -960,7 +902,7 @@ const StudentDashboard = () => {
                   changeCurrentEmblem={setGlobalEmblem}
                 />
               )}
-              {activeMenu === "UDDANNELSESBÅND" && (
+              {isDesktop && activeMenu === "UDDANNELSESBÅND" && (
                 <EducationalTape
                   selectedOptions={selectedOptions.UDDANNELSESBÅND}
                   onOptionChange={(key, value) =>
@@ -970,7 +912,7 @@ const StudentDashboard = () => {
                   currentEmblem={globalEmblem}
                 />
               )}
-              {activeMenu === "BRODERI" && (
+              {isDesktop && activeMenu === "BRODERI" && (
                 <Embroidery
                   selectedOptions={selectedOptions.BRODERI}
                   onOptionChange={(key, value) =>
@@ -981,7 +923,7 @@ const StudentDashboard = () => {
                   currentEmblem={globalEmblem}
                 />
               )}
-              {activeMenu === "BETRÆK" && (
+              {isDesktop && activeMenu === "BETRÆK" && (
                 <Cover
                   selectedOptions={selectedOptions.BETRÆK}
                   onOptionChange={(key, value) =>
@@ -991,7 +933,7 @@ const StudentDashboard = () => {
                   currentEmblem={globalEmblem}
                 />
               )}
-              {activeMenu === "SKYGGE" && (
+              {isDesktop && activeMenu === "SKYGGE" && (
                 <Shade
                     selectedOptions={selectedOptions.SKYGGE}
                     onOptionChange={(key, value) =>
@@ -1000,7 +942,7 @@ const StudentDashboard = () => {
                     program={program} visibilityConfig={visibilityConfig} pakke={packageName}
                   />
               )}
-              {activeMenu === "FOER" && (
+              {isDesktop && activeMenu === "FOER" && (
                 <Foer
                   selectedOptions={selectedOptions.FOER}
                   onOptionChange={(key, value) =>
@@ -1010,7 +952,7 @@ const StudentDashboard = () => {
                   program={program} visibilityConfig={visibilityConfig} pakke={packageName}
                 />
               )}
-              {activeMenu === "EKSTRABETRÆK" && (
+              {isDesktop && activeMenu === "EKSTRABETRÆK" && (
                 <ExtraCover
                   selectedOptions={selectedOptions.EKSTRABETRÆK}
                   onOptionChange={(key, value) =>
@@ -1021,7 +963,7 @@ const StudentDashboard = () => {
                   priceReset={setExtraCoverReset}
                 />
               )}
-              {activeMenu === "TILBEHØR" && (
+              {isDesktop && activeMenu === "TILBEHØR" && (
                 <Accessories
                   selectedOptions={selectedOptions}
                   onOptionChange={handleOptionChange}
@@ -1032,7 +974,7 @@ const StudentDashboard = () => {
                   programFlags={dynamicConfig?.programFlags?.[(program || '').toUpperCase()] || []}
                 />
               )}
-              {activeMenu === "STØRRELSE" && (
+              {isDesktop && activeMenu === "STØRRELSE" && (
                 <Size
                   selectedOptions={selectedOptions.STØRRELSE}
                   onOptionChange={(key, value) =>
@@ -1302,14 +1244,10 @@ const StudentDashboard = () => {
                       <button
                         key={index}
                         onClick={() => {
-                          ["preview-iframe", "preview-iframe2"].forEach((id) => {
-                            const iframe = document.getElementById(id);
-                            if (iframe?.contentWindow) {
-                              iframe.contentWindow.postMessage(`Page : ${index + 1}`, "*");
-                              iframe.contentWindow.postMessage("Tilvælg:no", "*");
-                              iframe.contentWindow.postMessage(`${item.name} camera`, "*");
-                            }
-                          });
+                          sendToActiveIframe(`Page : ${index + 1}`);
+                          sendToActiveIframe("Tilvælg:no");
+                          sendToActiveIframe(item.name);
+                          sendToActiveIframe(`${item.name} camera`);
                           setActiveMenu(item.name);
                         }}
                         className="flex-shrink-0 flex flex-col items-center relative pb-3"
@@ -1350,7 +1288,7 @@ const StudentDashboard = () => {
               {isConfigOpen && (
                 <div className="p-4 space-y-6">
                   {/* Keep all components mounted but conditionally show based on activeMenu */}
-                  {activeMenu === "KOKARDE" && (
+                  {!isDesktop && activeMenu === "KOKARDE" && (
                     <Bows
                       selectedOptions={selectedOptions.KOKARDE}
                       onOptionChange={(key, value) =>
@@ -1360,7 +1298,7 @@ const StudentDashboard = () => {
                       changeCurrentEmblem={setGlobalEmblem}
                     />
                   )}
-                  {activeMenu === "UDDANNELSESBÅND" && (
+                  {!isDesktop && activeMenu === "UDDANNELSESBÅND" && (
                     <EducationalTape
                       selectedOptions={selectedOptions.UDDANNELSESBÅND}
                       onOptionChange={(key, value) =>
@@ -1370,7 +1308,7 @@ const StudentDashboard = () => {
                       currentEmblem={globalEmblem}
                     />
                   )}
-                  {activeMenu === "BRODERI" && (
+                  {!isDesktop && activeMenu === "BRODERI" && (
                     <Embroidery
                       selectedOptions={selectedOptions.BRODERI}
                       onOptionChange={(key, value) =>
@@ -1381,7 +1319,7 @@ const StudentDashboard = () => {
                       currentEmblem={globalEmblem}
                     />
                   )}
-                  {activeMenu === "BETRÆK" && (
+                  {!isDesktop && activeMenu === "BETRÆK" && (
                     <Cover
                       selectedOptions={selectedOptions.BETRÆK}
                       onOptionChange={(key, value) =>
@@ -1391,7 +1329,7 @@ const StudentDashboard = () => {
                       currentEmblem={globalEmblem}
                     />
                   )}
-                  {activeMenu === "SKYGGE" && (
+                  {!isDesktop && activeMenu === "SKYGGE" && (
                     <Shade
                     selectedOptions={selectedOptions.SKYGGE}
                     onOptionChange={(key, value) =>
@@ -1400,7 +1338,7 @@ const StudentDashboard = () => {
                     program={program} visibilityConfig={visibilityConfig} pakke={packageName}
                   />
                   )}
-                  {activeMenu === "FOER" && (
+                  {!isDesktop && activeMenu === "FOER" && (
                     <Foer
                       selectedOptions={selectedOptions.FOER}
                       onOptionChange={(key, value) =>
@@ -1410,7 +1348,7 @@ const StudentDashboard = () => {
                       program={program} visibilityConfig={visibilityConfig} pakke={packageName}
                     />
                   )}
-                  {activeMenu === "EKSTRABETRÆK" && (
+                  {!isDesktop && activeMenu === "EKSTRABETRÆK" && (
                     <ExtraCover
                       selectedOptions={selectedOptions.EKSTRABETRÆK}
                       onOptionChange={(key, value) =>
@@ -1422,7 +1360,7 @@ const StudentDashboard = () => {
                       pakke={packageName}
                     />
                   )}
-                  {activeMenu === "TILBEHØR" && (
+                  {!isDesktop && activeMenu === "TILBEHØR" && (
                     <Accessories
                       selectedOptions={selectedOptions}
                       onOptionChange={handleOptionChange}
@@ -1433,7 +1371,7 @@ const StudentDashboard = () => {
                       programFlags={dynamicConfig?.programFlags?.[(program || '').toUpperCase()] || []}
                     />
                   )}
-                  {activeMenu === "STØRRELSE" && (
+                  {!isDesktop && activeMenu === "STØRRELSE" && (
                     <Size
                       selectedOptions={selectedOptions.STØRRELSE}
                       onOptionChange={(key, value) =>

@@ -1,3 +1,5 @@
+import { getActiveIframe } from './iframeMessenger';
+
 export function isArabicText(text) {
     if (!text || typeof text !== 'string') return false;
     return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(text);
@@ -362,35 +364,29 @@ export async function generateAllEmbroideryMaps(text) {
 }
 
 // ============================================================
-// SEND TO IFRAMES
+// SEND TO ACTIVE IFRAME
 // ============================================================
 export function sendEmbroideryMapsToIframes(prefix, payload) {
-    const ids = ['preview-iframe', 'preview-iframe2'];
-    ids.forEach(id => {
-        const iframe = document.getElementById(id);
-        if (!iframe?.contentWindow) return;
-        try {
-            if (payload.basecolor) iframe.contentWindow.postMessage(`${prefix}EmbroideryBasecolor:${payload.basecolor}`, '*');
-            if (payload.normal) iframe.contentWindow.postMessage(`${prefix}EmbroideryNormal:${payload.normal}`, '*');
-            if (payload.roughness) iframe.contentWindow.postMessage(`${prefix}EmbroideryRoughness:${payload.roughness}`, '*');
-            if (payload.height) iframe.contentWindow.postMessage(`${prefix}EmbroideryHeight:${payload.height}`, '*');
-            if (payload.ambient) iframe.contentWindow.postMessage(`${prefix}EmbroideryAmbient:${payload.ambient}`, '*');
-            if (payload.opacity) iframe.contentWindow.postMessage(`${prefix}EmbroideryOpacity:${payload.opacity}`, '*');
-        } catch (e) {
-            console.warn('postMessage error:', e);
-        }
-    });
+    const iframe = getActiveIframe();
+    if (!iframe?.contentWindow) return;
+    try {
+        if (payload.basecolor) iframe.contentWindow.postMessage(`${prefix}EmbroideryBasecolor:${payload.basecolor}`, '*');
+        if (payload.normal) iframe.contentWindow.postMessage(`${prefix}EmbroideryNormal:${payload.normal}`, '*');
+        if (payload.roughness) iframe.contentWindow.postMessage(`${prefix}EmbroideryRoughness:${payload.roughness}`, '*');
+        if (payload.height) iframe.contentWindow.postMessage(`${prefix}EmbroideryHeight:${payload.height}`, '*');
+        if (payload.ambient) iframe.contentWindow.postMessage(`${prefix}EmbroideryAmbient:${payload.ambient}`, '*');
+        if (payload.opacity) iframe.contentWindow.postMessage(`${prefix}EmbroideryOpacity:${payload.opacity}`, '*');
+    } catch (e) {
+        console.warn('postMessage error:', e);
+    }
 }
 
 export function sendArabicTextToIframes(text) {
-    const ids = ['preview-iframe', 'preview-iframe2'];
-    ids.forEach(id => {
-        const iframe = document.getElementById(id);
-        if (!iframe?.contentWindow) return;
-        try {
-            iframe.contentWindow.postMessage(`arabictext:${text}`, '*');
-        } catch (e) {
-            console.warn('postMessage error:', e);
-        }
-    });
+    const iframe = getActiveIframe();
+    if (!iframe?.contentWindow) return;
+    try {
+        iframe.contentWindow.postMessage(`arabictext:${text}`, '*');
+    } catch (e) {
+        console.warn('postMessage error:', e);
+    }
 }

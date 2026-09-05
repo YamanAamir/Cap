@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { sendToActiveIframe } from '../utils/iframeMessenger';
 import img1 from '../assets/stars/star.webp';
 import img2 from '../assets/stars/2-star.webp';
 import img3 from '../assets/stars/3-star.webp';
@@ -221,20 +222,16 @@ const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem, v
         const message = colorMap[selectedCoverColor.toLowerCase()];
         if (!message) return;
 
-        const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                    if (cameraTriggers.current["coverfarbe"]) {
-                        iframe.contentWindow.postMessage("coverfarbe camera", "*");
-                    }
-                }
-            });
-            cameraTriggers.current["coverfarbe"] = true;
+        const sendMessageToActive = (msg) => {
+            sendToActiveIframe(msg);
+            if (cameraTriggers.current["coverfarbe"]) {
+                sendToActiveIframe("coverfarbe camera");
+            } else {
+                cameraTriggers.current["coverfarbe"] = true;
+            }
         };
 
-        sendMessageToIframes(message);
+        sendMessageToActive(message);
     }, [selectedCoverColor]);
 
 
@@ -256,20 +253,16 @@ const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem, v
         const message = colorMap[selectedTopkantColor.toLowerCase()];
         if (!message) return;
 
-        const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                    if (cameraTriggers.current["topkant"]) {
-                        iframe.contentWindow.postMessage("topkant camera", "*");
-                    }
-                }
-            });
-            cameraTriggers.current["topkant"] = true;
+        const sendMessageToActive = (msg) => {
+            sendToActiveIframe(msg);
+            if (cameraTriggers.current["topkant"]) {
+                sendToActiveIframe("topkant camera");
+            } else {
+                cameraTriggers.current["topkant"] = true;
+            }
         };
 
-        sendMessageToIframes(message);
+        sendMessageToActive(message);
     }, [selectedTopkantColor]);
 
 
@@ -313,20 +306,16 @@ const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem, v
         }
         if (!message) return;
 
-        const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                    if (cameraTriggers.current["kantband"]) {
-                        iframe.contentWindow.postMessage("kantband camera", "*");
-                    }
-                }
-            });
-            cameraTriggers.current["kantband"] = true;
+        const sendMessageToActive = (msg) => {
+            sendToActiveIframe(msg);
+            if (cameraTriggers.current["kantband"]) {
+                sendToActiveIframe("kantband camera");
+            } else {
+                cameraTriggers.current["kantband"] = true;
+            }
         };
 
-        sendMessageToIframes(message);
+        sendMessageToActive(message);
 
     }, [selectedKantbandColor]);
 
@@ -358,30 +347,19 @@ const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem, v
         const message = colorMap[selectedStarsStyle.toLowerCase()];
         if (!message) return;
 
-        const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                    if (cameraTriggers.current["stars"]) {
-                        iframe.contentWindow.postMessage("stars camera", "*");
-                    }
-                }
-            });
-            cameraTriggers.current["stars"] = true;
+        const sendMessageToActive = (msg) => {
+            sendToActiveIframe(msg);
+            if (cameraTriggers.current["stars"]) {
+                sendToActiveIframe("stars camera");
+            } else {
+                cameraTriggers.current["stars"] = true;
+            }
         };
 
-        sendMessageToIframes(message);
+        sendMessageToActive(message);
 
         if (selectedKantbandColor == "NONE") {
-
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage('Star:0', "*");
-                }
-            });
-
+            sendToActiveIframe('Star:0');
         }
 
 
@@ -403,16 +381,12 @@ const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem, v
             // If user already has a choice, keep it
             if (selectedFlagbåndOption && selectedFlagbåndOption !== 'Nej') {
                 onOptionChange('Flagbånd', selectedFlagbåndOption);
-                ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                    const iframe = document.getElementById(id);
-                    if (iframe?.contentWindow) {
-                        iframe.contentWindow.postMessage(`Flagband:${selectedFlagbåndOption}`, "*");
-                        if (cameraTriggers.current["flagband"]) {
-                            iframe.contentWindow.postMessage("flagband camera", "*");
-                        }
-                    }
-                });
-                cameraTriggers.current["flagband"] = true;
+                sendToActiveIframe(`Flagband:${selectedFlagbåndOption}`);
+                if (cameraTriggers.current["flagband"]) {
+                    sendToActiveIframe("flagband camera");
+                } else {
+                    cameraTriggers.current["flagband"] = true;
+                }
             }
             // If no prior selection, default to International
             else {
@@ -421,16 +395,12 @@ const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem, v
             }
         } else if (selectedFlagbånd === 'No') {
             onOptionChange('Flagbånd', 'Nej');
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage('Flagband:none', "*");
-                    if (cameraTriggers.current["flagband_no"]) {
-                        iframe.contentWindow.postMessage("flagband camera", "*");
-                    }
-                }
-            });
-            cameraTriggers.current["flagband_no"] = true;
+            sendToActiveIframe('Flagband:none');
+            if (cameraTriggers.current["flagband_no"]) {
+                sendToActiveIframe("flagband camera");
+            } else {
+                cameraTriggers.current["flagband_no"] = true;
+            }
         }
     }, [selectedFlagbånd]);
 
@@ -456,20 +426,16 @@ const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem, v
         const message = colorMap[selectedFlagbåndOption.toLowerCase()];
         if (!message) return;
 
-        const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                    if (cameraTriggers.current["flagband_opt"]) {
-                        iframe.contentWindow.postMessage("flagband camera", "*");
-                    }
-                }
-            });
-            cameraTriggers.current["flagband_opt"] = true;
+        const sendMessageToActive = (msg) => {
+            sendToActiveIframe(msg);
+            if (cameraTriggers.current["flagband_opt"]) {
+                sendToActiveIframe("flagband camera");
+            } else {
+                cameraTriggers.current["flagband_opt"] = true;
+            }
         };
 
-        sendMessageToIframes(message);
+        sendMessageToActive(message);
 
 
     }, [selectedFlagbåndOption]);

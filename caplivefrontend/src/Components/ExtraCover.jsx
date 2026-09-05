@@ -1,4 +1,5 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { sendToActiveIframe } from '../utils/iframeMessenger';
 import ForExtraCover from './ForExtraCover';
 
 const ExtraCover = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, priceReset, pakke, visibilityConfig = {} }) => {
@@ -38,19 +39,12 @@ const ExtraCover = ({ selectedOptions = {}, onOptionChange, currentEmblem, progr
         const message = `Tilvælg:${selectedExtraCoverOption.toLowerCase()}`
         if (!message) return;
 
-        const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                    if (cameraTriggers.current["extracover"]) {
-                        iframe.contentWindow.postMessage("extracover camera", "*");
-                    }
-                }
-            });
+        sendToActiveIframe(message);
+        if (cameraTriggers.current["extracover"]) {
+            sendToActiveIframe("extracover camera");
+        } else {
             cameraTriggers.current["extracover"] = true;
-        };
-        sendMessageToIframes(message);
+        }
 
         // If "No" is selected, clear all other EKSTRABETRÆK options
         if (selectedExtraCoverOption === 'No') {

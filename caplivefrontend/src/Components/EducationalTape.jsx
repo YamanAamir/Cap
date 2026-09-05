@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { sendToActiveIframe } from '../utils/iframeMessenger';
 import {
     generateAllEmbroideryMaps,
     preloadAlphabetMaps,
@@ -115,14 +116,19 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
         return map[selectedEmbroideryColor] || '#000000';
     };
     const [isApplyingText, setIsApplyingText] = useState(false);
+    const lastAppliedFrontTextRef = useRef(selectedOptions['Broderi foran'] || '');
 
     const handleApplyEmbroideryText = async () => {
         if (isApplyingText) return;
+        const upperText = sanitizeEmbroideryLetters(inputEmbroideryText, 20);
+        if (!upperText.trim()) return;
+        if (upperText === lastAppliedFrontTextRef.current) return;
+
         setIsApplyingText(true);
         // Yield to allow mobile browser to render button feedback
         await new Promise(r => setTimeout(r, 10));
         try {
-            const upperText = sanitizeEmbroideryLetters(inputEmbroideryText, 20);
+            lastAppliedFrontTextRef.current = upperText;
             setEmbroideryText(upperText);
             onOptionChange('Broderi foran', upperText);
             if (isArabicText(upperText)) {
@@ -132,6 +138,7 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
                 const result = await generateAllEmbroideryMaps(upperText);
                 sendEmbroideryMapsToIframes('front', result);
             }
+            sendToActiveIframe("broderifarve camera");
         } catch (err) {
             console.error('Error applying front embroidery:', err);
         } finally {
@@ -141,6 +148,8 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
 
     const handleClearEmbroideryText = async () => {
         if (isApplyingText) return;
+        if (!lastAppliedFrontTextRef.current && !inputEmbroideryText) return;
+
         setIsApplyingText(true);
         await new Promise(r => setTimeout(r, 10));
         try {
@@ -148,12 +157,15 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
             setInputEmbroideryText('');
             setEmbroideryText('');
             onOptionChange('Broderi foran', '');
-            if (wasArabic) {
-                sendArabicTextToIframes('clear');
-            } else {
-                const result = await generateAllEmbroideryMaps('');
-                sendEmbroideryMapsToIframes('front', result);
-                sendArabicTextToIframes('clear');
+            if (lastAppliedFrontTextRef.current) {
+                lastAppliedFrontTextRef.current = '';
+                if (wasArabic) {
+                    sendArabicTextToIframes('clear');
+                } else {
+                    const result = await generateAllEmbroideryMaps('');
+                    sendEmbroideryMapsToIframes('front', result);
+                    sendArabicTextToIframes('clear');
+                }
             }
         } catch (err) {
             console.error('Error clearing front embroidery:', err);
@@ -210,16 +222,8 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
         // lowercase safety
         const message = colorMap[selectedHatbandColor.toLowerCase()];
         if (!message) return;
-        const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                }
-            });
-        };
-        sendMessageToIframes(message);
-        if (cameraTriggers.current['hueband']) { sendMessageToIframes("hueband camera") } else { cameraTriggers.current['hueband'] = true }
+        sendToActiveIframe(message);
+        if (cameraTriggers.current['hueband']) { sendToActiveIframe("hueband camera") } else { cameraTriggers.current['hueband'] = true }
     }, [selectedHatbandColor]);
     useEffect(() => {
         onOptionChange('Materiale', selectedMaterialType)
@@ -258,16 +262,8 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
             message = `UDDANNELSESBÅNDMateriale:black:${selectedMaterialType.toLowerCase()}`;
         }
         if (!message) return;
-        const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                }
-            });
-        };
-        sendMessageToIframes(message);
-        if (cameraTriggers.current['materiale']) { sendMessageToIframes("materiale camera") } else { cameraTriggers.current['materiale'] = true }
+        sendToActiveIframe(message);
+        if (cameraTriggers.current['materiale']) { sendToActiveIframe("materiale camera") } else { cameraTriggers.current['materiale'] = true }
     }, [selectedMaterialType, selectedHatbandColor])
     useEffect(() => {
         onOptionChange('Hagerem', selectedChinStrapColor)
@@ -288,16 +284,8 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
         // lowercase safety
         const message = colorMap[selectedChinStrapColor.toLowerCase()];
         if (!message) return;
-        const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                }
-            });
-        };
-        sendMessageToIframes(message);
-        if (cameraTriggers.current['hagerem']) { sendMessageToIframes("hagerem camera") } else { cameraTriggers.current['hagerem'] = true }
+        sendToActiveIframe(message);
+        if (cameraTriggers.current['hagerem']) { sendToActiveIframe("hagerem camera") } else { cameraTriggers.current['hagerem'] = true }
     }, [selectedChinStrapColor])
     // useEffect(() => {
     // onOptionChange('Hagerem Materiale', selectedButtonMaterialColor)
@@ -322,16 +310,8 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
         // lowercase safety
         const message = colorMap[selectedEmbroideryColor.toLowerCase()];
         if (!message) return;
-        const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                }
-            });
-        };
-        sendMessageToIframes(message);
-        if (cameraTriggers.current['broderifarve']) { sendMessageToIframes("broderifarve camera") } else { cameraTriggers.current['broderifarve'] = true }
+        sendToActiveIframe(message);
+        if (cameraTriggers.current['broderifarve']) { sendToActiveIframe("broderifarve camera") } else { cameraTriggers.current['broderifarve'] = true }
     }, [selectedEmbroideryColor])
     useEffect(() => {
         onOptionChange('Knap farve', selectedButtonColor)
@@ -345,16 +325,8 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
         // lowercase safety
         const message = colorMap[selectedButtonColor.toLowerCase()];
         if (!message) return;
-        const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                }
-            });
-        };
-        sendMessageToIframes(message);
-        if (cameraTriggers.current['knapfarve']) { sendMessageToIframes("knapfarve camera") } else { cameraTriggers.current['knapfarve'] = true }
+        sendToActiveIframe(message);
+        if (cameraTriggers.current['knapfarve']) { sendToActiveIframe("knapfarve camera") } else { cameraTriggers.current['knapfarve'] = true }
     }, [selectedButtonColor])
     useEffect(() => {
         onOptionChange('år', selectedYear);
@@ -364,16 +336,8 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
         // lowercase safety
         const message = `Year:${selectedYear}`;
         if (!message) return;
-        const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                }
-            });
-        };
-        sendMessageToIframes(message);
-        if (cameraTriggers.current['year']) { sendMessageToIframes("year camera") } else { cameraTriggers.current['year'] = true }
+        sendToActiveIframe(message);
+        if (cameraTriggers.current['year']) { sendToActiveIframe("year camera") } else { cameraTriggers.current['year'] = true }
     }, [selectedYear])
     // Initialize Broderi foran on component mount if not already set
     useEffect(() => {

@@ -5,7 +5,6 @@ const Size = ({ selectedOptions = {}, onOptionChange, size, visibilityConfig = {
     const [selectedSize, setSelectedSize] = useState(selectedOptions['Vælg størrelse'] || 'No');
     const [selectedMillimeterAdjustment, setSelectedMillimeterAdjustment] = useState(selectedOptions['Millimeter tilpasningssæt'] || 'No');
 
-    const sizeCanvasRef = useRef(null);
     const cameraTriggers = useRef({});
 
     const sizeOptions = [
@@ -19,65 +18,23 @@ const Size = ({ selectedOptions = {}, onOptionChange, size, visibilityConfig = {
         { name: 'No', value: 'No', icon: '❌' },
     ].filter(opt => isVisible(`Millimeter tilpasningssæt_${opt.value}`));
 
-    // ============== IMAGE GENERATE KARNE KA FUNCTION ==============
-    const renderSizeImage = (sizeValue) => {
-        const canvas = sizeCanvasRef.current;
-        if (!canvas) return;
-
-        const ctx = canvas.getContext('2d');
-        if (sizeValue === null || sizeValue === 'No') {
-            canvas.width = 1;
-            canvas.height = 1;
-            ctx.clearRect(0, 0, 1, 1);
-            const emptyBase64 = canvas.toDataURL('image/png');
-            ['preview-iframe', 'preview-iframe2'].forEach(id => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(`SizeImage:${emptyBase64}`, "*");
-                }
-            });
-            return;
-        }
-        const text = sizeValue.toString();
-
-        const fontSize = 320;
-        const fontFamily = "Arial";
-        ctx.font = `${fontSize}px ${fontFamily}`;
-
-        const metrics = ctx.measureText(text);
-        const textWidth = metrics.width;
-        const textHeight = fontSize;
-
-        canvas.width = textWidth + 160;
-        canvas.height = textHeight + 160;
-
-        // Clear & draw
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#ffffff";
-        ctx.font = `${fontSize}px ${fontFamily}`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-
-        const base64 = canvas.toDataURL('image/png', 10);
-
-        const message = `SizeImage:${base64}`;
-
+    const sendSizeMessage = (sizeValue) => {
+        const val = (sizeValue === null || sizeValue === 'No') ? 'No' : sizeValue.toString();
+        const message = `Size:${val}`;
         ['preview-iframe', 'preview-iframe2'].forEach(id => {
             const iframe = document.getElementById(id);
             if (iframe?.contentWindow) {
                 iframe.contentWindow.postMessage(message, "*");
-                if (cameraTriggers.current["size"]) {
+                if (val !== 'No') {
                     iframe.contentWindow.postMessage("size camera", "*");
                 }
             }
         });
-        cameraTriggers.current["size"] = true;
     };
 
     useEffect(() => {
         onOptionChange('Vælg størrelse', selectedSize);
-        renderSizeImage(selectedSize);
+        sendSizeMessage(selectedSize);
         if (size) size(selectedSize !== null && selectedSize !== 'No' && selectedMillimeterAdjustment !== null);
     }, [selectedSize, selectedMillimeterAdjustment]);
 
@@ -89,18 +46,11 @@ const Size = ({ selectedOptions = {}, onOptionChange, size, visibilityConfig = {
                 const iframe = document.getElementById(id);
                 if (iframe?.contentWindow) {
                     iframe.contentWindow.postMessage(`Millimeter:${value}`, "*");
-                    if (cameraTriggers.current["size_mm"]) {
-                        iframe.contentWindow.postMessage("size camera", "*");
-                    }
+                    iframe.contentWindow.postMessage("size camera", "*");
                 }
             });
-            cameraTriggers.current["size_mm"] = true;
         }
     }, [selectedMillimeterAdjustment]);
-
-    useEffect(() => {
-        renderSizeImage(selectedSize);
-    }, []);
 
     const SizeSelector = ({ label, currentSelection, onSelectionChange, sizeOptions }) => {
         const optionsWithNo = ['No', ...sizeOptions];
@@ -170,9 +120,6 @@ const Size = ({ selectedOptions = {}, onOptionChange, size, visibilityConfig = {
                 onSelectionChange={setSelectedMillimeterAdjustment}
                 options={millimeterAdjustmentOptions}
             />
-
-            {/* Hidden canvas for size image */}
-            <canvas ref={sizeCanvasRef} style={{ display: 'none' }} />
         </>
     );
 };

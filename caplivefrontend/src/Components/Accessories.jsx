@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getTilbehorForTier, hueæskeToTier, syncTilbehorToIframes } from '../utils/tilbehorDefaults';
+import { sendToActiveIframe } from '../utils/iframeMessenger';
 
 const AccessorySelector = ({ label, currentSelection, onSelectionChange, accessoryOptions }) => (
     <div className="space-y-4">
@@ -56,12 +57,7 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
     const extraKokardeText = tilbehor['Ekstra korkarde Text'] || '';
 
     const sendMessageToIframes = (msg) => {
-        ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-            const iframe = document.getElementById(id);
-            if (iframe?.contentWindow) {
-                iframe.contentWindow.postMessage(msg, '*');
-            }
-        });
+        sendToActiveIframe(msg);
     };
 
     const sendWithCamera = (msg, cameraKey, cameraMsg) => {

@@ -39,6 +39,10 @@ const Shade = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig
     const canvasLine2Ref = useRef(document.createElement('canvas'));
     const canvasLine3Ref = useRef(document.createElement('canvas'));
 
+    const lastAppliedLine1Ref = useRef(selectedOptions['Skyggegravering Line 1'] || '');
+    const lastAppliedLine2Ref = useRef(selectedOptions['Skyggegravering Line 2'] || '');
+    const lastAppliedLine3Ref = useRef(selectedOptions['Skyggegravering Line 3'] || '');
+
     // Updated: Now sends 1×1 transparent image when text is empty
     const renderLineToCanvas = (text, canvasRef, messagePrefix) => {
         const canvas = canvasRef.current;
@@ -85,7 +89,6 @@ const Shade = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig
 
         ctx.fillText(text, 0, 0);
 
-
         // STEP 5 — export
         const base64Image = canvas.toDataURL("image/png", 10);
         const message = messagePrefix + base64Image;
@@ -99,42 +102,111 @@ const Shade = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig
     };
 
     const handleApplyLine1 = () => {
+        const clean = inputLine1.trim();
+        if (!clean) return;
+        if (clean === lastAppliedLine1Ref.current) return;
+
+        lastAppliedLine1Ref.current = clean;
         setEngravingLine1(inputLine1);
         onOptionChange('Skyggegravering Line 1', inputLine1);
         renderLineToCanvas(inputLine1, canvasLine1Ref, 'EngravingLine1Image');
+        ['preview-iframe', 'preview-iframe2'].forEach(id => {
+            const iframe = document.getElementById(id);
+            if (iframe?.contentWindow) {
+                iframe.contentWindow.postMessage(`engravingLine1:${inputLine1}`, "*");
+                iframe.contentWindow.postMessage("skyggegravering camera", "*");
+            }
+        });
+        cameraTriggers.current["sky_grav1"] = true;
     };
 
     const handleClearLine1 = () => {
+        if (!lastAppliedLine1Ref.current && !inputLine1) return;
         setInputLine1('');
         setEngravingLine1('');
         onOptionChange('Skyggegravering Line 1', '');
-        renderLineToCanvas('', canvasLine1Ref, 'EngravingLine1Image');
+        if (lastAppliedLine1Ref.current) {
+            lastAppliedLine1Ref.current = '';
+            renderLineToCanvas('', canvasLine1Ref, 'EngravingLine1Image');
+            ['preview-iframe', 'preview-iframe2'].forEach(id => {
+                const iframe = document.getElementById(id);
+                if (iframe?.contentWindow) {
+                    iframe.contentWindow.postMessage('engravingLine1:', "*");
+                }
+            });
+        }
     };
 
     const handleApplyLine2 = () => {
+        const clean = inputLine2.trim();
+        if (!clean) return;
+        if (clean === lastAppliedLine2Ref.current) return;
+
+        lastAppliedLine2Ref.current = clean;
         setEngravingLine2(inputLine2);
         onOptionChange('Skyggegravering Line 2', inputLine2);
         renderLineToCanvas(inputLine2, canvasLine2Ref, 'EngravingLine2Image');
+        ['preview-iframe', 'preview-iframe2'].forEach(id => {
+            const iframe = document.getElementById(id);
+            if (iframe?.contentWindow) {
+                iframe.contentWindow.postMessage(`engravingLine2:${inputLine2}`, "*");
+                iframe.contentWindow.postMessage("skyggegravering camera", "*");
+            }
+        });
+        cameraTriggers.current["sky_grav2"] = true;
     };
 
     const handleClearLine2 = () => {
+        if (!lastAppliedLine2Ref.current && !inputLine2) return;
         setInputLine2('');
         setEngravingLine2('');
         onOptionChange('Skyggegravering Line 2', '');
-        renderLineToCanvas('', canvasLine2Ref, 'EngravingLine2Image');
+        if (lastAppliedLine2Ref.current) {
+            lastAppliedLine2Ref.current = '';
+            renderLineToCanvas('', canvasLine2Ref, 'EngravingLine2Image');
+            ['preview-iframe', 'preview-iframe2'].forEach(id => {
+                const iframe = document.getElementById(id);
+                if (iframe?.contentWindow) {
+                    iframe.contentWindow.postMessage('engravingLine2:', "*");
+                }
+            });
+        }
     };
 
     const handleApplyLine3 = () => {
+        const clean = inputLine3.trim();
+        if (!clean) return;
+        if (clean === lastAppliedLine3Ref.current) return;
+
+        lastAppliedLine3Ref.current = clean;
         setEngravingLine3(inputLine3);
         onOptionChange('Skyggegravering Line 3', inputLine3);
         renderLineToCanvas(inputLine3, canvasLine3Ref, 'EngravingLine3Image');
+        ['preview-iframe', 'preview-iframe2'].forEach(id => {
+            const iframe = document.getElementById(id);
+            if (iframe?.contentWindow) {
+                iframe.contentWindow.postMessage(`engravingLine3:${inputLine3}`, "*");
+                iframe.contentWindow.postMessage("skyggegravering camera", "*");
+            }
+        });
+        cameraTriggers.current["sky_grav3"] = true;
     };
 
     const handleClearLine3 = () => {
+        if (!lastAppliedLine3Ref.current && !inputLine3) return;
         setInputLine3('');
         setEngravingLine3('');
         onOptionChange('Skyggegravering Line 3', '');
-        renderLineToCanvas('', canvasLine3Ref, 'EngravingLine3Image');
+        if (lastAppliedLine3Ref.current) {
+            lastAppliedLine3Ref.current = '';
+            renderLineToCanvas('', canvasLine3Ref, 'EngravingLine3Image');
+            ['preview-iframe', 'preview-iframe2'].forEach(id => {
+                const iframe = document.getElementById(id);
+                if (iframe?.contentWindow) {
+                    iframe.contentWindow.postMessage('engravingLine3:', "*");
+                }
+            });
+        }
     };
 
     const handleKeyPressLine1 = (e) => {
@@ -155,11 +227,38 @@ const Shade = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig
         }
     };
 
-    // Initial render
+    // Initial render - only if text is non-empty
     useEffect(() => {
-        renderLineToCanvas(engravingLine1, canvasLine1Ref, 'EngravingLine1Image');
-        renderLineToCanvas(engravingLine2, canvasLine2Ref, 'EngravingLine2Image');
-        renderLineToCanvas(engravingLine3, canvasLine3Ref, 'EngravingLine3Image');
+        if (engravingLine1 && engravingLine1.trim()) {
+            lastAppliedLine1Ref.current = engravingLine1.trim();
+            renderLineToCanvas(engravingLine1, canvasLine1Ref, 'EngravingLine1Image');
+            ['preview-iframe', 'preview-iframe2'].forEach(id => {
+                const iframe = document.getElementById(id);
+                if (iframe?.contentWindow) {
+                    iframe.contentWindow.postMessage(`engravingLine1:${engravingLine1}`, "*");
+                }
+            });
+        }
+        if (engravingLine2 && engravingLine2.trim()) {
+            lastAppliedLine2Ref.current = engravingLine2.trim();
+            renderLineToCanvas(engravingLine2, canvasLine2Ref, 'EngravingLine2Image');
+            ['preview-iframe', 'preview-iframe2'].forEach(id => {
+                const iframe = document.getElementById(id);
+                if (iframe?.contentWindow) {
+                    iframe.contentWindow.postMessage(`engravingLine2:${engravingLine2}`, "*");
+                }
+            });
+        }
+        if (engravingLine3 && engravingLine3.trim()) {
+            lastAppliedLine3Ref.current = engravingLine3.trim();
+            renderLineToCanvas(engravingLine3, canvasLine3Ref, 'EngravingLine3Image');
+            ['preview-iframe', 'preview-iframe2'].forEach(id => {
+                const iframe = document.getElementById(id);
+                if (iframe?.contentWindow) {
+                    iframe.contentWindow.postMessage(`engravingLine3:${engravingLine3}`, "*");
+                }
+            });
+        }
     }, []);
 
     // Rest of your original effects (completely unchanged)
@@ -290,46 +389,6 @@ const Shade = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig
             cameraTriggers.current["skygge"] = true;
         }
     }, [selectedShadowTapeColor]);
-
-    // Backward compatibility text messages
-    useEffect(() => {
-        ['preview-iframe', 'preview-iframe2'].forEach(id => {
-            const iframe = document.getElementById(id);
-            if (iframe?.contentWindow) {
-                iframe.contentWindow.postMessage(`engravingLine1:${engravingLine1}`, "*");
-                if (cameraTriggers.current["sky_grav1"]) {
-                    iframe.contentWindow.postMessage("skyggegravering camera", "*");
-                }
-            }
-        });
-        cameraTriggers.current["sky_grav1"] = true;
-    }, [engravingLine1]);
-
-    useEffect(() => {
-        ['preview-iframe', 'preview-iframe2'].forEach(id => {
-            const iframe = document.getElementById(id);
-            if (iframe?.contentWindow) {
-                iframe.contentWindow.postMessage(`engravingLine2:${engravingLine2}`, "*");
-                if (cameraTriggers.current["sky_grav2"]) {
-                    iframe.contentWindow.postMessage("skyggegravering camera", "*");
-                }
-            }
-        });
-        cameraTriggers.current["sky_grav2"] = true;
-    }, [engravingLine2]);
-
-    useEffect(() => {
-        ['preview-iframe', 'preview-iframe2'].forEach(id => {
-            const iframe = document.getElementById(id);
-            if (iframe?.contentWindow) {
-                iframe.contentWindow.postMessage(`engravingLine3:${engravingLine3}`, "*");
-                if (cameraTriggers.current["sky_grav3"]) {
-                    iframe.contentWindow.postMessage("skyggegravering camera", "*");
-                }
-            }
-        });
-        cameraTriggers.current["sky_grav3"] = true;
-    }, [engravingLine3]);
 
     const getMaterialOptions = () => {
         let options = [];

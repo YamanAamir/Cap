@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { sendToActiveIframe } from '../utils/iframeMessenger';
 import img1 from '../assets/stars/star.webp';
 import img2 from '../assets/stars/2-star.webp';
 import img3 from '../assets/stars/3-star.webp';
@@ -656,20 +657,16 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
         const message = colorMap[selectedCoverColor.toLowerCase()];
         if (!message) return;
 
-        const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                    if (cameraTriggers.current["coverfarbe"]) {
-                        iframe.contentWindow.postMessage("coverfarbe camera", "*");
-                    }
-                }
-            });
-            cameraTriggers.current["coverfarbe"] = true;
+        const sendMessageToActive = (msg) => {
+            sendToActiveIframe(msg);
+            if (cameraTriggers.current["coverfarbe"]) {
+                sendToActiveIframe("coverfarbe camera");
+            } else {
+                cameraTriggers.current["coverfarbe"] = true;
+            }
         };
 
-        sendMessageToIframes(message);
+        sendMessageToActive(message);
     }, [selectedCoverColor]);
 
 
@@ -691,20 +688,16 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
         const message = colorMap[selectedTopkantColor.toLowerCase()];
         if (!message) return;
 
-        const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                    if (cameraTriggers.current["topkant"]) {
-                        iframe.contentWindow.postMessage("topkant camera", "*");
-                    }
-                }
-            });
-            cameraTriggers.current["topkant"] = true;
+        const sendMessageToActive = (msg) => {
+            sendToActiveIframe(msg);
+            if (cameraTriggers.current["topkant"]) {
+                sendToActiveIframe("topkant camera");
+            } else {
+                cameraTriggers.current["topkant"] = true;
+            }
         };
 
-        sendMessageToIframes(message);
+        sendMessageToActive(message);
     }, [selectedTopkantColor]);
 
 
@@ -737,20 +730,16 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
         const message = colorMap[selectedKantbandColor.toLowerCase()];
         if (!message) return;
 
-        const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                    if (cameraTriggers.current["kantband"]) {
-                        iframe.contentWindow.postMessage("kantband camera", "*");
-                    }
-                }
-            });
-            cameraTriggers.current["kantband"] = true;
+        const sendMessageToActive = (msg) => {
+            sendToActiveIframe(msg);
+            if (cameraTriggers.current["kantband"]) {
+                sendToActiveIframe("kantband camera");
+            } else {
+                cameraTriggers.current["kantband"] = true;
+            }
         };
 
-        sendMessageToIframes(message);
+        sendMessageToActive(message);
 
     }, [selectedKantbandColor]);
 
@@ -774,30 +763,19 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
         const message = colorMap[selectedStarsStyle.toLowerCase()];
         if (!message) return;
 
-        const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                    if (cameraTriggers.current["stars"]) {
-                        iframe.contentWindow.postMessage("stars camera", "*");
-                    }
-                }
-            });
-            cameraTriggers.current["stars"] = true;
+        const sendMessageToActive = (msg) => {
+            sendToActiveIframe(msg);
+            if (cameraTriggers.current["stars"]) {
+                sendToActiveIframe("stars camera");
+            } else {
+                cameraTriggers.current["stars"] = true;
+            }
         };
 
-        sendMessageToIframes(message);
+        sendMessageToActive(message);
 
         if (selectedKantbandColor == "NONE") {
-
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage('Star:0', "*");
-                }
-            });
-
+            sendToActiveIframe('Star:0');
         }
 
 
@@ -810,15 +788,8 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
             // If user already has a valid selection, keep it
             if (selectedFlagbåndOption && selectedFlagbåndOption !== 'Nej') {
                 forOptionChange('Flagbånd', selectedFlagbåndOption);
-                ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                    const iframe = document.getElementById(id);
-                    if (iframe?.contentWindow) {
-                        console.log("Sending message to iframe:", `Flagband:${selectedFlagbåndOption}`);
-                        iframe.contentWindow.postMessage(`Flagband:${selectedFlagbåndOption}`, "*");
-                    } else {
-                        console.log("Iframe not ready or program not available");
-                    }
-                });
+                console.log("Sending message to iframe:", `Flagband:${selectedFlagbåndOption}`);
+                sendToActiveIframe(`Flagband:${selectedFlagbåndOption}`);
             }
             // Otherwise, set default to International
             else {
@@ -827,16 +798,12 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
             }
         } else if (selectedFlagbånd === 'No') {
             forOptionChange('Flagbånd', 'Nej');
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage('Flagband:none', "*");
-                    if (cameraTriggers.current["flagband_no"]) {
-                        iframe.contentWindow.postMessage("flagband camera", "*");
-                    }
-                }
-            });
-            cameraTriggers.current["flagband_no"] = true;
+            sendToActiveIframe('Flagband:none');
+            if (cameraTriggers.current["flagband_no"]) {
+                sendToActiveIframe("flagband camera");
+            } else {
+                cameraTriggers.current["flagband_no"] = true;
+            }
         }
     }, [selectedFlagbånd]);
 
@@ -859,20 +826,16 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
         const message = colorMap[selectedFlagbåndOption.toLowerCase()];
         if (!message) return;
 
-        const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                    if (cameraTriggers.current["flagband_opt"]) {
-                        iframe.contentWindow.postMessage("flagband camera", "*");
-                    }
-                }
-            });
-            cameraTriggers.current["flagband_opt"] = true;
+        const sendMessageToActive = (msg) => {
+            sendToActiveIframe(msg);
+            if (cameraTriggers.current["flagband_opt"]) {
+                sendToActiveIframe("flagband camera");
+            } else {
+                cameraTriggers.current["flagband_opt"] = true;
+            }
         };
 
-        sendMessageToIframes(message);
+        sendMessageToActive(message);
 
 
     }, [selectedFlagbåndOption]);
@@ -893,16 +856,12 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
         const message = colorMap[selectedRosetteColor.name.toLowerCase()];
         if (!message) return;
 
-        ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-            const iframe = document.getElementById(id);
-            if (iframe?.contentWindow) {
-                iframe.contentWindow.postMessage(message, "*");
-                if (cameraTriggers.current["flower"]) {
-                    iframe.contentWindow.postMessage("flower camera", "*");
-                }
-            }
-        });
-        cameraTriggers.current["flower"] = true;
+        sendToActiveIframe(message);
+        if (cameraTriggers.current["flower"]) {
+            sendToActiveIframe("flower camera");
+        } else {
+            cameraTriggers.current["flower"] = true;
+        }
     }, [selectedRosetteColor]);
 
     useEffect(() => { forOptionChange('Kokarde', selectedPrestige); }, [selectedPrestige]);
@@ -915,16 +874,12 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
         const message = colorMap[selectedPrestige];
         if (!message) return;
 
-        ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-            const iframe = document.getElementById(id);
-            if (iframe?.contentWindow) {
-                iframe.contentWindow.postMessage(message, "*");
-                if (cameraTriggers.current["emblem"]) {
-                    iframe.contentWindow.postMessage("emblem camera", "*");
-                }
-            }
-        });
-        cameraTriggers.current["emblem"] = true;
+        sendToActiveIframe(message);
+        if (cameraTriggers.current["emblem"]) {
+            sendToActiveIframe("emblem camera");
+        } else {
+            cameraTriggers.current["emblem"] = true;
+        }
     }, [selectedPrestige]);
 
     useEffect(() => { forOptionChange('Emblem', selectedEmblem); }, [selectedEmblem]);
@@ -933,18 +888,14 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
         const message = colorMap[selectedEmblem.value];
         if (!message) return;
 
-        ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-            const iframe = document.getElementById(id);
-            if (iframe?.contentWindow) {
-                iframe.contentWindow.postMessage(message, "*");
-                const newEmblemMsg = (selectedEmblem.name === 'Guld' || selectedEmblem.value === 'Guld') ? 'gold new' : 'silver new';
-                iframe.contentWindow.postMessage(newEmblemMsg, "*");
-                if (cameraTriggers.current["rosetfarve"]) {
-                    iframe.contentWindow.postMessage("rosetfarve camera", "*");
-                }
-            }
-        });
-        cameraTriggers.current["rosetfarve"] = true;
+        sendToActiveIframe(message);
+        const newEmblemMsg = (selectedEmblem.name === 'Guld' || selectedEmblem.value === 'Guld') ? 'gold new' : 'silver new';
+        sendToActiveIframe(newEmblemMsg);
+        if (cameraTriggers.current["rosetfarve"]) {
+            sendToActiveIframe("rosetfarve camera");
+        } else {
+            cameraTriggers.current["rosetfarve"] = true;
+        }
     }, [selectedEmblem]);
 
     useEffect(() => { forOptionChange('Type', selectedType); }, [selectedType]);
@@ -972,27 +923,18 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
 
         if (!message) return;
 
-        ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-            const iframe = document.getElementById(id);
-            if (iframe?.contentWindow) {
-                iframe.contentWindow.postMessage(message, "*");
-                if (cameraTriggers.current["type"]) {
-                    iframe.contentWindow.postMessage("type camera", "*");
-                }
-            }
-        });
-        cameraTriggers.current["type"] = true;
+        sendToActiveIframe(message);
+        if (cameraTriggers.current["type"]) {
+            sendToActiveIframe("type camera");
+        } else {
+            cameraTriggers.current["type"] = true;
+        }
     }, [selectedType, selectedEmblem]);
 
     useEffect(() => {
         forOptionChange('Extra Top broderi', topEmbroiderySelection);
         const msg = `topEmbroidery:${topEmbroiderySelection}`;
-        ['preview-iframe', 'preview-iframe2'].forEach(id => {
-            const iframe = document.getElementById(id);
-            if (iframe?.contentWindow) {
-                iframe.contentWindow.postMessage(msg, "*");
-            }
-        });
+        sendToActiveIframe(msg);
     }, [topEmbroiderySelection]);
 
     const AccessorySelector = ({

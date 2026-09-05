@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { sendToActiveIframe } from '../utils/iframeMessenger';
 import noneImg from '../assets/cover images/none.webp';
 import {
     generateAllEmbroideryMaps,
@@ -107,14 +108,20 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
 
     const [isApplyingName, setIsApplyingName] = useState(false);
     const [isApplyingSchool, setIsApplyingSchool] = useState(false);
+    const lastAppliedNameRef = useRef(selectedOptions['Navne broderi'] || '');
+    const lastAppliedSchoolRef = useRef(selectedOptions.Skolebroderi || '');
 
     // --- Handlers ---
     const handleApplyNameText = async () => {
         if (isApplyingName) return;
+        const clean = sanitizeEmbroideryLetters(inputNameText, 26);
+        if (!clean.trim()) return;
+        if (clean === lastAppliedNameRef.current) return;
+
         setIsApplyingName(true);
         await new Promise(r => setTimeout(r, 10));
         try {
-            const clean = sanitizeEmbroideryLetters(inputNameText, 26);
+            lastAppliedNameRef.current = clean;
             setNameEmbroideryText(clean);
             onOptionChange('Navne broderi', clean);
             if (isArabicText(clean)) {
@@ -124,6 +131,8 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
                 const result = await generateAllEmbroideryMaps(clean);
                 sendEmbroideryMapsToIframes('backTop', result);
             }
+            sendToActiveIframe(`nameEmbroidery:${clean}`);
+            sendToActiveIframe("name camera");
         } catch (err) {
             console.error('Error applying name embroidery:', err);
         } finally {
@@ -133,6 +142,8 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
 
     const handleClearNameText = async () => {
         if (isApplyingName) return;
+        if (!lastAppliedNameRef.current && !inputNameText) return;
+
         setIsApplyingName(true);
         await new Promise(r => setTimeout(r, 10));
         try {
@@ -140,12 +151,16 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
             setInputNameText('');
             setNameEmbroideryText('');
             onOptionChange('Navne broderi', '');
-            if (wasArabic) {
-                sendArabicTextToIframes('clear');
-            } else {
-                const result = await generateAllEmbroideryMaps('');
-                sendEmbroideryMapsToIframes('backTop', result);
-                sendArabicTextToIframes('clear');
+            if (lastAppliedNameRef.current) {
+                lastAppliedNameRef.current = '';
+                if (wasArabic) {
+                    sendArabicTextToIframes('clear');
+                } else {
+                    const result = await generateAllEmbroideryMaps('');
+                    sendEmbroideryMapsToIframes('backTop', result);
+                    sendArabicTextToIframes('clear');
+                }
+                sendToActiveIframe('nameEmbroidery:');
             }
         } catch (err) {
             console.error('Error clearing name embroidery:', err);
@@ -156,10 +171,14 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
 
     const handleApplySchoolText = async () => {
         if (ingenButton || isApplyingSchool) return;
+        const clean = sanitizeEmbroideryLetters(inputSchoolText, 35);
+        if (!clean.trim()) return;
+        if (clean === lastAppliedSchoolRef.current) return;
+
         setIsApplyingSchool(true);
         await new Promise(r => setTimeout(r, 10));
         try {
-            const clean = sanitizeEmbroideryLetters(inputSchoolText, 35);
+            lastAppliedSchoolRef.current = clean;
             setSchoolEmbroideryText(clean);
             onOptionChange('Skolebroderi', clean);
             if (isArabicText(clean)) {
@@ -169,6 +188,8 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
                 const result = await generateAllEmbroideryMaps(clean);
                 sendEmbroideryMapsToIframes('backBottom', result);
             }
+            sendToActiveIframe(`schoolEmbroidery:${clean}`);
+            sendToActiveIframe("school camera");
         } catch (err) {
             console.error('Error applying school embroidery:', err);
         } finally {
@@ -178,6 +199,8 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
 
     const handleClearSchoolText = async () => {
         if (ingenButton || isApplyingSchool) return;
+        if (!lastAppliedSchoolRef.current && !inputSchoolText) return;
+
         setIsApplyingSchool(true);
         await new Promise(r => setTimeout(r, 10));
         try {
@@ -185,12 +208,16 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
             setInputSchoolText('');
             setSchoolEmbroideryText('');
             onOptionChange('Skolebroderi', '');
-            if (wasArabic) {
-                sendArabicTextToIframes('clear');
-            } else {
-                const result = await generateAllEmbroideryMaps('');
-                sendEmbroideryMapsToIframes('backBottom', result);
-                sendArabicTextToIframes('clear');
+            if (lastAppliedSchoolRef.current) {
+                lastAppliedSchoolRef.current = '';
+                if (wasArabic) {
+                    sendArabicTextToIframes('clear');
+                } else {
+                    const result = await generateAllEmbroideryMaps('');
+                    sendEmbroideryMapsToIframes('backBottom', result);
+                    sendArabicTextToIframes('clear');
+                }
+                sendToActiveIframe('schoolEmbroidery:');
             }
         } catch (err) {
             console.error('Error clearing school embroidery:', err);
@@ -227,7 +254,7 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
             return;
         }
 
-        if (!schoolEmbroideryText) return;
+        if (!schoolEmbroideryText || !schoolEmbroideryText.trim()) return;
 
         if (isArabicText(schoolEmbroideryText)) {
             sendArabicTextToIframes(schoolEmbroideryText);
@@ -249,6 +276,7 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
     useEffect(() => {
         onOptionChange('Ingen', ingenButton);
         if (ingenButton) {
+            lastAppliedSchoolRef.current = '';
             setSchoolEmbroideryText('');
             setInputSchoolText('');
             onOptionChange('Skolebroderi', '');
@@ -262,13 +290,15 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
                 opacity: null
             });
             sendArabicTextToIframes('clear');
+            sendToActiveIframe('schoolEmbroidery:');
         }
     }, [ingenButton]);
 
     // Initial load effect
     useEffect(() => {
 
-        if (nameEmbroideryText) {
+        if (nameEmbroideryText && nameEmbroideryText.trim()) {
+            lastAppliedNameRef.current = nameEmbroideryText.trim();
             if (isArabicText(nameEmbroideryText)) {
                 sendArabicTextToIframes(nameEmbroideryText);
             } else {
@@ -280,9 +310,11 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
                         );
                     });
             }
+            sendToActiveIframe(`nameEmbroidery:${nameEmbroideryText}`);
         }
 
-        if (!ingenButton && schoolEmbroideryText) {
+        if (!ingenButton && schoolEmbroideryText && schoolEmbroideryText.trim()) {
+            lastAppliedSchoolRef.current = schoolEmbroideryText.trim();
             if (isArabicText(schoolEmbroideryText)) {
                 sendArabicTextToIframes(schoolEmbroideryText);
             } else {
@@ -294,6 +326,7 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
                         );
                     });
             }
+            sendToActiveIframe(`schoolEmbroidery:${schoolEmbroideryText}`);
         }
 
     }, []);
@@ -302,16 +335,12 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
     useEffect(() => {
         onOptionChange('Top broderi', topEmbroiderySelection);
         const msg = `topEmbroidery:${topEmbroiderySelection}`;
-        ['preview-iframe', 'preview-iframe2'].forEach(id => {
-            const iframe = document.getElementById(id);
-            if (iframe?.contentWindow) {
-                iframe.contentWindow.postMessage(msg, "*");
-                if (cameraTriggers.current["top"]) {
-                    iframe.contentWindow.postMessage("top camera", "*");
-                }
-            }
-        });
-        cameraTriggers.current["top"] = true;
+        sendToActiveIframe(msg);
+        if (cameraTriggers.current["top"]) {
+            sendToActiveIframe("top camera");
+        } else {
+            cameraTriggers.current["top"] = true;
+        }
     }, [topEmbroiderySelection]);
 
     useEffect(() => { onOptionChange('Broderifarve', selectedNameEmbroideryColor); }, [selectedNameEmbroideryColor]);
@@ -327,63 +356,27 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
         };
         const msg = colorMap[selectedNameEmbroideryColor.toLowerCase()];
         if (msg) {
-            ['preview-iframe', 'preview-iframe2'].forEach(id => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                    if (cameraTriggers.current["name_color"]) {
-                        iframe.contentWindow.postMessage("name camera", "*");
-                    }
-                }
-            });
-        }
-        cameraTriggers.current["name_color"] = true;
-    }, [selectedNameEmbroideryColor]);
-
-    useEffect(() => {
-        const msg = `nameEmbroidery:${nameEmbroideryText}`;
-        ['preview-iframe', 'preview-iframe2'].forEach(id => {
-            const iframe = document.getElementById(id);
-            if (iframe?.contentWindow) {
-                iframe.contentWindow.postMessage(msg, "*");
-                if (cameraTriggers.current["name_text"]) {
-                    iframe.contentWindow.postMessage("name camera", "*");
-                }
+            sendToActiveIframe(msg);
+            if (cameraTriggers.current["name_color"]) {
+                sendToActiveIframe("name camera");
+            } else {
+                cameraTriggers.current["name_color"] = true;
             }
-        });
-        cameraTriggers.current["name_text"] = true;
-    }, [nameEmbroideryText]);
+        }
+    }, [selectedNameEmbroideryColor]);
 
     useEffect(() => {
         const colorMap = { 'hvid': 'schoolBroderiNamefarve:Hvid', 'guld': 'schoolBroderiNamefarve:Guld', 'sølv': 'schoolBroderiNamefarve:Sølv' };
         const msg = colorMap[selectedSchoolEmbroideryColor.toLowerCase()];
         if (msg) {
-            ['preview-iframe', 'preview-iframe2'].forEach(id => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                    if (cameraTriggers.current["school_color"]) {
-                        iframe.contentWindow.postMessage("school camera", "*");
-                    }
-                }
-            });
-        }
-        cameraTriggers.current["school_color"] = true;
-    }, [selectedSchoolEmbroideryColor]);
-
-    useEffect(() => {
-        const msg = `schoolEmbroidery:${schoolEmbroideryText}`;
-        ['preview-iframe', 'preview-iframe2'].forEach(id => {
-            const iframe = document.getElementById(id);
-            if (iframe?.contentWindow) {
-                iframe.contentWindow.postMessage(msg, "*");
-                if (cameraTriggers.current["school_text"]) {
-                    iframe.contentWindow.postMessage("school camera", "*");
-                }
+            sendToActiveIframe(msg);
+            if (cameraTriggers.current["school_color"]) {
+                sendToActiveIframe("school camera");
+            } else {
+                cameraTriggers.current["school_color"] = true;
             }
-        });
-        cameraTriggers.current["school_text"] = true;
-    }, [schoolEmbroideryText]);
+        }
+    }, [selectedSchoolEmbroideryColor]);
 
     // --- Color options ---
     const getEmbroideryColor = () => {

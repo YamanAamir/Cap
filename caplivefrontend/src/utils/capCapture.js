@@ -1,4 +1,4 @@
-const IFRAME_IDS = ['preview-iframe', 'preview-iframe2'];
+import { getActiveIframe, sendToActiveIframe } from './iframeMessenger';
 
 const compressImage = (base64Str, maxWidth = 800, quality = 0.7) => {
   return new Promise((resolve) => {
@@ -29,21 +29,8 @@ const compressImage = (base64Str, maxWidth = 800, quality = 0.7) => {
   });
 };
 
-const getActiveIframe = () => {
-  for (const id of IFRAME_IDS) {
-    const el = document.getElementById(id);
-    if (el?.contentWindow && el.offsetParent !== null) return el;
-  }
-  return IFRAME_IDS.map((id) => document.getElementById(id)).find(Boolean) || null;
-};
-
 const postToIframe = (message) => {
-  IFRAME_IDS.forEach((id) => {
-    const iframe = document.getElementById(id);
-    if (iframe?.contentWindow) {
-      iframe.contentWindow.postMessage(message, '*');
-    }
-  });
+  sendToActiveIframe(message);
 };
 
 /**
