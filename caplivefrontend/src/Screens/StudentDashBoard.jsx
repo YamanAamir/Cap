@@ -509,6 +509,13 @@ const StudentDashboard = () => {
     console.log("Iframe loaded");
     setIsIframeLoaded(true);
 
+    // Fallback: Ensure loader disappears even if cross-origin signal is delayed or missed
+    if (!modelLoadTimerRef.current) {
+      modelLoadTimerRef.current = setTimeout(() => {
+        setIsModelLoaded(true);
+      }, 5000);
+    }
+
     const activeId = getActiveIframeId();
     try {
       const iframe = document.getElementById(activeId);
@@ -542,12 +549,11 @@ const StudentDashboard = () => {
         : (event.data ? JSON.stringify(event.data) : "");
 
       if (rawStr.includes("All Models & Assets Loaded Successfully!")) {
-        console.log("✅ Models loaded signal received — hiding loader in 5s");
-        if (!modelLoadTimerRef.current) {
-          modelLoadTimerRef.current = setTimeout(() => {
-            setIsModelLoaded(true);
-          }, 5000);
-        }
+        console.log("✅ Models loaded signal received — hiding loader in 2s");
+        if (modelLoadTimerRef.current) clearTimeout(modelLoadTimerRef.current);
+        modelLoadTimerRef.current = setTimeout(() => {
+          setIsModelLoaded(true);
+        }, 2000);
       }
 
       if (event.data === "app:ready") {
@@ -556,7 +562,13 @@ const StudentDashboard = () => {
         );
 
         setIsAppReady(true);
-        setTimeout(() => setShowBlurEffect(true), 3000);
+        setTimeout(() => setShowBlurEffect(true), 1500);
+
+        // Hide loader after initial configuration messages have had time to apply
+        if (modelLoadTimerRef.current) clearTimeout(modelLoadTimerRef.current);
+        modelLoadTimerRef.current = setTimeout(() => {
+          setIsModelLoaded(true);
+        }, 3500);
 
         // Program bhejo
         if (program) {
@@ -1228,6 +1240,17 @@ const StudentDashboard = () => {
                           fontFamily: "'Inter', 'Segoe UI', sans-serif",
                         }}>{showBlurEffect ? "Indlæser standardkonfiguration…" : "Indlæser…"}</p>
                       </div>
+
+                      <style>{`
+                        @keyframes sl-float {
+                          0%, 100% { transform: translateY(0px); opacity: 1; }
+                          50% { transform: translateY(-8px); opacity: 0.92; }
+                        }
+                        @keyframes sl-shimmer {
+                          0% { left: -50%; }
+                          100% { left: 110%; }
+                        }
+                      `}</style>
                     </div>
                   )}
                 </div>
