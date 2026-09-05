@@ -509,13 +509,6 @@ const StudentDashboard = () => {
     console.log("Iframe loaded");
     setIsIframeLoaded(true);
 
-    // Fallback: Ensure loader disappears even if cross-origin signal is delayed or missed
-    if (!modelLoadTimerRef.current) {
-      modelLoadTimerRef.current = setTimeout(() => {
-        setIsModelLoaded(true);
-      }, 5000);
-    }
-
     const activeId = getActiveIframeId();
     try {
       const iframe = document.getElementById(activeId);
