@@ -140,7 +140,7 @@ const StudentDashboard = () => {
   const handleCaptureFullView = async () => {
     setIsCapturingFullView(true);
     console.log('Requesting screenshots from PlayCanvas...');
-    
+
     try {
       const capCapture = await import('../utils/capCapture');
       const images = await capCapture.captureCapViews();
@@ -265,13 +265,13 @@ const StudentDashboard = () => {
     syncTilbehorToIframes(selectedOptions.TILBEHØR);
   }, [activeMenu, isAppReady]);
 
-  
+
 
   // ---------------- LUKSUS ----------------
-  
+
 
   // ---------------- PREMIUM ----------------
-  
+
 
   let prices = dynamicConfig?.priceConfig?.[packageName || 'standard'] || {};
 
@@ -404,10 +404,10 @@ const StudentDashboard = () => {
 
     // Package base price
     let iniialPrice = 0;
-    
+
     // Attempt to read from dynamicConfig
     const progKey = program ? (Object.keys(dynamicConfig?.basePrices || {}).find(k => k.toLowerCase() === program.toLowerCase()) || program) : 'STX';
-    
+
     if (dynamicConfig?.basePrices && dynamicConfig.basePrices[progKey] && dynamicConfig.basePrices[progKey][packageName] !== undefined) {
       iniialPrice = dynamicConfig.basePrices[progKey][packageName];
     } else {
@@ -425,11 +425,11 @@ const StudentDashboard = () => {
       const front = selectedOptions["UDDANNELSESBÅND"]?.['Broderi foran'] || '';
       const name = selectedOptions.BRODERI?.['Navne broderi'] || '';
       const school = selectedOptions.BRODERI?.['Skolebroderi'] || '';
-      
+
       if (front.trim() !== '' && name.trim() !== '' && school.trim() !== '') {
         const standardPrices = dynamicConfig?.priceConfig?.['standard'] || {};
         let frontPrice = 0, namePrice = 0, schoolPrice = 0;
-        
+
         if (standardPrices["UDDANNELSESBÅND"] && standardPrices["UDDANNELSESBÅND"]['Broderi foran']) {
           frontPrice = calcTextPrice(front, standardPrices["UDDANNELSESBÅND"]['Broderi foran']);
         }
@@ -439,7 +439,7 @@ const StudentDashboard = () => {
         if (standardPrices.BRODERI && standardPrices.BRODERI['Skolebroderi']) {
           schoolPrice = calcTextPrice(school, standardPrices.BRODERI['Skolebroderi']);
         }
-        
+
         const bundlePrice = (dynamicConfig?.basichueBundlePrices?.[progKey] !== undefined)
           ? parseFloat(dynamicConfig.basichueBundlePrices[progKey])
           : (parseFloat(dynamicConfig?.basichueBundlePrice) || 220);
@@ -768,8 +768,8 @@ const StudentDashboard = () => {
 
 
     window.addEventListener("message", handleMessage);
-    
-  return () => window.removeEventListener("message", handleMessage);
+
+    return () => window.removeEventListener("message", handleMessage);
   }, [program, selectedOptions]);
 
   // Add this useEffect to debug
@@ -780,19 +780,24 @@ const StudentDashboard = () => {
   }, [program, isIframeLoaded, isAppReady]);
 
   useEffect(() => {
-    // Single shared PlayCanvas URL for both Desktop & Mobile
-    const playcanvasUrl = "https://playcanv.as/e/p/9y9yBbyR/";
-    // const desktopUrl = "https://playcanv.as/e/p/to6gFrqQ/"; // Temporary commented out
-    // const prodUrl = "https://playcanv.as/e/p/QIG7fh8C/";
+    if (isDesktop) {
+      const iframe_desktop = document.getElementById("preview-iframe");
+      if (iframe_desktop && (!iframe_desktop.src || !iframe_desktop.src.includes('playcanv.as'))) {
+        ////////DEV Student Life////////
+        iframe_desktop.src = "https://playcanv.as/e/p/to6gFrqQ/";
 
-    const iframe_desktop = document.getElementById("preview-iframe");
-    if (iframe_desktop && (!iframe_desktop.src || !iframe_desktop.src.includes('playcanv.as'))) {
-      iframe_desktop.src = playcanvasUrl;
-    }
+        ////////Production Student Life////////
+        // iframe_desktop.src = "https://playcanv.as/e/p/QIG7fh8C/";
+      }
+    } else {
+      const iframe_mobile = document.getElementById("preview-iframe2");
+      if (iframe_mobile && (!iframe_mobile.src || !iframe_mobile.src.includes('playcanv.as'))) {
+        ////////DEV Student Life////////
+        iframe_mobile.src = "https://playcanv.as/e/p/9y9yBbyR/";
 
-    const iframe_mobile = document.getElementById("preview-iframe2");
-    if (iframe_mobile && (!iframe_mobile.src || !iframe_mobile.src.includes('playcanv.as'))) {
-      iframe_mobile.src = playcanvasUrl;
+        ////////Production Student Life////////
+        // iframe_mobile.src = "https://playcanv.as/e/p/QIG7fh8C/";
+      }
     }
   }, [configLoading, isDesktop]);
 
@@ -825,214 +830,214 @@ const StudentDashboard = () => {
       {isDesktop ? (
         /* Desktop Layout */
         <div className="flex h-screen">
-        {/* Sidebar */}
-        <aside className="bg-white/70 backdrop-blur-sm border-r border-slate-200 overflow-y-auto">
-          <div className="p-6">
-            <h2 className="text-sm font-semibold text-center text-slate-600 uppercase tracking-wider mb-4">
-              Kasketter
-            </h2>
-            <nav className="">
-              {menuItems.filter(item => visibilityConfig?.[item.name] !== false).map((item, index) => (
-                <button
-                  key={index}
-                  onClick={() => {
-                    console.log("Sending message to iframe:", `Page : ${index + 1}`);
-                    sendToActiveIframe(`Page : ${index + 1}`);
-                    console.log("Sending message to iframe:", "Tilvælg:no");
-                    sendToActiveIframe("Tilvælg:no");
-                    console.log("Sending menu selection message to iframe:", item.name);
-                    sendToActiveIframe(item.name);
-                    sendToActiveIframe(`${item.name} camera`);
+          {/* Sidebar */}
+          <aside className="bg-white/70 backdrop-blur-sm border-r border-slate-200 overflow-y-auto">
+            <div className="p-6">
+              <h2 className="text-sm font-semibold text-center text-slate-600 uppercase tracking-wider mb-4">
+                Kasketter
+              </h2>
+              <nav className="">
+                {menuItems.filter(item => visibilityConfig?.[item.name] !== false).map((item, index) => (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      console.log("Sending message to iframe:", `Page : ${index + 1}`);
+                      sendToActiveIframe(`Page : ${index + 1}`);
+                      console.log("Sending message to iframe:", "Tilvælg:no");
+                      sendToActiveIframe("Tilvælg:no");
+                      console.log("Sending menu selection message to iframe:", item.name);
+                      sendToActiveIframe(item.name);
+                      sendToActiveIframe(`${item.name} camera`);
 
-                    if (errors && Object.keys(errors).length > 0) {
-                      return;
-                    }
-                    setActiveMenu(item.name);
+                      if (errors && Object.keys(errors).length > 0) {
+                        return;
+                      }
+                      setActiveMenu(item.name);
 
-                    if (item.name !== "EKSTRABETRÆK") {
-                      sendToActiveIframe(`CoverColor:${selectedOptions.BETRÆK.Farve}`);
-                      sendToActiveIframe(`Topkant:${selectedOptions.BETRÆK.Topkant}`);
-                      sendToActiveIframe(`Kantband:${selectedOptions.BETRÆK.Kantbånd}`);
-                      sendToActiveIframe(`Star:${selectedOptions.BETRÆK.Stjerner}`);
-                      sendToActiveIframe(`Flagband:${selectedOptions.BETRÆK.Flagbånd}`);
-                    }
-                  }}
-                  className={`flex items-center px-2 py-3 rounded-xl transition-all duration-200 group ${activeMenu === item.name
-                    ? "bg-white shadow-sm"
-                    : "hover:bg-slate-50 hover:shadow-sm"
-                    }`}
-                >
-                  <div
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 transition-transform duration-200 ${activeMenu === item.name
-                      ? "scale-110"
-                      : "group-hover:scale-105"
+                      if (item.name !== "EKSTRABETRÆK") {
+                        sendToActiveIframe(`CoverColor:${selectedOptions.BETRÆK.Farve}`);
+                        sendToActiveIframe(`Topkant:${selectedOptions.BETRÆK.Topkant}`);
+                        sendToActiveIframe(`Kantband:${selectedOptions.BETRÆK.Kantbånd}`);
+                        sendToActiveIframe(`Star:${selectedOptions.BETRÆK.Stjerner}`);
+                        sendToActiveIframe(`Flagband:${selectedOptions.BETRÆK.Flagbånd}`);
+                      }
+                    }}
+                    className={`flex items-center px-2 py-3 rounded-xl transition-all duration-200 group ${activeMenu === item.name
+                      ? "bg-white shadow-sm"
+                      : "hover:bg-slate-50 hover:shadow-sm"
                       }`}
                   >
-                    <img
-                      src={item.icon}
-                      alt={item.name}
-                      className="w-10 h-10 object-contain"
-                    />
-                  </div>
+                    <div
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 transition-transform duration-200 ${activeMenu === item.name
+                        ? "scale-110"
+                        : "group-hover:scale-105"
+                        }`}
+                    >
+                      <img
+                        src={item.icon}
+                        alt={item.name}
+                        className="w-10 h-10 object-contain"
+                      />
+                    </div>
 
-                  {activeMenu === item.name && (
-                    <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></div>
-                  )}
-                </button>
-              ))}
-            </nav>
+                    {activeMenu === item.name && (
+                      <div className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></div>
+                    )}
+                  </button>
+                ))}
+              </nav>
 
-          </div>
-        </aside>
+            </div>
+          </aside>
 
-        {/* Main Content Area */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Configuration Panel */}
-          {/* jjjjjjjjjjjj */}
-          <div className="w-[40%] bg-white/50 backdrop-blur-sm flex flex-col h-full border-r border-slate-200" id="desktop-config-panel">
+          {/* Main Content Area */}
+          <div className="flex-1 flex overflow-hidden">
+            {/* Configuration Panel */}
             {/* jjjjjjjjjjjj */}
-            <div className="p-6 space-y-8 flex-1 overflow-y-auto">
-              {isDesktop && activeMenu === "KOKARDE" && (
-                <Bows
-                  selectedOptions={selectedOptions.KOKARDE}
-                  onOptionChange={(key, value) =>
-                    handleOptionChange("KOKARDE", key, value)
-                  }
-                  program={program} visibilityConfig={visibilityConfig} pakke={packageName}
-                  changeCurrentEmblem={setGlobalEmblem}
-                />
-              )}
-              {isDesktop && activeMenu === "UDDANNELSESBÅND" && (
-                <EducationalTape
-                  selectedOptions={selectedOptions.UDDANNELSESBÅND}
-                  onOptionChange={(key, value) =>
-                    handleOptionChange("UDDANNELSESBÅND", key, value)
-                  }
-                  program={program} visibilityConfig={visibilityConfig} pakke={packageName}
-                  currentEmblem={globalEmblem}
-                />
-              )}
-              {isDesktop && activeMenu === "BRODERI" && (
-                <Embroidery
-                  selectedOptions={selectedOptions.BRODERI}
-                  onOptionChange={(key, value) =>
-                    handleOptionChange("BRODERI", key, value)
-                  }
-                  program={program} visibilityConfig={visibilityConfig}
-                  pakke={packageName}
-                  currentEmblem={globalEmblem}
-                />
-              )}
-              {isDesktop && activeMenu === "BETRÆK" && (
-                <Cover
-                  selectedOptions={selectedOptions.BETRÆK}
-                  onOptionChange={(key, value) =>
-                    handleOptionChange("BETRÆK", key, value)
-                  }
-                  program={program} visibilityConfig={visibilityConfig} pakke={packageName}
-                  currentEmblem={globalEmblem}
-                />
-              )}
-              {isDesktop && activeMenu === "SKYGGE" && (
-                <Shade
+            <div className="w-[40%] bg-white/50 backdrop-blur-sm flex flex-col h-full border-r border-slate-200" id="desktop-config-panel">
+              {/* jjjjjjjjjjjj */}
+              <div className="p-6 space-y-8 flex-1 overflow-y-auto">
+                {isDesktop && activeMenu === "KOKARDE" && (
+                  <Bows
+                    selectedOptions={selectedOptions.KOKARDE}
+                    onOptionChange={(key, value) =>
+                      handleOptionChange("KOKARDE", key, value)
+                    }
+                    program={program} visibilityConfig={visibilityConfig} pakke={packageName}
+                    changeCurrentEmblem={setGlobalEmblem}
+                  />
+                )}
+                {isDesktop && activeMenu === "UDDANNELSESBÅND" && (
+                  <EducationalTape
+                    selectedOptions={selectedOptions.UDDANNELSESBÅND}
+                    onOptionChange={(key, value) =>
+                      handleOptionChange("UDDANNELSESBÅND", key, value)
+                    }
+                    program={program} visibilityConfig={visibilityConfig} pakke={packageName}
+                    currentEmblem={globalEmblem}
+                  />
+                )}
+                {isDesktop && activeMenu === "BRODERI" && (
+                  <Embroidery
+                    selectedOptions={selectedOptions.BRODERI}
+                    onOptionChange={(key, value) =>
+                      handleOptionChange("BRODERI", key, value)
+                    }
+                    program={program} visibilityConfig={visibilityConfig}
+                    pakke={packageName}
+                    currentEmblem={globalEmblem}
+                  />
+                )}
+                {isDesktop && activeMenu === "BETRÆK" && (
+                  <Cover
+                    selectedOptions={selectedOptions.BETRÆK}
+                    onOptionChange={(key, value) =>
+                      handleOptionChange("BETRÆK", key, value)
+                    }
+                    program={program} visibilityConfig={visibilityConfig} pakke={packageName}
+                    currentEmblem={globalEmblem}
+                  />
+                )}
+                {isDesktop && activeMenu === "SKYGGE" && (
+                  <Shade
                     selectedOptions={selectedOptions.SKYGGE}
                     onOptionChange={(key, value) =>
                       handleOptionChange("SKYGGE", key, value)
                     }
                     program={program} visibilityConfig={visibilityConfig} pakke={packageName}
                   />
-              )}
-              {isDesktop && activeMenu === "FOER" && (
-                <Foer
-                  selectedOptions={selectedOptions.FOER}
-                  onOptionChange={(key, value) =>
-                    handleOptionChange("FOER", key, value)
-                  }
-                  currentEmblem={globalEmblem}
-                  program={program} visibilityConfig={visibilityConfig} pakke={packageName}
-                />
-              )}
-              {isDesktop && activeMenu === "EKSTRABETRÆK" && (
-                <ExtraCover
-                  selectedOptions={selectedOptions.EKSTRABETRÆK}
-                  onOptionChange={(key, value) =>
-                    handleOptionChange("EKSTRABETRÆK", key, value)
-                  }
-                  currentEmblem={globalEmblem}
-                  program={program} visibilityConfig={visibilityConfig} pakke={packageName}
-                  priceReset={setExtraCoverReset}
-                />
-              )}
-              {isDesktop && activeMenu === "TILBEHØR" && (
-                <Accessories
-                  selectedOptions={selectedOptions}
-                  onOptionChange={handleOptionChange}
-                  errors={errors}
-                  setErrors={setErrors}
-                  pakke={packageName}
-                  visibilityConfig={visibilityConfig}
-                  programFlags={dynamicConfig?.programFlags?.[(program || '').toUpperCase()] || []}
-                />
-              )}
-              {isDesktop && activeMenu === "STØRRELSE" && (
-                <Size
-                  selectedOptions={selectedOptions.STØRRELSE}
-                  onOptionChange={(key, value) =>
-                    handleOptionChange("STØRRELSE", key, value)
-                  }
-                  size={setSizeFlag}
-                  visibilityConfig={visibilityConfig}
-                />
-              )}
-            </div>
+                )}
+                {isDesktop && activeMenu === "FOER" && (
+                  <Foer
+                    selectedOptions={selectedOptions.FOER}
+                    onOptionChange={(key, value) =>
+                      handleOptionChange("FOER", key, value)
+                    }
+                    currentEmblem={globalEmblem}
+                    program={program} visibilityConfig={visibilityConfig} pakke={packageName}
+                  />
+                )}
+                {isDesktop && activeMenu === "EKSTRABETRÆK" && (
+                  <ExtraCover
+                    selectedOptions={selectedOptions.EKSTRABETRÆK}
+                    onOptionChange={(key, value) =>
+                      handleOptionChange("EKSTRABETRÆK", key, value)
+                    }
+                    currentEmblem={globalEmblem}
+                    program={program} visibilityConfig={visibilityConfig} pakke={packageName}
+                    priceReset={setExtraCoverReset}
+                  />
+                )}
+                {isDesktop && activeMenu === "TILBEHØR" && (
+                  <Accessories
+                    selectedOptions={selectedOptions}
+                    onOptionChange={handleOptionChange}
+                    errors={errors}
+                    setErrors={setErrors}
+                    pakke={packageName}
+                    visibilityConfig={visibilityConfig}
+                    programFlags={dynamicConfig?.programFlags?.[(program || '').toUpperCase()] || []}
+                  />
+                )}
+                {isDesktop && activeMenu === "STØRRELSE" && (
+                  <Size
+                    selectedOptions={selectedOptions.STØRRELSE}
+                    onOptionChange={(key, value) =>
+                      handleOptionChange("STØRRELSE", key, value)
+                    }
+                    size={setSizeFlag}
+                    visibilityConfig={visibilityConfig}
+                  />
+                )}
+              </div>
 
-            {/* Desktop Footer (Moved here to be inside Config Panel) */}
-            <div className="p-6 bg-white border-t border-slate-200">
-              {matchingInstallmentPlan && (
-                <div className="mb-3 px-3.5 py-2 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg flex items-center justify-between text-xs">
-                  <span className="font-bold text-emerald-800 flex items-center gap-1.5">
-                    <span className="text-sm">⚡</span> Betal i 3 rater
+              {/* Desktop Footer (Moved here to be inside Config Panel) */}
+              <div className="p-6 bg-white border-t border-slate-200">
+                {matchingInstallmentPlan && (
+                  <div className="mb-3 px-3.5 py-2 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-lg flex items-center justify-between text-xs">
+                    <span className="font-bold text-emerald-800 flex items-center gap-1.5">
+                      <span className="text-sm">⚡</span> Betal i 3 rater
+                    </span>
+                    <span className="text-sm font-semibold text-emerald-700">
+                      I dag: {matchingInstallmentPlan.downPaymentAmount} kr.
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm font-semibold text-slate-600 uppercase tracking-wider">
+                    Pris
                   </span>
-                  <span className="text-sm font-semibold text-emerald-700">
-                   I dag: {matchingInstallmentPlan.downPaymentAmount} kr.
+                  <span className="text-xl font-bold text-slate-900 flex items-center">
+                    {calculateTotalPrice().toFixed(2)} DKK
+                    {packageName === 'premium' && <span className="text-sm text-green-600 ml-1">(Inclusive)</span>}
                   </span>
                 </div>
-              )}
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-sm font-semibold text-slate-600 uppercase tracking-wider">
-                  Pris
-                </span>
-                <span className="text-xl font-bold text-slate-900 flex items-center">
-                  {calculateTotalPrice().toFixed(2)} DKK
-                  {packageName === 'premium' && <span className="text-sm text-green-600 ml-1">(Inclusive)</span>}
-                </span>
-              </div>
-              <div className="flex justify-between items-center mb-6">
-                <span className="text-xs font-semibold text-slate-400">
-                  Ekspeditionsgebyr
-                </span>
-                <span className="text-xs font-semibold text-slate-400">
-                  +{getDeliveryFee().toFixed(2)} DKK
-                </span>
-              </div>
-              <button
-                onClick={collectSelectedOptions}
-                disabled={!sizeFlag}
-                className={`w-full py-3.5 rounded text-sm font-bold uppercase tracking-wider transition-colors
+                <div className="flex justify-between items-center mb-6">
+                  <span className="text-xs font-semibold text-slate-400">
+                    Ekspeditionsgebyr
+                  </span>
+                  <span className="text-xs font-semibold text-slate-400">
+                    +{getDeliveryFee().toFixed(2)} DKK
+                  </span>
+                </div>
+                <button
+                  onClick={collectSelectedOptions}
+                  disabled={!sizeFlag}
+                  className={`w-full py-3.5 rounded text-sm font-bold uppercase tracking-wider transition-colors
                   ${sizeFlag
-                    ? "bg-[#16a34a] text-white hover:bg-[#15803d]"
-                    : "bg-slate-100 text-slate-400 cursor-not-allowed"
-                  }`}
-              >
-                Godkend og Betal
-              </button>
+                      ? "bg-[#16a34a] text-white hover:bg-[#15803d]"
+                      : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                    }`}
+                >
+                  Godkend og Betal
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* Preview Panel */}
-          <div className="flex-1 relative bg-slate-50">
-            {/* Iframe Preview Area */}
-            <div className="absolute inset-0 w-full h-full overflow-hidden">
+            {/* Preview Panel */}
+            <div className="flex-1 relative bg-slate-50">
+              {/* Iframe Preview Area */}
+              <div className="absolute inset-0 w-full h-full overflow-hidden">
                 <iframe
                   id="preview-iframe"
                   src=""
@@ -1342,12 +1347,12 @@ const StudentDashboard = () => {
                   )}
                   {!isDesktop && activeMenu === "SKYGGE" && (
                     <Shade
-                    selectedOptions={selectedOptions.SKYGGE}
-                    onOptionChange={(key, value) =>
-                      handleOptionChange("SKYGGE", key, value)
-                    }
-                    program={program} visibilityConfig={visibilityConfig} pakke={packageName}
-                  />
+                      selectedOptions={selectedOptions.SKYGGE}
+                      onOptionChange={(key, value) =>
+                        handleOptionChange("SKYGGE", key, value)
+                      }
+                      program={program} visibilityConfig={visibilityConfig} pakke={packageName}
+                    />
                   )}
                   {!isDesktop && activeMenu === "FOER" && (
                     <Foer
