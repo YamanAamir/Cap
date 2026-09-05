@@ -780,24 +780,19 @@ const StudentDashboard = () => {
   }, [program, isIframeLoaded, isAppReady]);
 
   useEffect(() => {
-    if (isDesktop) {
-      const iframe_desktop = document.getElementById("preview-iframe");
-      if (iframe_desktop && (!iframe_desktop.src || !iframe_desktop.src.includes('playcanv.as'))) {
-        ////////DEV Student Life////////
-        iframe_desktop.src = "https://playcanv.as/e/p/to6gFrqQ/";
+    // Single shared PlayCanvas URL for both Desktop & Mobile
+    const playcanvasUrl = "https://playcanv.as/e/p/9y9yBbyR/";
+    // const desktopUrl = "https://playcanv.as/e/p/to6gFrqQ/"; // Temporary commented out
+    // const prodUrl = "https://playcanv.as/e/p/QIG7fh8C/";
 
-        ////////Production Student Life////////
-        // iframe_desktop.src = "https://playcanv.as/e/p/QIG7fh8C/";
-      }
-    } else {
-      const iframe_mobile = document.getElementById("preview-iframe2");
-      if (iframe_mobile && (!iframe_mobile.src || !iframe_mobile.src.includes('playcanv.as'))) {
-        ////////DEV Student Life////////
-        iframe_mobile.src = "https://playcanv.as/e/p/9y9yBbyR/";
+    const iframe_desktop = document.getElementById("preview-iframe");
+    if (iframe_desktop && (!iframe_desktop.src || !iframe_desktop.src.includes('playcanv.as'))) {
+      iframe_desktop.src = playcanvasUrl;
+    }
 
-        ////////Production Student Life////////
-        // iframe_mobile.src = "https://playcanv.as/e/p/QIG7fh8C/";
-      }
+    const iframe_mobile = document.getElementById("preview-iframe2");
+    if (iframe_mobile && (!iframe_mobile.src || !iframe_mobile.src.includes('playcanv.as'))) {
+      iframe_mobile.src = playcanvasUrl;
     }
   }, [configLoading, isDesktop]);
 
