@@ -626,213 +626,207 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
     return (
       <div className="overflow-y-auto px-6 py-4">
         <div className="max-w-4xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Left Column */}
-            <div className="space-y-3">
-              {/* First Name */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Fornavn *
-                </label>
-                <input
-                  ref={refs.firstName}
-                  name="firstName"
-                  type="text"
-                  value={customerDetails.firstName || ""}
-                  onChange={(e) => handleInputChange("firstName", e.target.value)}
-                  onKeyPress={(e) => handleKeyPress(e, "firstName")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
-                  placeholder="Indtast dit fornavn"
-                />
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
+            {/* First Name */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Fornavn *
+              </label>
+              <input
+                ref={refs.firstName}
+                name="firstName"
+                type="text"
+                value={customerDetails.firstName || ""}
+                onChange={(e) => handleInputChange("firstName", e.target.value)}
+                onKeyPress={(e) => handleKeyPress(e, "firstName")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
+                placeholder="Indtast dit fornavn"
+              />
+            </div>
 
-              {/* Email */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Email *
-                </label>
-                <input
-                  ref={refs.email}
-                  name="email"
-                  type="email"
-                  value={customerDetails.email || ""}
-                  onChange={(e) => handleInputChange("email", e.target.value)}
-                  onBlur={() => {
-                    if (customerDetails.email?.trim() && !isValidEmail(customerDetails.email)) {
-                      setEmailError('Indtast venligst en gyldig e-mailadresse');
-                    }
-                  }}
-                  onKeyPress={(e) => handleKeyPress(e, "email")}
-                  className={`w-full px-3 py-2 border ${emailError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-green-500 focus:border-green-500'} rounded-lg focus:ring-2 transition-all duration-200`}
-                  placeholder="Indtast din mail"
-                />
-                {emailError && (
-                  <p className="text-red-500 text-xs mt-1 font-medium">{emailError}</p>
-                )}
-              </div>
+            {/* Last Name */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Efternavn *
+              </label>
+              <input
+                ref={refs.lastName}
+                name="lastName"
+                type="text"
+                value={customerDetails.lastName || ""}
+                onChange={(e) => handleInputChange("lastName", e.target.value)}
+                onKeyPress={(e) => handleKeyPress(e, "lastName")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
+                placeholder="Indtast dit efternavn"
+              />
+            </div>
 
-              {/* School Name + Deliver to School */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Skole navn *
-                </label>
-                <input
-                  ref={refs.Skolenavn}
-                  name="Skolenavn"
-                  type="text"
-                  value={customerDetails.Skolenavn || ""}
-                  onChange={(e) => handleInputChange("Skolenavn", e.target.value)}
-                  onKeyPress={(e) => handleKeyPress(e, "Skolenavn")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
-                  placeholder="Indtast dit skolenavn"
-                />
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Email *
+              </label>
+              <input
+                ref={refs.email}
+                name="email"
+                type="email"
+                value={customerDetails.email || ""}
+                onChange={(e) => handleInputChange("email", e.target.value)}
+                onBlur={() => {
+                  if (customerDetails.email?.trim() && !isValidEmail(customerDetails.email)) {
+                    setEmailError('Indtast venligst en gyldig e-mailadresse');
+                  }
+                }}
+                onKeyPress={(e) => handleKeyPress(e, "email")}
+                className={`w-full px-3 py-2 border ${emailError ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-green-500 focus:border-green-500'} rounded-lg focus:ring-2 transition-all duration-200`}
+                placeholder="Indtast din mail"
+              />
+              {emailError && (
+                <p className="text-red-500 text-xs mt-1 font-medium">{emailError}</p>
+              )}
+            </div>
 
-                <div className="mt-2 flex items-center">
+            {/* Phone */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Telefonnr. *
+              </label>
+              <div className="flex gap-2">
+                <div className="relative w-20 shrink-0">
+                  <span className="absolute left-2.5 top-2.5 font-bold text-gray-400">+</span>
                   <input
-                    type="checkbox"
-                    checked={customerDetails.deliverToSchool || false}
-                    onChange={(e) =>
-                      handleInputChange("deliverToSchool", e.target.checked)
-                    }
-                    className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                    id="deliverToSchool"
+                    type="tel"
+                    maxLength={4}
+                    value={customerDetails.countryCode || ""}
+                    onChange={(e) => handleInputChange("countryCode", e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+                    className="w-full pl-6 pr-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 font-medium"
+                    placeholder="45"
+                    required
                   />
-                  <label
-                    htmlFor="deliverToSchool"
-                    className="ml-2 text-sm text-gray-700"
-                  >
-                    Levering til skolen
-                  </label>
                 </div>
-              </div>
-
-              {/* City */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  By *
-                </label>
-                <input
-                  ref={refs.city}
-                  name="city"
-                  type="text"
-                  value={customerDetails.city || ""}
-                  onChange={(e) => handleInputChange("city", e.target.value)}
-                  onKeyPress={(e) => handleKeyPress(e, "city")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
-                  placeholder="Indtast din by"
-                />
-              </div>
-
-              {/* Country */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Land
-                </label>
-                <select
-                  ref={refs.country}
-                  name="country"
-                  value={customerDetails.country || "Denmark"}
-                  onChange={(e) => handleInputChange("country", e.target.value)}
-                  onKeyPress={(e) => handleKeyPress(e, "country")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
-                >
-                  <option value="Denmark">Denmark</option>
-                  <option value="Grønland">Grønland</option>
-                  <option value="Sweden">Sweden</option>
-                  <option value="Norway">Norway</option>
-                  <option value="Germany">Germany</option>
-                  <option value="Other">Other</option>
-                </select>
+                <div className="relative flex-1">
+                  <input
+                    ref={refs.phone}
+                    name="phone"
+                    type="tel"
+                    maxLength={8}
+                    value={customerDetails.phone || ""}
+                    onChange={(e) => handleInputChange("phone", e.target.value.replace(/[^0-9]/g, '').slice(0, 8))}
+                    onKeyPress={(e) => handleKeyPress(e, "phone")}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
+                    placeholder="8 cifre (f.eks. 12345678)"
+                    required
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Right Column */}
-            <div className="space-y-3">
-              {/* Last Name */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Efternavn *
-                </label>
-                <input
-                  ref={refs.lastName}
-                  name="lastName"
-                  type="text"
-                  value={customerDetails.lastName || ""}
-                  onChange={(e) => handleInputChange("lastName", e.target.value)}
-                  onKeyPress={(e) => handleKeyPress(e, "lastName")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
-                  placeholder="Indtast dit efternavn"
-                />
-              </div>
+            {/* School Name + Deliver to School */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Skole navn *
+              </label>
+              <input
+                ref={refs.Skolenavn}
+                name="Skolenavn"
+                type="text"
+                value={customerDetails.Skolenavn || ""}
+                onChange={(e) => handleInputChange("Skolenavn", e.target.value)}
+                onKeyPress={(e) => handleKeyPress(e, "Skolenavn")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
+                placeholder="Indtast dit skolenavn"
+              />
 
-                {/* Phone */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Telefonnr. *
-                  </label>
-                  <div className="flex gap-2">
-                    <div className="relative w-20 shrink-0">
-                      <span className="absolute left-2.5 top-2.5 font-bold text-gray-400">+</span>
-                      <input
-                        type="tel"
-                        maxLength={4}
-                        value={customerDetails.countryCode || ""}
-                        onChange={(e) => handleInputChange("countryCode", e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
-                        className="w-full pl-6 pr-2 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 font-medium"
-                        placeholder="45"
-                        required
-                      />
-                    </div>
-                    <div className="relative flex-1">
-                      <input
-                        ref={refs.phone}
-                        name="phone"
-                        type="tel"
-                        maxLength={8}
-                        value={customerDetails.phone || ""}
-                        onChange={(e) => handleInputChange("phone", e.target.value.replace(/[^0-9]/g, '').slice(0, 8))}
-                        onKeyPress={(e) => handleKeyPress(e, "phone")}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
-                        placeholder="8 cifre (f.eks. 12345678)"
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-
-              {/* Address */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Adresse *
-                </label>
+              <div className="mt-2 flex items-center">
                 <input
-                  ref={refs.address}
-                  name="address"
-                  type="text"
-                  value={customerDetails.address || ""}
-                  onChange={(e) => handleInputChange("address", e.target.value)}
-                  onKeyPress={(e) => handleKeyPress(e, "address")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
-                  placeholder="Indtast dit vejnavn"
+                  type="checkbox"
+                  checked={customerDetails.deliverToSchool || false}
+                  onChange={(e) =>
+                    handleInputChange("deliverToSchool", e.target.checked)
+                  }
+                  className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                  id="deliverToSchool"
                 />
-              </div>
-
-              {/* Postal Code */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Postnr. *
+                <label
+                  htmlFor="deliverToSchool"
+                  className="ml-2 text-sm text-gray-700"
+                >
+                  Levering til skolen
                 </label>
-                <input
-                  ref={refs.postalCode}
-                  name="postalCode"
-                  type="text"
-                  value={customerDetails.postalCode || ""}
-                  onChange={(e) => handleInputChange("postalCode", e.target.value)}
-                  onKeyPress={(e) => handleKeyPress(e, "postalCode")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
-                  placeholder="Indtast dit post nr"
-                />
               </div>
+            </div>
+
+            {/* Address */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Adresse *
+              </label>
+              <input
+                ref={refs.address}
+                name="address"
+                type="text"
+                value={customerDetails.address || ""}
+                onChange={(e) => handleInputChange("address", e.target.value)}
+                onKeyPress={(e) => handleKeyPress(e, "address")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
+                placeholder="Indtast dit vejnavn"
+              />
+            </div>
+
+            {/* City */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                By *
+              </label>
+              <input
+                ref={refs.city}
+                name="city"
+                type="text"
+                value={customerDetails.city || ""}
+                onChange={(e) => handleInputChange("city", e.target.value)}
+                onKeyPress={(e) => handleKeyPress(e, "city")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
+                placeholder="Indtast din by"
+              />
+            </div>
+
+            {/* Postal Code */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Postnr. *
+              </label>
+              <input
+                ref={refs.postalCode}
+                name="postalCode"
+                type="text"
+                value={customerDetails.postalCode || ""}
+                onChange={(e) => handleInputChange("postalCode", e.target.value)}
+                onKeyPress={(e) => handleKeyPress(e, "postalCode")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
+                placeholder="Indtast dit post nr"
+              />
+            </div>
+
+            {/* Country */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Land
+              </label>
+              <select
+                ref={refs.country}
+                name="country"
+                value={customerDetails.country || "Denmark"}
+                onChange={(e) => handleInputChange("country", e.target.value)}
+                onKeyPress={(e) => handleKeyPress(e, "country")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200"
+              >
+                <option value="Denmark">Denmark</option>
+                <option value="Grønland">Grønland</option>
+                <option value="Sweden">Sweden</option>
+                <option value="Norway">Norway</option>
+                <option value="Germany">Germany</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
           </div>
 
