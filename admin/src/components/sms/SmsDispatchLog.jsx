@@ -448,9 +448,9 @@ export default function SmsDispatchLog({ campaigns }) {
                       <td className="px-4 py-3 text-xs text-slate-600">
                         {displayDateMsg ? (
                           displayDateMsg.status === 'SENT' && displayDateMsg.sentAt ? (
-                            <span>Sent: {new Date(displayDateMsg.sentAt).toLocaleString('da-DK', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                            <span>Sent: {new Date(displayDateMsg.sentAt).toLocaleString('da-DK', { timeZone: 'Europe/Copenhagen', dateStyle: 'short', timeStyle: 'short' })}</span>
                           ) : (
-                            <span className="text-slate-500">Scheduled: {new Date(displayDateMsg.scheduledFor).toLocaleString('da-DK', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                            <span className="text-slate-500">Scheduled: {new Date(displayDateMsg.scheduledFor).toLocaleString('da-DK', { timeZone: 'Europe/Copenhagen', dateStyle: 'short', timeStyle: 'short' })}</span>
                           )
                         ) : '-'}
                       </td>
@@ -495,11 +495,11 @@ export default function SmsDispatchLog({ campaigns }) {
                         <td className="px-4 py-2.5 text-xs text-slate-600">
                           {msg.status === 'SENT' && msg.sentAt ? (
                             <span className="text-emerald-700 font-medium">
-                              {new Date(msg.sentAt).toLocaleString('da-DK', { dateStyle: 'short', timeStyle: 'short' })}
+                              {new Date(msg.sentAt).toLocaleString('da-DK', { timeZone: 'Europe/Copenhagen', dateStyle: 'short', timeStyle: 'short' })}
                             </span>
                           ) : (
                             <span className="text-slate-500" title="Scheduled For">
-                              {new Date(msg.scheduledFor).toLocaleString('da-DK', { dateStyle: 'short', timeStyle: 'short' })}
+                              {new Date(msg.scheduledFor).toLocaleString('da-DK', { timeZone: 'Europe/Copenhagen', dateStyle: 'short', timeStyle: 'short' })}
                             </span>
                           )}
                         </td>

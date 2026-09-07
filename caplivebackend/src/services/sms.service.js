@@ -150,7 +150,7 @@ const scheduleCampaignMessages = async (enrollmentId, customer, discountCode) =>
   const vars = {
     name: customer.name,
     discountCode: discountCode?.code || '',
-    expiryDate: discountCode ? new Date(discountCode.expiresAt).toLocaleDateString('da-DK') : '',
+    expiryDate: discountCode ? new Date(discountCode.expiresAt).toLocaleDateString('da-DK', { timeZone: 'Europe/Copenhagen' }) : '',
     link: campaignSlug ? `${frontendBaseUrl}/sms-signup/${campaignSlug}` : '',
   };
 
