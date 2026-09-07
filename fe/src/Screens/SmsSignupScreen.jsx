@@ -115,7 +115,7 @@ const SmsSignupScreen = () => {
     );
   }
 
-  if (campaignError || !campaign) {
+if (campaignError || !campaign) {
     return (
       <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center p-6 font-sans">
         <div className="max-w-md w-full bg-white rounded shadow-sm border border-slate-200 p-8 text-center">
@@ -127,10 +127,10 @@ const SmsSignupScreen = () => {
             This signup link is invalid or the campaign has expired.
           </p>
           <a
-            href="/"
-            className="mt-8 flex items-center justify-center gap-2 w-full py-4 bg-slate-100 text-slate-700 font-bold rounded shadow-sm hover:bg-slate-200 transition-colors"
+            href="https://studentlife.dk"
+            className="mt-8 flex items-center justify-center gap-2 w-full py-4 bg-[#1e3a8a] text-white font-bold rounded shadow-sm hover:bg-blue-800 transition-colors"
           >
-            RETURN TO HOME
+            DESIGN DIN STUDENTERHUE NU <ArrowRight className="h-4 w-4" />
           </a>
         </div>
       </div>
