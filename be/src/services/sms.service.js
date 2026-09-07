@@ -16,18 +16,74 @@ const normalizeRecipientPhone = (phone, defaultCountryCode = '45') => {
 
 const DAY_MAP = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
+// Helper to get date components in Europe/Copenhagen timezone
+const getCopenhagenParts = (date = new Date()) => {
+  const dtf = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Copenhagen',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+    weekday: 'short',
+    hour12: false
+  });
+  const parts = {};
+  for (const { type, value } of dtf.formatToParts(date)) {
+    parts[type] = value;
+  }
+  return {
+    year: parseInt(parts.year, 10),
+    month: parseInt(parts.month, 10),
+    day: parseInt(parts.day, 10),
+    hour: parseInt(parts.hour === '24' ? '0' : parts.hour, 10),
+    minute: parseInt(parts.minute, 10),
+    weekday: (parts.weekday || '').toUpperCase() // 'MON', 'TUE', etc.
+  };
+};
+
+// Helper to create a UTC Date corresponding to a specific year, month, day, hour, minute in Europe/Copenhagen
+const makeCopenhagenDate = (year, month, day, hour = 0, minute = 0) => {
+  const pad = (n) => String(n).padStart(2, '0');
+  const dStr = `${year}-${pad(month)}-${pad(day)}T${pad(hour)}:${pad(minute)}:00Z`;
+  const tempUtc = new Date(dStr);
+  
+  const dtf = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Copenhagen',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+    hour12: false
+  });
+  const parts = Object.fromEntries(dtf.formatToParts(tempUtc).map(p => [p.type, p.value]));
+  const cphHour = parseInt(parts.hour === '24' ? '0' : parts.hour, 10);
+  
+  const targetUtcMs = Date.UTC(year, month - 1, day, hour, minute, 0);
+  const renderedCphUtcMs = Date.UTC(
+    parseInt(parts.year, 10),
+    parseInt(parts.month, 10) - 1,
+    parseInt(parts.day, 10),
+    cphHour,
+    parseInt(parts.minute, 10),
+    0
+  );
+  const diffMs = renderedCphUtcMs - targetUtcMs;
+  return new Date(targetUtcMs - diffMs);
+};
+
 const calculateStepSchedule = (enrolledAt, dayOffset, campaign = {}) => {
   const enrollmentDate = new Date(enrolledAt || new Date());
+  const offset = parseInt(dayOffset, 10) || 0;
   
   // If Day 0 and immediate sending is enabled, send immediately
   const sendImmediate = campaign.sendImmediateOnEnrollment !== false;
-  if (dayOffset === 0 && sendImmediate) {
+  if (offset === 0 && sendImmediate) {
     return new Date(enrollmentDate);
   }
-
-  // Target date offset from enrolledAt
-  const target = new Date(enrollmentDate);
-  target.setDate(target.getDate() + dayOffset);
 
   // Allowed days parsing
   let allowed = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
@@ -44,23 +100,40 @@ const calculateStepSchedule = (enrolledAt, dayOffset, campaign = {}) => {
     }
   }
 
-  // If the target day of week is not allowed, advance day by day until an allowed day is found
+  // Get enrollment date in Copenhagen timezone
+  const cphEnrollment = getCopenhagenParts(enrollmentDate);
+  
+  // Start checking from (enrollment date + offset)
+  let checkUtc = new Date(Date.UTC(cphEnrollment.year, cphEnrollment.month - 1, cphEnrollment.day + offset, 12, 0, 0));
+  
   let safetyLoop = 0;
-  while (!allowed.includes(DAY_MAP[target.getDay()]) && safetyLoop < 14) {
-    target.setDate(target.getDate() + 1);
+  while (safetyLoop < 14) {
+    const parts = getCopenhagenParts(checkUtc);
+    const isAllowed = allowed.includes(parts.weekday);
+    
+    const isWeekend = (parts.weekday === 'SAT' || parts.weekday === 'SUN');
+    const timeStr = isWeekend 
+      ? (campaign.weekendSendTime || '12:00')
+      : (campaign.weekdaySendTime || '16:00');
+    
+    const [hours, minutes] = timeStr.split(':').map(n => parseInt(n, 10) || 0);
+    const candidateDate = makeCopenhagenDate(parts.year, parts.month, parts.day, hours, minutes);
+    
+    if (isAllowed) {
+      // For Day 0 when immediate send is false, if today's send time has already passed, move to next allowed day
+      if (offset === 0 && candidateDate <= enrollmentDate) {
+        checkUtc.setUTCDate(checkUtc.getUTCDate() + 1);
+        safetyLoop++;
+        continue;
+      }
+      return candidateDate;
+    }
+    
+    checkUtc.setUTCDate(checkUtc.getUTCDate() + 1);
     safetyLoop++;
   }
 
-  // Determine time: weekday vs weekend
-  const isWeekend = target.getDay() === 0 || target.getDay() === 6; // Sunday or Saturday
-  const timeStr = isWeekend 
-    ? (campaign.weekendSendTime || '12:00')
-    : (campaign.weekdaySendTime || '16:00');
-
-  const [hours, minutes] = timeStr.split(':').map(n => parseInt(n, 10) || 0);
-  target.setHours(hours, minutes, 0, 0);
-
-  return target;
+  return new Date(enrollmentDate.getTime() + offset * 86400000);
 };
 
 const scheduleCampaignMessages = async (enrollmentId, customer, discountCode) => {

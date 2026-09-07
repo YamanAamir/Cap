@@ -546,10 +546,20 @@ exports.updateSmsCampaign = async (req, res) => {
         include: { steps: { where: { isActive: true }, orderBy: { sortOrder: 'asc' } } }
       });
 
+      const { normalizeRecipientPhone } = require('../services/sms.service');
       // Fetch all enrollments for this campaign
       const enrollments = await prisma.smsCampaignEnrollment.findMany({
         where: { campaignId: id },
-        include: { customer: true, discountCode: true }
+        include: { 
+          customer: { 
+            include: { 
+              orders: { 
+                where: { status: { not: 'CANCELLED' } } 
+              } 
+            } 
+          }, 
+          discountCode: true 
+        }
       });
 
       const enrollmentIds = enrollments.map(e => e.id);
@@ -578,6 +588,15 @@ exports.updateSmsCampaign = async (req, res) => {
         // Re-generate future messages based on new schedule and steps
         const newMessages = [];
         for (const enrollment of enrollments) {
+          const customer = enrollment.customer;
+          if (!customer || customer.smsOptOut || !customer.smsMarketingConsent) {
+            continue;
+          }
+          // Do not send automated marketing if customer already has active order
+          if (customer.orders && customer.orders.length > 0) {
+            continue;
+          }
+
           if (enrollment.discountCode && !enrollment.discountCode.usedAt) {
             const discountUpdateData = {};
             if (actualType !== undefined) {
@@ -600,12 +619,14 @@ exports.updateSmsCampaign = async (req, res) => {
             }
           }
 
+          const recipientPhone = normalizeRecipientPhone(customer.phone);
+          if (!recipientPhone) continue;
+
           for (const step of updatedCampaign.steps) {
             const scheduledFor = calculateStepSchedule(enrollment.enrolledAt, parseInt(step.dayOffset) || 0, updatedCampaign);
 
             // Only queue messages that are in the future
             if (scheduledFor > new Date()) {
-              const customer = enrollment.customer;
               const discountCode = enrollment.discountCode;
               const frontendBaseUrl = process.env.FRONTEND_BASE_URL || 'https://studenterhue.studentlife.dk/studentlife';
               const campaignSlug = updatedCampaign.slug || '';
@@ -626,7 +647,7 @@ exports.updateSmsCampaign = async (req, res) => {
               newMessages.push({
                 customerId: enrollment.customerId,
                 enrollmentId: enrollment.id,
-                phone: enrollment.customer.phone,
+                phone: recipientPhone,
                 message: parsedMessage,
                 scheduledFor,
                 status: 'SCHEDULED'
