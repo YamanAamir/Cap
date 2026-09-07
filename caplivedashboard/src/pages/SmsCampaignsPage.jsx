@@ -32,6 +32,17 @@ const DAYS_OF_WEEK = [
 
 const DEFAULT_ALLOWED_DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
+const parseAllowedDays = (val) => {
+  if (Array.isArray(val) && val.length > 0) return val;
+  if (typeof val === 'string') {
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch {}
+  }
+  return DEFAULT_ALLOWED_DAYS;
+};
+
 const SmsCampaignsPage = () => {
   const [campaigns, setCampaigns] = useState([]);
   const [draftCampaigns, setDraftCampaigns] = useState({});
@@ -69,7 +80,7 @@ const SmsCampaignsPage = () => {
           ...JSON.parse(JSON.stringify(camp)),
           weekdaySendTime: camp.weekdaySendTime || '16:00',
           weekendSendTime: camp.weekendSendTime || '12:00',
-          allowedDays: (Array.isArray(camp.allowedDays) && camp.allowedDays.length > 0) ? camp.allowedDays : DEFAULT_ALLOWED_DAYS,
+          allowedDays: parseAllowedDays(camp.allowedDays),
           sendImmediateOnEnrollment: camp.sendImmediateOnEnrollment !== undefined ? camp.sendImmediateOnEnrollment : true,
         };
       });
@@ -175,8 +186,8 @@ const SmsCampaignsPage = () => {
     const draft = draftCampaigns[campaignId];
     if (!original || !draft) return false;
 
-    const origAllowedDays = JSON.stringify(original.allowedDays || DEFAULT_ALLOWED_DAYS);
-    const draftAllowedDays = JSON.stringify(draft.allowedDays || DEFAULT_ALLOWED_DAYS);
+    const origAllowedDays = JSON.stringify(parseAllowedDays(original.allowedDays));
+    const draftAllowedDays = JSON.stringify(parseAllowedDays(draft.allowedDays));
     const origSendImmediate = original.sendImmediateOnEnrollment !== undefined ? original.sendImmediateOnEnrollment : true;
     const draftSendImmediate = draft.sendImmediateOnEnrollment !== undefined ? draft.sendImmediateOnEnrollment : true;
     const origWeekday = original.weekdaySendTime || '16:00';
@@ -205,7 +216,7 @@ const SmsCampaignsPage = () => {
           ...JSON.parse(JSON.stringify(original)),
           weekdaySendTime: original.weekdaySendTime || '16:00',
           weekendSendTime: original.weekendSendTime || '12:00',
-          allowedDays: (Array.isArray(original.allowedDays) && original.allowedDays.length > 0) ? original.allowedDays : DEFAULT_ALLOWED_DAYS,
+          allowedDays: parseAllowedDays(original.allowedDays),
           sendImmediateOnEnrollment: original.sendImmediateOnEnrollment !== undefined ? original.sendImmediateOnEnrollment : true,
         }
       }));
@@ -665,7 +676,7 @@ const SmsCampaignsPage = () => {
                       </label>
                       <div className="flex flex-wrap gap-1.5">
                         {DAYS_OF_WEEK.map(day => {
-                          const currentAllowed = draftCampaigns[campaign.id].allowedDays || DEFAULT_ALLOWED_DAYS;
+                          const currentAllowed = parseAllowedDays(draftCampaigns[campaign.id]?.allowedDays);
                           const isSelected = currentAllowed.includes(day.key);
                           return (
                             <button

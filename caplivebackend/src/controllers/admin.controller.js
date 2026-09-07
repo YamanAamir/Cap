@@ -349,22 +349,57 @@ exports.getDispatchLogs = async (req, res) => {
 };
 
 // SMS Campaigns
+const DEFAULT_ALLOWED_DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+
+const formatAllowedDays = (val) => {
+  if (val === undefined || val === null) {
+    return JSON.stringify(DEFAULT_ALLOWED_DAYS);
+  }
+  if (Array.isArray(val)) {
+    return JSON.stringify(val);
+  }
+  if (typeof val === 'string') {
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) return JSON.stringify(parsed);
+    } catch {
+      const parts = val.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+      if (parts.length > 0) return JSON.stringify(parts);
+    }
+    return val;
+  }
+  return JSON.stringify(DEFAULT_ALLOWED_DAYS);
+};
+
+const normalizeCampaign = (c) => {
+  if (!c) return c;
+  let expiry = 20;
+  let type = c.discountType;
+  if (type && type.includes(':')) {
+    const parts = type.split(':');
+    type = parts[0];
+    expiry = parseInt(parts[1]) || 20;
+  }
+  let days = c.allowedDays;
+  if (typeof days === 'string') {
+    try {
+      days = JSON.parse(days);
+    } catch {
+      days = DEFAULT_ALLOWED_DAYS;
+    }
+  }
+  if (!Array.isArray(days) || days.length === 0) {
+    days = DEFAULT_ALLOWED_DAYS;
+  }
+  return { ...c, discountType: type, discountExpiryDays: expiry, allowedDays: days };
+};
+
 exports.getSmsCampaigns = async (req, res) => {
   try {
     const campaigns = await prisma.smsCampaign.findMany({
       include: { steps: { orderBy: { sortOrder: 'asc' } }, _count: { select: { enrollments: true } } },
     });
-    const mapped = campaigns.map(c => {
-      let expiry = 20;
-      let type = c.discountType;
-      if (type && type.includes(':')) {
-        const parts = type.split(':');
-        type = parts[0];
-        expiry = parseInt(parts[1]) || 20;
-      }
-      return { ...c, discountType: type, discountExpiryDays: expiry };
-    });
-    res.json(mapped);
+    res.json(campaigns.map(normalizeCampaign));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -398,7 +433,7 @@ exports.createSmsCampaign = async (req, res) => {
         discountValue: discountValue !== undefined && discountValue !== null && discountValue !== '' ? parseFloat(discountValue) : null,
         weekdaySendTime: weekdaySendTime || '16:00',
         weekendSendTime: weekendSendTime || '12:00',
-        allowedDays: allowedDays !== undefined ? allowedDays : ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
+        allowedDays: formatAllowedDays(allowedDays),
         sendImmediateOnEnrollment: sendImmediateOnEnrollment !== undefined ? !!sendImmediateOnEnrollment : true,
         steps: {
           create: steps.map((s, i) => ({
@@ -408,8 +443,12 @@ exports.createSmsCampaign = async (req, res) => {
           })),
         },
       },
+      include: {
+        steps: { orderBy: { sortOrder: 'asc' } },
+        _count: { select: { enrollments: true } },
+      },
     });
-    res.status(201).json(campaign);
+    res.status(201).json(normalizeCampaign(campaign));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -480,7 +519,7 @@ exports.updateSmsCampaign = async (req, res) => {
           ...(discountValue !== undefined && { discountValue: discountValue !== null && discountValue !== '' ? parseFloat(discountValue) : null }),
           ...(weekdaySendTime !== undefined && { weekdaySendTime }),
           ...(weekendSendTime !== undefined && { weekendSendTime }),
-          ...(allowedDays !== undefined && { allowedDays }),
+          ...(allowedDays !== undefined && { allowedDays: formatAllowedDays(allowedDays) }),
           ...(sendImmediateOnEnrollment !== undefined && { sendImmediateOnEnrollment: !!sendImmediateOnEnrollment }),
         }
       });
@@ -604,9 +643,9 @@ exports.updateSmsCampaign = async (req, res) => {
 
     const campaign = await prisma.smsCampaign.findUnique({
       where: { id },
-      include: { steps: { orderBy: { sortOrder: 'asc' } } },
+      include: { steps: { orderBy: { sortOrder: 'asc' } }, _count: { select: { enrollments: true } } },
     });
-    res.json(campaign);
+    res.json(normalizeCampaign(campaign));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
