@@ -539,14 +539,45 @@ exports.updateSmsCampaign = async (req, res) => {
     }
 
     if (applyToExisting) {
-      const { calculateStepSchedule } = require('../services/sms.service');
+      const { calculateStepSchedule, normalizeRecipientPhone } = require('../services/sms.service');
       // Fetch updated campaign with steps
       const updatedCampaign = await prisma.smsCampaign.findUnique({
         where: { id },
         include: { steps: { where: { isActive: true }, orderBy: { sortOrder: 'asc' } } }
       });
 
-      const { normalizeRecipientPhone } = require('../services/sms.service');
+      // Auto-link any unlinked orders first
+      const unlinkedOrders = await prisma.order.findMany({
+        where: { customerId: null },
+        select: { id: true, customerEmail: true, customerDetails: true }
+      });
+      if (unlinkedOrders.length > 0) {
+        const customers = await prisma.customer.findMany({
+          select: { id: true, email: true, phone: true }
+        });
+        for (const ord of unlinkedOrders) {
+          let matchedCust = null;
+          if (ord.customerEmail) {
+            matchedCust = customers.find(c => c.email && c.email.toLowerCase() === ord.customerEmail.toLowerCase());
+          }
+          if (!matchedCust && ord.customerDetails) {
+            try {
+              const cd = typeof ord.customerDetails === 'string' ? JSON.parse(ord.customerDetails) : ord.customerDetails;
+              const p = (cd.phone || '').replace(/\D/g, '');
+              if (p.length >= 8) {
+                matchedCust = customers.find(c => (c.phone || '').replace(/\D/g, '').endsWith(p.slice(-8)));
+              }
+            } catch (e) {}
+          }
+          if (matchedCust) {
+            await prisma.order.update({
+              where: { id: ord.id },
+              data: { customerId: matchedCust.id }
+            }).catch(() => {});
+          }
+        }
+      }
+
       // Fetch all enrollments for this campaign
       const enrollments = await prisma.smsCampaignEnrollment.findMany({
         where: { campaignId: id },
@@ -749,6 +780,38 @@ exports.getSmsMessages = async (req, res) => {
   try {
     const { campaignId, status, dateFrom, dateTo, search, orderStatus } = req.query;
 
+    // Auto-link any unlinked orders to customer by email or phone so customer.orders is fully populated
+    const unlinkedOrders = await prisma.order.findMany({
+      where: { customerId: null },
+      select: { id: true, customerEmail: true, customerDetails: true }
+    });
+    if (unlinkedOrders.length > 0) {
+      const customers = await prisma.customer.findMany({
+        select: { id: true, email: true, phone: true }
+      });
+      for (const ord of unlinkedOrders) {
+        let matchedCust = null;
+        if (ord.customerEmail) {
+          matchedCust = customers.find(c => c.email && c.email.toLowerCase() === ord.customerEmail.toLowerCase());
+        }
+        if (!matchedCust && ord.customerDetails) {
+          try {
+            const cd = typeof ord.customerDetails === 'string' ? JSON.parse(ord.customerDetails) : ord.customerDetails;
+            const p = (cd.phone || '').replace(/\D/g, '');
+            if (p.length >= 8) {
+              matchedCust = customers.find(c => (c.phone || '').replace(/\D/g, '').endsWith(p.slice(-8)));
+            }
+          } catch (e) {}
+        }
+        if (matchedCust) {
+          await prisma.order.update({
+            where: { id: ord.id },
+            data: { customerId: matchedCust.id }
+          }).catch(() => {});
+        }
+      }
+    }
+
     // Auto-cleanup: Cancel any pending/scheduled messages for customers who already placed active orders
     await prisma.smsMessage.updateMany({
       where: {
@@ -760,22 +823,6 @@ exports.getSmsMessages = async (req, res) => {
         }
       },
       data: { status: 'CANCELLED' }
-    });
-
-    // Auto-restore: Re-activate future scheduled messages for opted-in customers who have NO active orders
-    await prisma.smsMessage.updateMany({
-      where: {
-        status: 'CANCELLED',
-        scheduledFor: { gte: new Date() },
-        customer: {
-          smsOptOut: false,
-          smsMarketingConsent: true,
-          orders: {
-            none: { status: { not: 'CANCELLED' } }
-          }
-        }
-      },
-      data: { status: 'SCHEDULED' }
     });
 
     const where = {};
@@ -822,8 +869,7 @@ exports.getSmsMessages = async (req, res) => {
 
     const messages = await prisma.smsMessage.findMany({
       where,
-      orderBy: { id: 'desc' }, // Newest first
-      take: 500,
+      orderBy: { id: 'desc' },
       include: { 
         customer: { 
           select: { 

@@ -360,7 +360,7 @@ export default function SmsDispatchLog({ campaigns }) {
 
                 // Next scheduled message or latest sent message
                 const nextScheduled = group.msgs.find(m => m.status === 'SCHEDULED' || m.status === 'PENDING');
-                const latestSent = [...group.msgs].reverse().find(m => m.status === 'SENT' && m.sentAt);
+                const latestSent = [...group.msgs].reverse().find(m => (m.status === 'SENT' || m.status === 'DELIVERED') && (m.sentAt || m.scheduledFor));
                 const displayDateMsg = nextScheduled || latestSent || group.msgs[0];
                 
                 return (
@@ -447,8 +447,8 @@ export default function SmsDispatchLog({ campaigns }) {
                       </td>
                       <td className="px-4 py-3 text-xs text-slate-600">
                         {displayDateMsg ? (
-                          displayDateMsg.status === 'SENT' && displayDateMsg.sentAt ? (
-                            <span>Sent: {new Date(displayDateMsg.sentAt).toLocaleString('da-DK', { timeZone: 'Europe/Copenhagen', dateStyle: 'short', timeStyle: 'short' })}</span>
+                          (displayDateMsg.status === 'SENT' || displayDateMsg.status === 'DELIVERED') && (displayDateMsg.sentAt || displayDateMsg.scheduledFor) ? (
+                            <span>{displayDateMsg.status === 'DELIVERED' ? 'Delivered: ' : 'Sent: '}{new Date(displayDateMsg.sentAt || displayDateMsg.scheduledFor).toLocaleString('da-DK', { timeZone: 'Europe/Copenhagen', dateStyle: 'short', timeStyle: 'short' })}</span>
                           ) : (
                             <span className="text-slate-500">Scheduled: {new Date(displayDateMsg.scheduledFor).toLocaleString('da-DK', { timeZone: 'Europe/Copenhagen', dateStyle: 'short', timeStyle: 'short' })}</span>
                           )
@@ -493,9 +493,9 @@ export default function SmsDispatchLog({ campaigns }) {
                           </div>
                         </td>
                         <td className="px-4 py-2.5 text-xs text-slate-600">
-                          {msg.status === 'SENT' && msg.sentAt ? (
+                          {(msg.status === 'SENT' || msg.status === 'DELIVERED') && (msg.sentAt || msg.scheduledFor) ? (
                             <span className="text-emerald-700 font-medium">
-                              {new Date(msg.sentAt).toLocaleString('da-DK', { timeZone: 'Europe/Copenhagen', dateStyle: 'short', timeStyle: 'short' })}
+                              {new Date(msg.sentAt || msg.scheduledFor).toLocaleString('da-DK', { timeZone: 'Europe/Copenhagen', dateStyle: 'short', timeStyle: 'short' })}
                             </span>
                           ) : (
                             <span className="text-slate-500" title="Scheduled For">
