@@ -25,9 +25,6 @@ const ProductionOrderDetailPage = () => {
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, statusId: null });
   const [productionFilters, setProductionFilters] = useState([]);
-  const [translateLoading, setTranslateLoading] = useState(() => {
-    return !(document.documentElement.classList.contains('translated-ltr') || document.documentElement.classList.contains('translated-rtl'));
-  });
 
   const fetchOrderAndSettings = async () => {
     setLoading(true);
@@ -92,26 +89,7 @@ const ProductionOrderDetailPage = () => {
         }
       };
     }
-
-    if (translateLoading) {
-      const checkTranslate = setInterval(() => {
-        if (document.documentElement.classList.contains('translated-ltr') || document.documentElement.classList.contains('translated-rtl')) {
-          clearInterval(checkTranslate);
-          setTranslateLoading(false);
-        }
-      }, 100);
-
-      const timeout = setTimeout(() => {
-        clearInterval(checkTranslate);
-        setTranslateLoading(false);
-      }, 2000);
-
-      return () => {
-        clearInterval(checkTranslate);
-        clearTimeout(timeout);
-      };
-    }
-  }, [translateLoading]);
+  }, []);
 
   const handleStatusUpdate = async () => {
     if (!confirmModal.statusId) return;
@@ -150,12 +128,7 @@ const ProductionOrderDetailPage = () => {
   const liningImageBase64 = order?.selectedOptions?.FOER?.['Indvendigt foer billede']?.[0]?.url || selectedOptions?.FOER?.['Indvendigt foer billede'];
 
   return (
-    <div className={`animate-in fade-in duration-500 max-w-[1200px] mx-auto pb-12 transition-opacity ${translateLoading ? 'opacity-0' : 'opacity-100'}`}>
-      {translateLoading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80">
-          <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
-        </div>
-      )}
+    <div className="animate-in fade-in duration-300 max-w-[1200px] mx-auto pb-12">
       <div id="google_translate_element"></div>
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
