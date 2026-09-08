@@ -4075,6 +4075,179 @@ const createInstallmentOrder = async (req, res) => {
   }
 };
 
+const createDirectOrder = async (req, res) => {
+  try {
+    const {
+      customerDetails,
+      selectedOptions,
+      totalPrice,
+      currency = 'DKK',
+      orderDate,
+      orderNumber,
+      email,
+      packageName,
+      program,
+      capImages,
+      discountCode,
+      isInstallment,
+      installmentPlanId,
+    } = req.body;
+
+    const customerEmail = email || customerDetails?.email;
+    if (!customerEmail || !customerDetails) {
+      return res.status(400).json({ message: 'Customer details and email are required.' });
+    }
+
+    const { upsertCustomerFromOrder, applyDiscountCode } = require('../services/core.service');
+    const customer = await upsertCustomerFromOrder(customerDetails, customerEmail);
+
+    let finalPrice = parseFloat(totalPrice) || 0;
+    let discountRecord = null;
+    let discountAmount = null;
+
+    if (discountCode) {
+      try {
+        const result = await applyDiscountCode(discountCode, customerDetails?.phone, finalPrice);
+        discountRecord = result.discount;
+        discountAmount = result.discountAmount;
+      } catch (discErr) {
+        console.warn("Direct order discount calculation warning:", discErr.message);
+      }
+    }
+
+    let finalInstallmentDetails = null;
+    if (isInstallment && installmentPlanId) {
+      try {
+        const plan = await prisma.installmentPlan.findUnique({
+          where: { id: parseInt(installmentPlanId) }
+        });
+        if (plan) {
+          const downPayment = plan.downPaymentAmount || 399;
+          const remainingAmount = Math.max(0, finalPrice - downPayment);
+          let installmentRows = plan.installments;
+          if (typeof installmentRows === 'string') {
+            try { installmentRows = JSON.parse(installmentRows); } catch { installmentRows = []; }
+          }
+          if (!Array.isArray(installmentRows)) {
+            installmentRows = [];
+          }
+
+          const installmentCount = installmentRows.length;
+          const installmentAmount = installmentCount > 0 ? (remainingAmount / installmentCount).toFixed(2) : 0;
+          
+          const generatedInstallments = [
+            {
+              amount: downPayment,
+              label: "1. betaling (ved bestilling)",
+              status: 'Paid',
+              paidAt: new Date().toISOString()
+            }
+          ];
+          
+          for (let i = 0; i < installmentCount; i++) {
+            generatedInstallments.push({
+              amount: parseFloat(installmentAmount),
+              label: installmentRows[i]?.label || `${i + 2}. rate`,
+              status: 'Pending',
+              paidAt: null
+            });
+          }
+
+          finalInstallmentDetails = {
+            downPayment,
+            installments: generatedInstallments
+          };
+        }
+      } catch (planErr) {
+        console.warn("Direct order installment warning:", planErr.message);
+      }
+    }
+
+    let orderStatus = await prisma.orderStatus.findUnique({ where: { slug: 'paid' } });
+    if (!orderStatus) {
+      orderStatus = await prisma.orderStatus.findFirst({ where: { isActive: true } });
+    }
+
+    const assignedOrderNumber = orderNumber || `CAP-${Date.now()}`;
+
+    const order = await prisma.order.create({
+      data: {
+        orderNumber: assignedOrderNumber,
+        customerEmail: customerEmail,
+        customerDetails: typeof customerDetails === 'string' ? customerDetails : JSON.stringify(customerDetails),
+        selectedOptions: typeof selectedOptions === 'string' ? selectedOptions : JSON.stringify(selectedOptions),
+        totalPrice: finalPrice,
+        currency: currency || 'DKK',
+        orderDate: orderDate ? new Date(orderDate) : new Date(),
+        status: orderStatus ? orderStatus.name.toUpperCase().replace(/\s+/g, '_') : 'PAID',
+        statusId: orderStatus?.id || null,
+        packageName: packageName || null,
+        program: program || null,
+        customerId: customer.id,
+        capImages: capImages ? (typeof capImages === 'string' ? capImages : JSON.stringify(capImages)) : null,
+        discountCodeId: discountRecord?.id || null,
+        discountAmount: discountAmount,
+        installmentPlanId: isInstallment && installmentPlanId ? parseInt(installmentPlanId) : null,
+        installmentDetails: finalInstallmentDetails ? JSON.stringify(finalInstallmentDetails) : null,
+      },
+    });
+
+    if (discountRecord) {
+      await prisma.discountCode.update({
+        where: { id: discountRecord.id },
+        data: { usedAt: new Date(), usedByOrderId: order.id },
+      }).catch(e => console.error("Error updating discountCode used status:", e));
+    }
+
+    // Cancel pending marketing SMS campaigns now that order is confirmed
+    if (customer && customer.id) {
+      const { cancelPendingCampaignMessages } = require('../services/sms.service');
+      await cancelPendingCampaignMessages(customer.id).catch(err => {
+        console.error("Failed to cancel pending campaign messages after direct order:", err);
+      });
+    }
+
+    console.log(`⚡ Direct Order (Bypass): Dispatching confirmation emails for Order Number: ${order.orderNumber} to Customer: ${order.customerEmail}...`);
+
+    try {
+      await sendCapEmail(
+        {
+          body: {
+            customerDetails: order.customerDetails,
+            selectedOptions: order.selectedOptions,
+            totalPrice: order.totalPrice,
+            currency: order.currency,
+            orderNumber: order.orderNumber,
+            orderDate: order.orderDate,
+            email: order.customerEmail,
+            packageName: order.packageName,
+            program: order.program,
+            capImages: order.capImages,
+            installmentDetails: order.installmentDetails,
+          }
+        },
+        { status: () => ({ json: () => { } }) }
+      );
+    } catch (emailErr) {
+      console.error("Direct order confirmation email dispatch failed:", emailErr);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Ordre oprettet succesfuldt (Bypass / Direct)",
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      order,
+    });
+  } catch (err) {
+    console.error("Error creating direct order:", err);
+    res.status(500).json({
+      success: false,
+      message: err.message || "Failed to create direct order",
+    });
+  }
+};
+
 module.exports = {
-  workflowStatusChange, sendCapEmail, stripePayment, getSessionDetails, stripeWebhook, emailTester, createInstallmentOrder, payInstallment
+  workflowStatusChange, sendCapEmail, stripePayment, getSessionDetails, stripeWebhook, emailTester, createInstallmentOrder, payInstallment, createDirectOrder
 };

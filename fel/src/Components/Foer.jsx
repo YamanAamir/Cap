@@ -191,7 +191,7 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program }) 
     const getKokardeColorOptions = (material) => {
         switch (material) {
             case 'Læder': return [{ name: 'Hvid', value: 'Hvid', color: '#ffffff' }, { name: 'Sort', value: 'Sort', color: '#000000' }];
-            case 'Kunstlæder': return [{ name: 'Vegansk', value: 'Vegansk', color: '#006644' }];
+            case 'Kunstlæder': return [{ name: 'Vegansk', value: 'Vegansk', color: '#4c5250ff' }];
             case 'Ruskin': return [{ name: 'Cognac', value: 'Cognac', color: '#a66f5a' }];
             case 'Alcantra': return [{ name: 'Sort', value: 'Sort', color: '#000000' }];
             default: return [{ name: 'Hvid', value: 'Hvid', color: '#ffffff' }];

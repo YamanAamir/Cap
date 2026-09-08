@@ -17,7 +17,9 @@ import { getBaseUrl } from '../services/marketing.api';
 const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfiguring, packageName, program, installmentPlan }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isBypassLoading, setIsBypassLoading] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
+  const [placedOrderRef, setPlacedOrderRef] = useState('');
   const [expressConfig, setExpressConfig] = useState({ active: true, price: 250 });
   const [discountCodeInput, setDiscountCodeInput] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState(null);
@@ -518,11 +520,105 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
     }
   };
 
+  // Temporary Direct / Bypass Order Handler (without Stripe Payment)
+  const handleDirectBypassOrder = async () => {
+    setIsBypassLoading(true);
+
+    const orderDate = new Date().toISOString();
+    let capImages = {};
+    try {
+      capImages = await captureCapViews();
+    } catch (err) {
+      console.warn('Cap image capture failed:', err);
+    }
+
+    const isInstallment = paymentMethod === 'installment' && !!installmentPlan;
+    const cleanCountryCode = (customerDetails.countryCode || '').replace(/\D/g, '');
+    const cleanPhone = (customerDetails.phone || '').replace(/\D/g, '');
+    if (!cleanCountryCode || cleanPhone.length !== 8) {
+      alert('Udfyld venligst landekode og et 8-cifret telefonnummer.');
+      setIsBypassLoading(false);
+      return;
+    }
+    const fullFormattedPhone = `+${cleanCountryCode}${cleanPhone}`;
+
+    const orderData = {
+      customerDetails: {
+        ...customerDetails,
+        countryCode: cleanCountryCode,
+        phone: cleanPhone,
+        fullPhone: fullFormattedPhone,
+      },
+      selectedOptions: buildFilteredOptions(selectedOptions),
+      totalPrice: finalPrice,
+      currency: "DKK",
+      orderDate,
+      orderNumber: `CAP-${Date.now()}`,
+      email: customerDetails.email,
+      packageName: packageName,
+      program: program,
+      capImages: Object.keys(capImages).length > 0 ? capImages : null,
+      discountCode: appliedDiscount?.discount?.code || null,
+      isInstallment: isInstallment,
+      installmentPlanId: isInstallment ? installmentPlan.id : null,
+      installmentDetails: null,
+      liningPhoto:
+        (typeof selectedOptions.FOER?.['Indvendigt foer billede'] === 'string' &&
+          selectedOptions.FOER['Indvendigt foer billede'].startsWith('data:image')
+          ? selectedOptions.FOER['Indvendigt foer billede']
+          : null),
+    };
+
+    try {
+      const rawUrl = import.meta.env.VITE_API_BASE_URL || getBaseUrl();
+      const apiRoot = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl.replace(/\/$/, '')}/api`;
+
+      const directRes = await fetch(`${apiRoot}/sendEmail/create-direct-order`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderData),
+      });
+
+      const directContentType = directRes.headers.get("content-type");
+      let directData = {};
+      if (directContentType && directContentType.includes("application/json")) {
+        directData = await directRes.json();
+      } else {
+        const text = await directRes.text();
+        console.error("Non-JSON Direct response:", directRes.status, text);
+        throw new Error(`Kunne ikke oprette ordre (${directRes.status}).`);
+      }
+
+      if (!directRes.ok) {
+        throw new Error(directData.message || "Failed to create direct order");
+      }
+
+      setPlacedOrderRef(directData.orderNumber || orderData.orderNumber);
+      setOrderComplete(true);
+      setIsBypassLoading(false);
+
+      pushEvent('purchase_completed', {
+        value: orderData.totalPrice || 0,
+        currency: 'DKK',
+        order_ref: directData.orderNumber || orderData.orderNumber,
+        email: orderData.email || null,
+        package: orderData.packageName
+      }, 'gradcap_configurator');
+
+    } catch (error) {
+      console.error("Error during direct bypass order:", error);
+      alert(error.message || "Der opstod en fejl under oprettelse af ordren. Prøv venligst igen.");
+      setIsBypassLoading(false);
+    }
+  };
+
   // Reset modal to initial state
   const handleResetModal = () => {
     setCurrentStep(0);
     setIsLoading(false);
+    setIsBypassLoading(false);
     setOrderComplete(false);
+    setPlacedOrderRef('');
     setCustomerDetails({
       firstName: '',
       lastName: '',
@@ -1117,7 +1213,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
 
         <div className="bg-gray-50 rounded-lg p-4 mb-6">
           <p className="text-sm text-gray-600 mb-1">Order Reference</p>
-          <p className="font-bold text-gray-900">{orderDate}</p>
+          <p className="font-bold text-gray-900">{placedOrderRef || `CAP-${Date.now()}`}</p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -1347,28 +1443,53 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
                   <div className="absolute inset-0 bg-gradient-to-r from-green-700 to-green-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 </button>
               ) : (
-                <button
-                  onClick={handleConfirmOrder}
-                  disabled={isLoading}
-                  className="flex-1 bg-gradient-to-r from-green-600 via-green-600 to-green-700 text-white py-2 px-4 rounded-lg font-medium text-sm hover:from-green-700 hover:to-green-800 transition-all duration-300 shadow-md hover:shadow-lg relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span className="relative z-10 flex items-center justify-center">
-                    {isLoading ? (
+                <div className="flex flex-col sm:flex-row gap-2 flex-1">
+                  {/* Temporary Direct / Test Bypass Order Button */}
+                  <button
+                    type="button"
+                    onClick={handleDirectBypassOrder}
+                    disabled={isLoading || isBypassLoading}
+                    className="flex-1 bg-gradient-to-r from-amber-600 via-amber-600 to-amber-700 text-white py-2 px-3 rounded-lg font-medium text-xs sm:text-sm hover:from-amber-700 hover:to-amber-800 transition-all duration-300 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center border border-amber-500"
+                    title="Midlertidig testknap: Opret ordre direkte uden Stripe betaling"
+                  >
+                    {isBypassLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                        Processing...
+                        Opretter ordre...
                       </>
                     ) : (
                       <>
-                        <CheckCircle className="w-4 h-4 mr-1" />
-                        Godkend ordre og betal
+                        <CheckCircle className="w-4 h-4 mr-1 text-amber-200" />
+                        ⚡ Opret ordre (Bypass Betaling / Test)
                       </>
                     )}
-                  </span>
-                  {!isLoading && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-green-700 to-green-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  )}
-                </button>
+                  </button>
+
+                  {/* Standard Stripe Checkout Button */}
+                  <button
+                    type="button"
+                    onClick={handleConfirmOrder}
+                    disabled={isLoading || isBypassLoading}
+                    className="flex-1 bg-gradient-to-r from-green-600 via-green-600 to-green-700 text-white py-2 px-4 rounded-lg font-medium text-sm hover:from-green-700 hover:to-green-800 transition-all duration-300 shadow-md hover:shadow-lg relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="relative z-10 flex items-center justify-center">
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          Godkend ordre og betal
+                        </>
+                      )}
+                    </span>
+                    {!isLoading && !isBypassLoading && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-green-700 to-green-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    )}
+                  </button>
+                </div>
               )}
             </div>
           </div>

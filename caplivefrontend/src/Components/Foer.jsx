@@ -272,7 +272,7 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, vi
         let opts = [];
         switch (material) {
             case 'Læder': opts = [{ name: 'Hvid', value: 'Hvid', color: '#ffffff' }, { name: 'Sort', value: 'Sort', color: '#000000' }]; break;
-            case 'Kunstlæder': opts = [{ name: 'Vegansk', value: 'Vegansk', color: '#006644' }]; break;
+            case 'Kunstlæder': opts = [{ name: 'Vegansk', value: 'Vegansk', color: '#4c5250ff' }]; break;
             case 'Ruskin': opts = [{ name: 'Cognac', value: 'Cognac', color: '#8b4513' }]; break;
             case 'Alcantra': opts = [{ name: 'black', value: 'black', color: '#000000' }]; break;
             default: opts = [{ name: 'Hvid', value: 'Hvid', color: '#ffffff' }, { name: 'Sort', value: 'Sort', color: '#000000' }]; break;
