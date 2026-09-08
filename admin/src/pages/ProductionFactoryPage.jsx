@@ -63,6 +63,12 @@ const ProductionFactoryPage = () => {
         }
       };
     }
+
+    return () => {
+      document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=" + document.domain + "; path=/;";
+      document.documentElement.classList.remove('translated-ltr', 'translated-rtl');
+    };
   }, []);
 
   useEffect(() => {

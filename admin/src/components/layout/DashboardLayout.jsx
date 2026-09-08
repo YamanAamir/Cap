@@ -96,6 +96,16 @@ const DashboardLayout = () => {
     }
   }, [location.pathname, isMobile]);
 
+  const isFactoryRoute = location.pathname.startsWith('/dashboard/factory');
+
+  useEffect(() => {
+    if (!isFactoryRoute) {
+      document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=" + document.domain + "; path=/;";
+      document.documentElement.classList.remove('translated-ltr', 'translated-rtl');
+    }
+  }, [location.pathname, isFactoryRoute]);
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -118,7 +128,7 @@ const DashboardLayout = () => {
     pageSubtitles[location.pathname] || '';
 
   return (
-    <div className="flex h-screen bg-[#f8f9fa] overflow-hidden font-sans">
+    <div className={cn("flex h-screen bg-[#f8f9fa] overflow-hidden font-sans", !isFactoryRoute && "notranslate")} translate={!isFactoryRoute ? "no" : undefined}>
       
       {/* Mobile Overlay */}
       {isMobile && isSidebarOpen && (
@@ -131,9 +141,10 @@ const DashboardLayout = () => {
       {/* Sidebar */}
       <aside
         className={cn(
-          'absolute lg:relative flex flex-col transition-transform duration-300 ease-in-out z-30 bg-white shadow-[2px_0_10px_rgba(0,0,0,0.05)] border-r border-slate-100 h-full',
+          'absolute lg:relative flex flex-col transition-transform duration-300 ease-in-out z-30 bg-white shadow-[2px_0_10px_rgba(0,0,0,0.05)] border-r border-slate-100 h-full notranslate',
           isSidebarOpen ? 'w-[260px] translate-x-0' : 'w-[260px] lg:w-[70px] -translate-x-full lg:translate-x-0'
         )}
+        translate="no"
       >
         <div className="p-4 border-b border-slate-100 flex items-center h-[72px] justify-between lg:justify-start">
           {(!isMobile && !isSidebarOpen) ? (
@@ -211,7 +222,7 @@ const DashboardLayout = () => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         
         {/* Header */}
-        <header className="h-[72px] bg-white flex items-center justify-between px-4 md:px-8 shadow-sm z-10">
+        <header className="h-[72px] bg-white flex items-center justify-between px-4 md:px-8 shadow-sm z-10 notranslate" translate="no">
           <div className="flex items-center gap-3">
             {isMobile && (
               <button 
