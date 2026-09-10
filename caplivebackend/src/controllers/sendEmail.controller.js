@@ -4079,32 +4079,3 @@ module.exports = {
   workflowStatusChange, sendCapEmail, stripePayment, getSessionDetails, stripeWebhook, emailTester, createInstallmentOrder, payInstallment,
   capOrderEmail, capOrderAdminEmail, factoryOrderEmail, createEmailTransporter
 };
-packageName: order.packageName,
-  program: order.program,
-    capImages: parsedCapImages,
-      installmentDetails: finalInstallmentDetails,
-          }
-        },
-{ status: () => ({ json: () => { } }) }
-      );
-    } catch (emailErr) {
-  console.error("Direct order confirmation email failed:", emailErr);
-}
-
-res.status(201).json({
-  success: true,
-  message: "Direkte ordre oprettet succesfuldt (Bypassed Stripe)",
-  orderId: order.id,
-  orderNumber: order.orderNumber,
-  order,
-});
-  } catch (err) {
-  console.error("Error creating direct order:", err);
-  res.status(500).json({ success: false, message: err.message || "Failed to create direct order" });
-}
-};
-
-module.exports = {
-  workflowStatusChange, sendCapEmail, stripePayment, getSessionDetails, stripeWebhook, emailTester, createInstallmentOrder, payInstallment, createDirectOrder,
-  capOrderEmail, capOrderAdminEmail, factoryOrderEmail, createEmailTransporter
-};
