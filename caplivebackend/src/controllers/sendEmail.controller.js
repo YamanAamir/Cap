@@ -4096,18 +4096,33 @@ const createDirectOrder = async (req, res) => {
   try {
     const { upsertCustomerFromOrder, applyDiscountCode } = require('../services/core.service');
 
+    const safeParse = (val) => {
+      if (!val) return null;
+      if (typeof val === 'object') return val;
+      try {
+        return JSON.parse(val);
+      } catch (e) {
+        return val;
+      }
+    };
+
+    const parsedCustomerDetails = safeParse(customerDetails) || {};
+    const parsedSelectedOptions = safeParse(selectedOptions) || {};
+    const parsedCapImages = safeParse(capImages);
+    const customerEmail = email || parsedCustomerDetails?.email || '';
+
     let customer = null;
     if (typeof upsertCustomerFromOrder === 'function') {
-      customer = await upsertCustomerFromOrder(customerDetails, email);
+      customer = await upsertCustomerFromOrder(parsedCustomerDetails, customerEmail);
     } else {
-      customer = await prisma.customer.findUnique({ where: { email } });
-      if (!customer) {
+      customer = await prisma.customer.findUnique({ where: { email: customerEmail } });
+      if (!customer && customerEmail) {
         customer = await prisma.customer.create({
           data: {
-            name: `${customerDetails?.firstName || ''} ${customerDetails?.lastName || ''}`.trim() || email,
-            email,
-            phone: customerDetails?.phone || null,
-            school: customerDetails?.Skolenavn || null,
+            name: `${parsedCustomerDetails?.firstName || ''} ${parsedCustomerDetails?.lastName || ''}`.trim() || customerEmail,
+            email: customerEmail,
+            phone: parsedCustomerDetails?.phone || null,
+            school: parsedCustomerDetails?.Skolenavn || null,
           },
         });
       }
@@ -4119,7 +4134,7 @@ const createDirectOrder = async (req, res) => {
 
     if (discountCode) {
       try {
-        const result = await applyDiscountCode(discountCode, customerDetails?.phone, finalPrice);
+        const result = await applyDiscountCode(discountCode, parsedCustomerDetails?.phone, finalPrice);
         discountRecord = result.discount;
         discountAmount = result.discountAmount;
       } catch (err) {
@@ -4174,25 +4189,39 @@ const createDirectOrder = async (req, res) => {
     const paidStatus = await prisma.orderStatus.findUnique({ where: { slug: 'paid' } });
     const defaultStatus = paidStatus || await prisma.orderStatus.findFirst({ where: { isActive: true } });
 
+    let validOrderDate = new Date();
+    if (orderDate) {
+      if (orderDate instanceof Date && !isNaN(orderDate.getTime())) {
+        validOrderDate = orderDate;
+      } else if (typeof orderDate === 'string' && !orderDate.startsWith('CAP-')) {
+        const d = new Date(orderDate);
+        if (!isNaN(d.getTime())) {
+          validOrderDate = d;
+        }
+      }
+    }
+
+    const actualOrderNumber = orderNumber || (typeof orderDate === 'string' && orderDate.startsWith('CAP-') ? orderDate : `CAP-${Date.now()}`);
+
     const order = await prisma.order.create({
       data: {
-        orderNumber: orderNumber || `CAP-${Date.now()}`,
-        customerEmail: email,
-        customerDetails: typeof customerDetails === 'string' ? customerDetails : JSON.stringify(customerDetails),
-        selectedOptions: typeof selectedOptions === 'string' ? selectedOptions : JSON.stringify(selectedOptions),
+        orderNumber: actualOrderNumber,
+        customerEmail: customerEmail,
+        customerDetails: parsedCustomerDetails,
+        selectedOptions: parsedSelectedOptions,
         totalPrice: finalPrice,
         currency,
-        orderDate: orderDate ? new Date(orderDate) : new Date(),
+        orderDate: validOrderDate,
         status: defaultStatus ? defaultStatus.name.toUpperCase().replace(/\s+/g, '_') : 'PAID',
         statusId: defaultStatus?.id || null,
         packageName: packageName || null,
         program: program || null,
         customerId: customer?.id || null,
-        capImages: capImages ? (typeof capImages === 'string' ? capImages : JSON.stringify(capImages)) : null,
+        capImages: parsedCapImages,
         discountCodeId: discountRecord?.id || null,
         discountAmount: discountAmount,
         installmentPlanId: isInstallment && installmentPlanId ? parseInt(installmentPlanId) : null,
-        installmentDetails: finalInstallmentDetails ? JSON.stringify(finalInstallmentDetails) : null,
+        installmentDetails: finalInstallmentDetails,
       },
     });
 
@@ -4217,17 +4246,17 @@ const createDirectOrder = async (req, res) => {
       await sendCapEmail(
         {
           body: {
-            customerDetails: order.customerDetails,
-            selectedOptions: order.selectedOptions,
-            totalPrice: order.totalPrice,
+            customerDetails: parsedCustomerDetails,
+            selectedOptions: parsedSelectedOptions,
+            totalPrice: finalPrice,
             currency: order.currency,
             orderNumber: order.orderNumber,
             orderDate: order.orderDate,
-            email: order.customerEmail,
+            email: customerEmail,
             packageName: order.packageName,
             program: order.program,
-            capImages: order.capImages,
-            installmentDetails: order.installmentDetails,
+            capImages: parsedCapImages,
+            installmentDetails: finalInstallmentDetails,
           }
         },
         { status: () => ({ json: () => { } }) }

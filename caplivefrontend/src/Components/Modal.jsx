@@ -553,7 +553,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       selectedOptions: buildFilteredOptions(selectedOptions),
       totalPrice: finalPrice,
       currency: "DKK",
-      orderDate,
+      orderDate: new Date().toISOString(),
       orderNumber: `CAP-${Date.now()}`,
       email: customerDetails.email,
       packageName: packageName,
