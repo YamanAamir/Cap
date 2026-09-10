@@ -29,6 +29,7 @@ const generateExcelFile = async (orders, columns, batchId) => {
   ensureExportsDir();
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Production Orders');
+  
 
   const visibleColumns = columns.filter((c) => c.isVisible).sort((a, b) => a.sortOrder - b.sortOrder);
   sheet.columns = visibleColumns.map((col) => ({
