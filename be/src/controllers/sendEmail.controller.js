@@ -4069,8 +4069,3 @@ module.exports = {
   workflowStatusChange, sendCapEmail, stripePayment, getSessionDetails, stripeWebhook, emailTester, createInstallmentOrder, payInstallment,
   capOrderEmail, capOrderAdminEmail, factoryOrderEmail, createEmailTransporter
 };
-
-module.exports = {
-  workflowStatusChange, sendCapEmail, stripePayment, getSessionDetails, stripeWebhook, emailTester, createInstallmentOrder, payInstallment, directOrder,
-  capOrderEmail, capOrderAdminEmail, factoryOrderEmail, createEmailTransporter
-};

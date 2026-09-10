@@ -37,6 +37,7 @@ router.get('/production/batches', admin, adminController.getProductionBatches);
 router.get('/production/batches/:id', admin, adminController.getProductionBatch);
 router.post('/production/generate', admin, adminController.generateProductionBatch);
 router.post('/production/batches/:id/send', admin, adminController.sendProductionBatch);
+router.delete('/production/batches/:id', admin, adminController.deleteProductionBatch);
 router.get('/production/logs', admin, adminController.getDispatchLogs);
 
 router.get('/sms/campaigns', admin, adminController.getSmsCampaigns);

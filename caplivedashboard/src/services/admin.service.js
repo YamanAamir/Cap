@@ -23,10 +23,11 @@ export const updateDiscountCode = (id, data) => api.put(`/admin/discount-codes/$
 export const deleteDiscountCode = (id) => api.delete(`/admin/discount-codes/${id}`).then(r => r.data);
 
 // Production
-export const getProductionBatches = () => api.get('/admin/production/batches').then(r => r.data);
+export const getProductionBatches = (params) => api.get('/admin/production/batches', { params }).then(r => r.data);
 export const getProductionBatch = (id) => api.get(`/admin/production/batches/${id}`).then(r => r.data);
 export const generateProductionBatch = () => api.post('/admin/production/generate').then(r => r.data);
 export const sendProductionBatch = (id, data) => api.post(`/admin/production/batches/${id}/send`, data).then(r => r.data);
+export const deleteProductionBatch = (id) => api.delete(`/admin/production/batches/${id}`).then(r => r.data);
 export const getDispatchLogs = () => api.get('/admin/production/logs').then(r => r.data);
 
 // SMS

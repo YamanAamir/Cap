@@ -297,13 +297,89 @@ exports.validateDiscountCode = async (req, res) => {
 // Production
 exports.getProductionBatches = async (req, res) => {
   try {
+    const { startDate, endDate, status, search } = req.query;
+    const where = {};
+    if (status && status !== 'ALL') {
+      where.status = status;
+    }
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) where.createdAt.gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        where.createdAt.lte = end;
+      }
+    }
+    if (search) {
+      const batchId = parseInt(search);
+      if (!isNaN(batchId)) {
+        where.id = batchId;
+      }
+    }
     const batches = await prisma.productionBatch.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
       include: { sentByUser: { select: { name: true, email: true } }, _count: { select: { orders: true } } },
     });
     res.json(batches);
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+};
+
+exports.deleteProductionBatch = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: 'Invalid batch ID' });
+    }
+
+    const batch = await prisma.productionBatch.findUnique({
+      where: { id },
+      include: { orders: true }
+    });
+
+    if (!batch) {
+      return res.status(404).json({ message: 'Batch not found' });
+    }
+
+    // 1. Unlink orders so they can be re-batched
+    await prisma.order.updateMany({
+      where: { productionBatchId: id },
+      data: { productionBatchId: null }
+    });
+
+    // 2. Delete dispatch logs associated with this batch
+    await prisma.productionDispatchLog.deleteMany({
+      where: { batchId: id }
+    });
+
+    // 3. Delete generated physical files from disk if they exist
+    const fs = require('fs');
+    const path = require('path');
+    if (batch.excelFilePath) {
+      const excelFull = path.join(__dirname, '../../public', batch.excelFilePath.replace(/^\//, ''));
+      if (fs.existsSync(excelFull)) {
+        try { fs.unlinkSync(excelFull); } catch (e) {}
+      }
+    }
+    if (batch.zipFilePath) {
+      const zipFull = path.join(__dirname, '../../public', batch.zipFilePath.replace(/^\//, ''));
+      if (fs.existsSync(zipFull)) {
+        try { fs.unlinkSync(zipFull); } catch (e) {}
+      }
+    }
+
+    // 4. Delete the batch
+    await prisma.productionBatch.delete({
+      where: { id }
+    });
+
+    res.json({ message: `Batch #${id} deleted successfully` });
+  } catch (err) {
+    console.error('Error deleting production batch:', err);
+    res.status(500).json({ message: err.message || 'Failed to delete batch' });
   }
 };
 

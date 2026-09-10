@@ -2,9 +2,13 @@ import React, { useState, useEffect } from 'react';
 import {
   getProductionBatches, generateProductionBatch, sendProductionBatch,
   getDispatchLogs, getSettings, updateSetting, getProductionBatch, getEmailTemplates,
-  getOrderStatuses
+  getOrderStatuses, deleteProductionBatch
 } from '../services/admin.service';
-import { Loader2, Send, FileSpreadsheet, Archive, CheckCircle2, Factory, Mail, Layers, Settings, X, List, Download } from 'lucide-react';
+import { 
+  Loader2, Send, FileSpreadsheet, Archive, CheckCircle2, Factory, 
+  Mail, Layers, Settings, X, List, Download, Trash2, Calendar, 
+  Filter, Search, RotateCcw 
+} from 'lucide-react';
 import ConfirmModal from '../components/common/ConfirmModal';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -24,10 +28,19 @@ const ProductionPage = () => {
   const [targetStatusId, setTargetStatusId] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false });
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, batch: null, isDeleting: false });
   const [ordersModal, setOrdersModal] = useState({ isOpen: false, loading: false, orders: [] });
   const [templates, setTemplates] = useState([]);
   const [sendExcel, setSendExcel] = useState(true);
   const [sendZip, setSendZip] = useState(true);
+
+  // Filter States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [datePreset, setDatePreset] = useState('ALL');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -39,9 +52,9 @@ const ProductionPage = () => {
         getEmailTemplates(),
         getOrderStatuses().catch(() => [])
       ]);
-      setBatches(b);
-      setLogs(l);
-      setTemplates(tpls);
+      setBatches(Array.isArray(b) ? b : []);
+      setLogs(Array.isArray(l) ? l : []);
+      setTemplates(Array.isArray(tpls) ? tpls : []);
       const activeStatuses = Array.isArray(allStatuses) ? allStatuses.filter(s => s.isActive !== false) : [];
       setOrderStatuses(activeStatuses);
 
@@ -61,11 +74,89 @@ const ProductionPage = () => {
           setTargetStatusId(defaultSt.id.toString());
         }
       }
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+    } catch (e) { 
+      console.error(e); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   useEffect(() => { load(); }, []);
+
+  const handleDatePresetChange = (preset) => {
+    setDatePreset(preset);
+    const now = new Date();
+    
+    if (preset === 'ALL') {
+      setStartDate('');
+      setEndDate('');
+    } else if (preset === 'TODAY') {
+      const dStr = now.toISOString().split('T')[0];
+      setStartDate(dStr);
+      setEndDate(dStr);
+    } else if (preset === 'YESTERDAY') {
+      const y = new Date(now);
+      y.setDate(y.getDate() - 1);
+      const dStr = y.toISOString().split('T')[0];
+      setStartDate(dStr);
+      setEndDate(dStr);
+    } else if (preset === 'LAST_7_DAYS') {
+      const past = new Date(now);
+      past.setDate(past.getDate() - 7);
+      setStartDate(past.toISOString().split('T')[0]);
+      setEndDate(now.toISOString().split('T')[0]);
+    } else if (preset === 'LAST_30_DAYS') {
+      const past = new Date(now);
+      past.setDate(past.getDate() - 30);
+      setStartDate(past.toISOString().split('T')[0]);
+      setEndDate(now.toISOString().split('T')[0]);
+    } else if (preset === 'THIS_MONTH') {
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+      setStartDate(firstDay.toISOString().split('T')[0]);
+      setEndDate(now.toISOString().split('T')[0]);
+    }
+  };
+
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setStatusFilter('ALL');
+    setDatePreset('ALL');
+    setStartDate('');
+    setEndDate('');
+  };
+
+  const hasActiveFilters = searchQuery.trim() !== '' || statusFilter !== 'ALL' || datePreset !== 'ALL' || startDate !== '' || endDate !== '';
+
+  const filteredBatches = batches.filter(batch => {
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase().replace('#', '');
+      const idStr = (batch.id || '').toString();
+      const statusStr = (batch.status || '').toLowerCase();
+      const dateStr = new Date(batch.createdAt).toLocaleDateString().toLowerCase();
+      if (!idStr.includes(q) && !statusStr.includes(q) && !dateStr.includes(q)) {
+        return false;
+      }
+    }
+
+    if (statusFilter !== 'ALL') {
+      if (batch.status !== statusFilter) return false;
+    }
+
+    if (startDate) {
+      const bDate = new Date(batch.createdAt);
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      if (bDate < start) return false;
+    }
+    if (endDate) {
+      const bDate = new Date(batch.createdAt);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      if (bDate > end) return false;
+    }
+
+    return true;
+  });
 
   const handleGenerate = async () => {
     if (generating) return;
@@ -84,8 +175,11 @@ const ProductionPage = () => {
         toast.error(result?.message || 'No orders ready for production');
       }
       load();
-    } catch (e) { toast.error(e.response?.data?.message || 'Failed to generate batch'); }
-    finally { setGenerating(false); }
+    } catch (e) { 
+      toast.error(e.response?.data?.message || 'Failed to generate batch'); 
+    } finally { 
+      setGenerating(false); 
+    }
   };
 
   const handleSelectBatch = (batch) => {
@@ -97,6 +191,31 @@ const ProductionPage = () => {
     });
     setSendExcel(true);
     setSendZip(true);
+  };
+
+  const handleDeleteBatchClick = (e, batch) => {
+    e.stopPropagation();
+    setDeleteModal({ isOpen: true, batch, isDeleting: false });
+  };
+
+  const executeDeleteBatch = async () => {
+    if (!deleteModal.batch) return;
+    const batchToDelete = deleteModal.batch;
+    setDeleteModal(prev => ({ ...prev, isDeleting: true }));
+    try {
+      await deleteProductionBatch(batchToDelete.id);
+      toast.success(`Batch #${batchToDelete.id} successfully deleted`);
+      if (selectedBatch?.id === batchToDelete.id) {
+        setSelectedBatch(null);
+      }
+      setBatches(prev => prev.filter(b => b.id !== batchToDelete.id));
+      setDeleteModal({ isOpen: false, batch: null, isDeleting: false });
+      load();
+    } catch (err) {
+      console.error('Failed to delete batch:', err);
+      toast.error(err.response?.data?.message || 'Failed to delete batch');
+      setDeleteModal(prev => ({ ...prev, isDeleting: false }));
+    }
   };
 
   const handleSendClick = () => {
@@ -139,9 +258,10 @@ const ProductionPage = () => {
       toast.success('Production files successfully dispatched to manufacturer!');
       setSelectedBatch(null);
       load();
-    } catch (e) { toast.error(e.response?.data?.message || 'Failed to send email'); }
-    finally { 
-      setSending(false);
+    } catch (e) { 
+      toast.error(e.response?.data?.message || 'Failed to send email'); 
+    } finally { 
+      setSending(false); 
       setConfirmModal({ isOpen: false });
     }
   };
@@ -207,7 +327,7 @@ const ProductionPage = () => {
       <div className="flex flex-col xl:flex-row gap-6">
         
         {/* Left Column */}
-        <div className="xl:w-[400px] shrink-0 space-y-6">
+        <div className="xl:w-[420px] shrink-0 space-y-6">
           
           {/* Settings */}
           <div className="bg-white p-5 rounded border border-slate-200 space-y-4">
@@ -268,52 +388,213 @@ const ProductionPage = () => {
             </div>
           </div>
 
-          {/* Batches */}
-          <div className="bg-white rounded border border-slate-200 overflow-hidden flex flex-col h-[500px]">
-            <div className="bg-[#fafafa] border-b border-slate-200 p-4">
-               <h3 className="text-sm font-bold text-slate-700 flex items-center">
-                 <Archive className="h-4 w-4 mr-2 text-slate-400" /> Batch Archives
-               </h3>
+          {/* Batches Archives with Date Filtering and Delete */}
+          <div className="bg-white rounded border border-slate-200 overflow-hidden flex flex-col min-h-[520px]">
+            {/* Header */}
+            <div className="bg-[#fafafa] border-b border-slate-200 p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Archive className="h-4 w-4 text-slate-400" />
+                <h3 className="text-sm font-bold text-slate-700">Batch Archives</h3>
+                <span className="text-[11px] font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">
+                  {filteredBatches.length} / {batches.length}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {hasActiveFilters && (
+                  <button 
+                    onClick={handleResetFilters}
+                    className="text-xs text-rose-600 hover:text-rose-800 font-semibold flex items-center gap-1 bg-rose-50 hover:bg-rose-100 px-2 py-1 rounded transition-colors"
+                    title="Reset all filters"
+                  >
+                    <RotateCcw className="w-3 h-3" /> Clear
+                  </button>
+                )}
+                <button
+                  onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+                  className={cn(
+                    "text-xs font-semibold flex items-center gap-1 px-2.5 py-1 rounded transition-colors border",
+                    isFilterExpanded || hasActiveFilters
+                      ? "bg-blue-50 border-blue-200 text-blue-700 font-bold"
+                      : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                  )}
+                >
+                  <Filter className="w-3 h-3" />
+                  Filter
+                </button>
+              </div>
             </div>
+
+            {/* Filter Drawer / Controls */}
+            {isFilterExpanded && (
+              <div className="p-3.5 bg-slate-50 border-b border-slate-200 space-y-3 animate-in slide-in-from-top-2 duration-200">
+                {/* Search Input */}
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input 
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    placeholder="Search by Batch # or ID..."
+                    className="w-full pl-8 pr-7 py-1.5 bg-white border border-slate-200 rounded text-xs focus:outline-none focus:border-blue-500"
+                  />
+                  {searchQuery && (
+                    <button 
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Quick Date Range Preset Pills */}
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                    <Calendar className="w-3 h-3 text-slate-400" /> Date Preset
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5 text-[11px]">
+                    {[
+                      { id: 'ALL', label: 'All Dates' },
+                      { id: 'TODAY', label: 'Today' },
+                      { id: 'YESTERDAY', label: 'Yesterday' },
+                      { id: 'LAST_7_DAYS', label: 'Last 7 Days' },
+                      { id: 'LAST_30_DAYS', label: 'Last 30 Days' },
+                      { id: 'THIS_MONTH', label: 'This Month' },
+                    ].map(p => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handleDatePresetChange(p.id)}
+                        className={cn(
+                          "py-1 px-1 text-center rounded border font-medium transition-colors text-[10px]",
+                          datePreset === p.id 
+                            ? "bg-[#1e3a8a] text-white border-[#1e3a8a] font-bold" 
+                            : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
+                        )}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Date Range Custom Inputs */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">From Date</label>
+                    <input
+                      type="date"
+                      value={startDate}
+                      onChange={e => {
+                        setStartDate(e.target.value);
+                        setDatePreset('CUSTOM');
+                      }}
+                      className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs focus:outline-none focus:border-blue-500 text-slate-700"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">To Date</label>
+                    <input
+                      type="date"
+                      value={endDate}
+                      onChange={e => {
+                        setEndDate(e.target.value);
+                        setDatePreset('CUSTOM');
+                      }}
+                      className="w-full px-2 py-1 bg-white border border-slate-200 rounded text-xs focus:outline-none focus:border-blue-500 text-slate-700"
+                    />
+                  </div>
+                </div>
+
+                {/* Status Filter */}
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Batch Status</label>
+                  <div className="flex gap-1.5 text-xs">
+                    {['ALL', 'SENT', 'DRAFT'].map(st => (
+                      <button
+                        key={st}
+                        type="button"
+                        onClick={() => setStatusFilter(st)}
+                        className={cn(
+                          "flex-1 py-1 text-center rounded border font-medium transition-colors text-[11px]",
+                          statusFilter === st
+                            ? "bg-[#1e3a8a] text-white border-[#1e3a8a] font-bold"
+                            : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
+                        )}
+                      >
+                        {st}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
             
-            <div className="flex-1 overflow-y-auto custom-scrollbar">
+            {/* Batches List */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar max-h-[500px]">
               {loading ? (
                 <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-blue-600" /></div>
-              ) : batches.length === 0 ? (
+              ) : filteredBatches.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-slate-400 p-6 text-center">
                   <Archive className="h-10 w-10 mb-3 opacity-20" />
-                  <p className="font-bold text-sm text-slate-500">No batches</p>
+                  <p className="font-bold text-sm text-slate-500">
+                    {batches.length === 0 ? "No batches generated yet" : "No batches match current filter"}
+                  </p>
+                  {hasActiveFilters && (
+                    <button
+                      onClick={handleResetFilters}
+                      className="mt-2 text-xs text-blue-600 hover:underline font-bold"
+                    >
+                      Clear filters
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="divide-y divide-slate-100">
-                  {batches.map(b => (
-                    <button
+                  {filteredBatches.map(b => (
+                    <div
                       key={b.id}
                       onClick={() => handleSelectBatch(b)}
                       className={cn(
-                        "w-full text-left p-4 transition-colors border-l-4",
+                        "w-full text-left p-3.5 transition-colors border-l-4 cursor-pointer flex items-center justify-between group",
                         selectedBatch?.id === b.id 
-                          ? "bg-blue-50/50 border-blue-500" 
+                          ? "bg-blue-50/60 border-blue-500" 
                           : "border-transparent hover:bg-slate-50 hover:border-slate-300"
                       )}
                     >
-                      <div className="flex items-start justify-between">
-                        <div>
+                      <div className="flex-1 min-w-0 pr-2">
+                        <div className="flex items-center gap-2">
                           <p className={cn("font-bold text-sm", selectedBatch?.id === b.id ? "text-blue-900" : "text-slate-800")}>
                             Batch #{b.id}
                           </p>
-                          <p className="text-[11px] text-slate-500 mt-0.5">
-                            {new Date(b.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        </div>
-                        <div className="flex flex-col items-end gap-1.5">
-                          <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded", b.status === 'SENT' ? 'bg-[#f0f8f1] text-[#2d6a4f]' : 'bg-amber-50 text-amber-700')}>
+                          <span className={cn(
+                            "text-[10px] font-bold px-1.5 py-0.5 rounded",
+                            b.status === 'SENT' ? 'bg-[#f0f8f1] text-[#2d6a4f]' : 'bg-amber-50 text-amber-700'
+                          )}>
                             {b.status}
                           </span>
-                          <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">{b.orderCount} order{b.orderCount !== 1 ? 's' : ''}</span>
                         </div>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          {new Date(b.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
                       </div>
-                    </button>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                          {b.orderCount} order{b.orderCount !== 1 ? 's' : ''}
+                        </span>
+
+                        {/* Delete Button */}
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteBatchClick(e, b)}
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title={`Delete Batch #${b.id}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -323,15 +604,25 @@ const ProductionPage = () => {
 
         {/* Right Column: Review & Send */}
         <div className="flex-1">
-          <div className="bg-white rounded border border-slate-200 h-[660px] flex flex-col">
+          <div className="bg-white rounded border border-slate-200 min-h-[660px] flex flex-col">
             <div className="bg-[#fafafa] border-b border-slate-200 p-4 flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-700 flex items-center">
                 <Send className="h-4 w-4 mr-2 text-slate-400" /> Review & Dispatch
               </h3>
               {selectedBatch && (
-                <div className="flex items-center gap-3">
-                  <button onClick={handleViewOrders} className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center bg-blue-50 px-2 py-1 rounded transition-colors">
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={handleViewOrders} 
+                    className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center bg-blue-50 px-2.5 py-1 rounded transition-colors"
+                  >
                     <List className="w-3 h-3 mr-1" /> View Orders
+                  </button>
+                  <button
+                    onClick={(e) => handleDeleteBatchClick(e, selectedBatch)}
+                    className="text-xs font-bold text-red-600 hover:text-red-800 flex items-center bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded transition-colors"
+                    title="Delete this batch"
+                  >
+                    <Trash2 className="w-3 h-3 mr-1" /> Delete Batch
                   </button>
                   <span className="text-xs font-bold text-slate-500 bg-slate-200 px-2 py-0.5 rounded">
                     Batch #{selectedBatch.id}
@@ -342,7 +633,7 @@ const ProductionPage = () => {
             
             <div className="p-6 flex-1 bg-[#f0f4f8] overflow-y-auto custom-scrollbar">
               {!selectedBatch ? (
-                <div className="flex flex-col items-center justify-center h-full text-slate-400 text-center">
+                <div className="flex flex-col items-center justify-center h-full text-slate-400 text-center py-20">
                   <Mail className="h-12 w-12 mb-4 opacity-20" />
                   <p className="font-bold text-slate-600">No Batch Selected</p>
                   <p className="text-sm mt-1">Select a batch from the left to view details.</p>
@@ -356,7 +647,7 @@ const ProductionPage = () => {
                       Generated Payload
                       <span className="text-[10px] text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded">Check files to attach them in the email</span>
                     </h4>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {selectedBatch.excelFilePath ? (
                         <div className={cn("flex items-center justify-between p-3 border rounded transition-colors cursor-pointer", sendExcel ? "bg-white border-green-500" : "bg-slate-50 border-slate-200 opacity-70")} onClick={() => setSendExcel(!sendExcel)}>
                           <div className="flex items-center">
@@ -457,7 +748,7 @@ const ProductionPage = () => {
                         <textarea
                           value={emailForm.emailBody}
                           className="w-full resize-none outline-none text-sm text-slate-600 min-h-[140px] bg-transparent cursor-not-allowed"
-                          disabled={true}
+                          disabled={true} 
                         />
                       </div>
                     </div>
@@ -517,6 +808,18 @@ const ProductionPage = () => {
         isLoading={sending}
         onConfirm={executeSend}
         onCancel={() => setConfirmModal({ isOpen: false })}
+      />
+
+      {/* Delete Batch Confirmation Modal */}
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        title={`Delete Batch #${deleteModal.batch?.id}`}
+        message={`Are you sure you want to delete Batch #${deleteModal.batch?.id}? Associated ${deleteModal.batch?.orderCount || 0} order(s) will be unlinked and made ready for future batch generation. This action cannot be undone.`}
+        confirmText="Delete Batch"
+        isDestructive={true}
+        isLoading={deleteModal.isDeleting}
+        onConfirm={executeDeleteBatch}
+        onCancel={() => setDeleteModal({ isOpen: false, batch: null, isDeleting: false })}
       />
 
       {/* Orders List Modal */}
