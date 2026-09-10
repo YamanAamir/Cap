@@ -21,29 +21,33 @@ export const extractOrderImages = (order) => {
   const capImagesObj = safeParseJSON(order.capImages);
   const selectedOptionsObj = safeParseJSON(order.selectedOptions);
 
-  const angleLabels = {
-    front: 'Front Angle',
-    back: 'Rear Angle',
-    top: 'Top View',
-    bottom: 'Underbrim View',
-    left: 'Left View',
-    right: 'Right View',
-    inside: 'Inside View',
-    lining: 'Lining View',
-    mockup: '3D Mockup',
-    render: 'Render View',
-  };
+  const TARGET_RENDERS = [
+    { key: 'front', aliases: ['front', 'front_angle', 'frontangle', 'frontview', 'front_view'], label: 'Front Angle' },
+    { key: 'back', aliases: ['back', 'rear', 'rear_angle', 'rearangle', 'rearview', 'backview'], label: 'Rear Angle' },
+    { key: 'top', aliases: ['top', 'top_view', 'topview', 'topangle'], label: 'Top View' },
+    { key: 'bottom', aliases: ['bottom', 'underbrim', 'underbrim_view', 'underbrimview', 'bottomview'], label: 'Underbrim View' },
+  ];
 
-  // 1. Process capImages (3D rendered views)
+  // 1. Process 3D rendered views in exact specified order: Front Angle, Rear Angle, Top View, Underbrim View
   if (capImagesObj && typeof capImagesObj === 'object') {
-    Object.entries(capImagesObj).forEach(([key, val]) => {
-      if (typeof val === 'string' && (val.startsWith('data:image') || val.startsWith('http://') || val.startsWith('https://') || val.startsWith('/'))) {
-        const cleanKey = key.toLowerCase().trim();
+    TARGET_RENDERS.forEach(({ key, aliases, label }) => {
+      let val = null;
+      for (const [k, v] of Object.entries(capImagesObj)) {
+        const cleanK = k.toLowerCase().trim();
+        if (aliases.includes(cleanK) || cleanK === key) {
+          if (typeof v === 'string' && (v.startsWith('data:image') || v.startsWith('http://') || v.startsWith('https://') || v.startsWith('/'))) {
+            val = v;
+            break;
+          }
+        }
+      }
+
+      if (val) {
         images.push({
-          id: `order-${order.id}-cap-${cleanKey}`,
+          id: `order-${order.id}-cap-${key}`,
           category: 'render',
-          key: cleanKey,
-          label: angleLabels[cleanKey] || `${cleanKey.charAt(0).toUpperCase() + cleanKey.slice(1)} View`,
+          key: key,
+          label: label,
           src: val,
           orderId: order.id,
           orderNumber: order.orderNumber || String(order.id),
@@ -52,16 +56,21 @@ export const extractOrderImages = (order) => {
     });
   }
 
-  // 2. Process selectedOptions for custom uploaded artwork / lining / logos
+  // 2. Process Custom Inside Lining (only if custom uploaded inside lining artwork/photo exists)
   if (selectedOptionsObj && typeof selectedOptionsObj === 'object') {
-    // Check specific lining image
     const liningVal =
       selectedOptionsObj?.FOER?.['Indvendigt foer billede']?.[0]?.url ||
       selectedOptionsObj?.FOER?.['Indvendigt foer billede'] ||
       (typeof selectedOptionsObj?.FOER === 'object' &&
+        Object.entries(selectedOptionsObj.FOER).find(([k, v]) =>
+          typeof v === 'string' &&
+          (v.startsWith('data:image') || v.startsWith('http://') || v.startsWith('https://')) &&
+          k.toLowerCase().includes('billede')
+        )?.[1]) ||
+      (typeof selectedOptionsObj?.FOER === 'object' &&
         Object.values(selectedOptionsObj.FOER).find(v => typeof v === 'string' && v.startsWith('data:image')));
 
-    if (typeof liningVal === 'string' && (liningVal.startsWith('data:image') || liningVal.startsWith('http') || liningVal.startsWith('/'))) {
+    if (typeof liningVal === 'string' && (liningVal.startsWith('data:image') || liningVal.startsWith('http://') || liningVal.startsWith('https://') || liningVal.startsWith('/'))) {
       if (!images.some(img => img.src === liningVal)) {
         images.push({
           id: `order-${order.id}-lining`,
@@ -74,34 +83,6 @@ export const extractOrderImages = (order) => {
         });
       }
     }
-
-    // Recursive search for any other custom uploaded files / logos in options
-    const scanForUploads = (obj, path = '') => {
-      if (!obj) return;
-      if (typeof obj === 'string') {
-        const isImage = obj.startsWith('data:image') || /\.(png|jpe?g|webp|gif|svg)($|\?)/i.test(obj);
-        if (isImage && !images.some(img => img.src === obj)) {
-          images.push({
-            id: `order-${order.id}-upload-${images.length}`,
-            category: 'upload',
-            key: path.toLowerCase().replace(/[^a-z0-9]/g, '_') || 'attachment',
-            label: path || 'Custom Attachment',
-            src: obj,
-            orderId: order.id,
-            orderNumber: order.orderNumber || String(order.id),
-          });
-        }
-      } else if (Array.isArray(obj)) {
-        obj.forEach((item, idx) => scanForUploads(item, path ? `${path} #${idx + 1}` : `Item #${idx + 1}`));
-      } else if (typeof obj === 'object') {
-        Object.entries(obj).forEach(([k, v]) => {
-          if (['id', 'color', 'price', 'name', 'label', 'description'].includes(k)) return;
-          scanForUploads(v, path ? `${path} > ${k}` : k);
-        });
-      }
-    };
-
-    scanForUploads(selectedOptionsObj);
   }
 
   return images;

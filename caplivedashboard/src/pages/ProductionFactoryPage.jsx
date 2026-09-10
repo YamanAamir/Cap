@@ -43,39 +43,35 @@ const ProductionFactoryPage = () => {
       const response = await getOrders({
         page,
         search: debounceSearch,
-        sortBy,
-        order,
-        limit,
+        limit: 20,
         statusId: statusFilter,
         isVisibleToProduction: 'true',
       });
       setData(response);
     } catch (error) {
       console.error('Failed to fetch factory orders:', error);
-      toast.error('Failed to load production orders');
+      toast.error('Failed to load production queue');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    setPage(1);
-  }, [debounceSearch, statusFilter, limit]);
-
-  useEffect(() => {
     fetchOrders();
-  }, [page, debounceSearch, sortBy, order, statusFilter, limit]);
+  }, [page, debounceSearch, statusFilter]);
 
-  const handleStatusChange = async (orderId, newStatusId) => {
-    setUpdatingId(orderId);
+  const handleStatusUpdate = async () => {
+    if (!confirmModal.orderId || !confirmModal.statusId) return;
+    setUpdatingId(confirmModal.orderId);
     try {
-      await updateOrderStatus(orderId, { statusId: parseInt(newStatusId) });
+      await updateOrderStatus(confirmModal.orderId, { statusId: parseInt(confirmModal.statusId) });
       toast.success('Status updated');
       fetchOrders();
     } catch (error) {
       toast.error('Failed to update status');
     } finally {
       setUpdatingId(null);
+      setConfirmModal({ isOpen: false, orderId: null, statusId: null });
     }
   };
 
