@@ -23,8 +23,8 @@ const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 const createEmailTransporter = () => {
   return nodemailer.createTransport({
     host: "smtp.simply.com",
-    port: 587,
-    secure: false, // use TLS later
+    port: 465,
+    secure: true,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS, // must be an App Password
@@ -4058,5 +4058,6 @@ const createInstallmentOrder = async (req, res) => {
 };
 
 module.exports = {
-  workflowStatusChange, sendCapEmail, stripePayment, getSessionDetails, stripeWebhook, emailTester, createInstallmentOrder, payInstallment
+  workflowStatusChange, sendCapEmail, stripePayment, getSessionDetails, stripeWebhook, emailTester, createInstallmentOrder, payInstallment,
+  capOrderEmail, capOrderAdminEmail, factoryOrderEmail, createEmailTransporter
 };

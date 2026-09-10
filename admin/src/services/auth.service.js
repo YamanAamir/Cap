@@ -39,6 +39,11 @@ export const updateOrder = async (id, data) => {
   return response.data;
 };
 
+export const resendOrderEmails = async (id, data = {}) => {
+  const response = await api.post(`/orders/${id}/resend-email`, data);
+  return response.data;
+};
+
 export const deleteOrder = async (id) => {
   const response = await api.delete(`/orders/${id}`);
   return response.data;

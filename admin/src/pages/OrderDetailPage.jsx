@@ -10,6 +10,9 @@ import {
 import { cn } from '@/lib/utils';
 import ConfigBlueprintCards from '../components/orders/ConfigBlueprintCards';
 import ConfirmModal from '../components/common/ConfirmModal';
+import OrderHistoryTimeline from '../components/orders/OrderHistoryTimeline';
+import SendOrderEmailsModal from '../components/orders/SendOrderEmailsModal';
+import { formatDenmarkDateTime } from '../utils/dateUtils';
 
 const OrderDetailPage = () => {
   const { id } = useParams();
@@ -27,6 +30,9 @@ const OrderDetailPage = () => {
   
   // Confirmation Modal
   const [confirmModal, setConfirmModal] = useState({ isOpen: false });
+
+  // Send Emails Modal
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   const fetchOrder = async () => {
     setLoading(true);
@@ -168,34 +174,46 @@ const OrderDetailPage = () => {
               <h1 className="text-2xl font-bold text-slate-800">#{order.orderNumber}</h1>
               {getStatusBadge(order.orderStatus, order.status)}
             </div>
-            <p className="text-xs text-slate-500 flex items-center gap-1 mt-1 font-bold">
-              <Calendar className="h-3 w-3" />
-              {new Date(order.createdAt).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-1 font-bold">
+              <Calendar className="h-3.5 w-3.5 text-slate-400" />
+              <span>Dansk Tid: {formatDenmarkDateTime(order.createdAt, { includeSeconds: true, monthFormat: 'long' })}</span>
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-[#fafafa] p-1.5 rounded border border-slate-200 w-full md:w-auto">
-          <select
-            value={selectedStatusId}
-            onChange={(e) => setSelectedStatusId(e.target.value)}
-            className="h-10 border-0 bg-transparent px-3 text-sm font-bold text-slate-700 min-w-[200px] focus:ring-0 cursor-pointer outline-none w-full md:w-auto"
-          >
-            <option value="">Update Status...</option>
-            {statuses.filter(s => s.isActive).map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
           <button
-            onClick={() => setConfirmModal({ isOpen: true })}
-            disabled={updating || !selectedStatusId || String(order.statusId) === selectedStatusId}
-            className={cn(
-              "flex items-center justify-center h-10 px-4 rounded text-white font-bold transition-colors shrink-0",
-              updating || !selectedStatusId || String(order.statusId) === selectedStatusId ? "bg-slate-300 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
-            )}
+            type="button"
+            onClick={() => setIsEmailModalOpen(true)}
+            className="flex items-center gap-2 h-10 px-4 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-sm transition-colors shrink-0 cursor-pointer"
+            title="Send ordrebekræftelse og specifikationer til kunde, admin eller fabrik"
           >
-            {updating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'UPDATE'}
+            <Mail className="h-4 w-4" />
+            <span>Send Order Emails</span>
           </button>
+
+          <div className="flex items-center gap-2 bg-[#fafafa] p-1.5 rounded border border-slate-200 w-full md:w-auto">
+            <select
+              value={selectedStatusId}
+              onChange={(e) => setSelectedStatusId(e.target.value)}
+              className="h-10 border-0 bg-transparent px-3 text-sm font-bold text-slate-700 min-w-[200px] focus:ring-0 cursor-pointer outline-none w-full md:w-auto"
+            >
+              <option value="">Update Status...</option>
+              {statuses.filter(s => s.isActive).map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => setConfirmModal({ isOpen: true })}
+              disabled={updating || !selectedStatusId || String(order.statusId) === selectedStatusId}
+              className={cn(
+                "flex items-center justify-center h-10 px-4 rounded text-white font-bold transition-colors shrink-0",
+                updating || !selectedStatusId || String(order.statusId) === selectedStatusId ? "bg-slate-300 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+              )}
+            >
+              {updating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'UPDATE'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -204,6 +222,9 @@ const OrderDetailPage = () => {
         {/* Left Column: Info & Registry */}
         <div className="lg:col-span-2 space-y-6">
           
+          {/* Order History Timeline Component */}
+          <OrderHistoryTimeline order={order} />
+
           <div className="bg-white border border-slate-200 rounded p-6">
             <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-6 pb-4 border-b border-slate-100">
               <User className="h-4 w-4 text-slate-400" />
@@ -459,6 +480,13 @@ const OrderDetailPage = () => {
           </div>
         </div>
       )}
+
+      <SendOrderEmailsModal
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        order={order}
+        onSuccess={() => fetchOrder()}
+      />
 
       <ConfirmModal
         isOpen={confirmModal.isOpen}

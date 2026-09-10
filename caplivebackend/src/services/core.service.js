@@ -242,17 +242,29 @@ const applyDiscountCode = async (code, phone, orderTotal) => {
 };
 
 const createProductionBatch = async () => {
-  const setting = await prisma.systemSetting.findUnique({ where: { key: 'production_status_slug' } });
-  const slug = setting?.value?.slug || 'ready-for-production';
-  const productionStatus = await prisma.orderStatus.findUnique({ where: { slug } });
+  // Find all active order statuses that trigger production
+  const triggerStatuses = await prisma.orderStatus.findMany({
+    where: { triggersProduction: true, isActive: true }
+  });
+  let triggerStatusIds = triggerStatuses.map(s => s.id);
 
-  if (!productionStatus) {
-    throw new Error('Production status not configured');
+  // Fallback to configured slug or 'ready-for-production' if no statuses have triggersProduction = true
+  if (triggerStatusIds.length === 0) {
+    const setting = await prisma.systemSetting.findUnique({ where: { key: 'production_status_slug' } });
+    const slug = setting?.value?.slug || 'ready-for-production';
+    const fallbackStatus = await prisma.orderStatus.findUnique({ where: { slug } });
+    if (fallbackStatus) {
+      triggerStatusIds = [fallbackStatus.id];
+    }
+  }
+
+  if (triggerStatusIds.length === 0) {
+    return null;
   }
 
   const orders = await prisma.order.findMany({
-    where: { statusId: productionStatus.id, productionBatchId: null },
-    include: { discountCode: true, customer: true },
+    where: { statusId: { in: triggerStatusIds }, productionBatchId: null },
+    include: { discountCode: true, customer: true, orderStatus: true },
   });
 
   if (orders.length === 0) {
@@ -307,15 +319,38 @@ const sendProductionBatch = async (batchId, adminUserId, overrides = {}) => {
   if (!batch) throw new Error('Batch not found');
   if (batch.status === 'SENT') throw new Error('Batch already sent');
 
-  const sentStatusSetting = await prisma.systemSetting.findUnique({ where: { key: 'sent_to_manufacturer_slug' } });
-  const sentSlug = sentStatusSetting?.value?.slug || 'sent-to-manufacturer';
-  const sentStatus = await prisma.orderStatus.findUnique({ where: { slug: sentSlug } });
+  let sentStatus = null;
+  if (overrides.targetStatusId) {
+    sentStatus = await prisma.orderStatus.findUnique({ where: { id: parseInt(overrides.targetStatusId) } });
+  }
+  if (!sentStatus) {
+    const statusSetting = await prisma.systemSetting.findUnique({ where: { key: 'sent_to_manufacturer_status_id' } });
+    if (statusSetting?.value?.statusId) {
+      sentStatus = await prisma.orderStatus.findUnique({ where: { id: parseInt(statusSetting.value.statusId) } });
+    }
+  }
+  if (!sentStatus) {
+    const sentStatusSetting = await prisma.systemSetting.findUnique({ where: { key: 'sent_to_manufacturer_slug' } });
+    const sentSlug = sentStatusSetting?.value?.slug || 'sent-to-manufacturer';
+    sentStatus = await prisma.orderStatus.findUnique({ where: { slug: sentSlug } });
+  }
+  if (!sentStatus) {
+    sentStatus = await prisma.orderStatus.findFirst({
+      where: {
+        OR: [
+          { slug: 'sent-to-manufacturer' },
+          { name: { contains: 'Sent To Manufacturer' } },
+          { name: { contains: 'Sendt til produktion' } },
+        ]
+      }
+    });
+  }
 
   const nodemailer = require('nodemailer');
   const transporter = nodemailer.createTransport({
     host: 'smtp.simply.com',
-    port: 587,
-    secure: false,
+    port: 465,
+    secure: true,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
@@ -402,23 +437,40 @@ const sendCustomerStatusEmail = async (orderId, emailTemplateId) => {
   const nodemailer = require('nodemailer');
   const transporter = nodemailer.createTransport({
     host: 'smtp.simply.com',
-    port: 587,
-    secure: false,
+    port: 465,
+    secure: true,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
   });
 
+  let customerDetails = {};
+  try {
+    customerDetails = typeof order.customerDetails === 'string'
+      ? JSON.parse(order.customerDetails)
+      : (order.customerDetails || {});
+  } catch (e) {
+    customerDetails = {};
+  }
+
+  const customerName = `${customerDetails.firstName || ''} ${customerDetails.lastName || ''}`.trim()
+    || order.customer?.name
+    || customerDetails.name
+    || order.customerEmail.split('@')[0];
+
   const replacements = {
-    orderNumber: order.orderNumber,
-    customerName: order.customer?.name || order.customerEmail.split('@')[0],
-    totalPrice: order.totalPrice.toString(),
-    currency: order.currency,
+    orderNumber: order.orderNumber || '',
+    customerName,
+    firstName: customerDetails.firstName || customerName,
+    lastName: customerDetails.lastName || '',
+    totalPrice: order.totalPrice ? order.totalPrice.toString() : '0',
+    currency: order.currency || 'DKK',
+    status: order.orderStatus?.name || order.status || '',
   };
 
-  const subject = interpolateTemplate(template.subject, replacements);
-  const body = interpolateTemplate(template.body, replacements);
+  const subject = interpolateTemplate(template.subject || '', replacements);
+  const body = interpolateTemplate(template.body || '', replacements);
 
   try {
     await transporter.sendMail({
@@ -426,7 +478,9 @@ const sendCustomerStatusEmail = async (orderId, emailTemplateId) => {
       to: order.customerEmail,
       subject,
       text: body,
+      html: body.includes('<') && body.includes('>') ? body : body.replace(/\n/g, '<br/>'),
     });
+    console.log(`[EMAIL] Successfully sent customer status email to ${order.customerEmail} for order ${order.orderNumber}`);
   } catch (error) {
     console.error('Failed to send customer status email:', error);
   }
@@ -436,8 +490,8 @@ const sendOrderEmail = async (to, subject, htmlBody) => {
   const nodemailer = require('nodemailer');
   const transporter = nodemailer.createTransport({
     host: 'smtp.simply.com',
-    port: 587,
-    secure: false,
+    port: 465,
+    secure: true,
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
@@ -458,9 +512,18 @@ const sendOrderEmail = async (to, subject, htmlBody) => {
 };
 
 const getDashboardStats = async () => {
-  const productionSetting = await prisma.systemSetting.findUnique({ where: { key: 'production_status_slug' } });
-  const slug = productionSetting?.value?.slug || 'ready-for-production';
-  const productionStatus = await prisma.orderStatus.findUnique({ where: { slug } });
+  const triggerStatuses = await prisma.orderStatus.findMany({
+    where: { triggersProduction: true, isActive: true }
+  });
+  let triggerStatusIds = triggerStatuses.map(s => s.id);
+  if (triggerStatusIds.length === 0) {
+    const productionSetting = await prisma.systemSetting.findUnique({ where: { key: 'production_status_slug' } });
+    const slug = productionSetting?.value?.slug || 'ready-for-production';
+    const fallbackStatus = await prisma.orderStatus.findUnique({ where: { slug } });
+    if (fallbackStatus) {
+      triggerStatusIds = [fallbackStatus.id];
+    }
+  }
 
   const [
     readyForProduction,
@@ -475,8 +538,8 @@ const getDashboardStats = async () => {
     allStatuses,
     statusCountsRaw
   ] = await Promise.all([
-    productionStatus
-      ? prisma.order.count({ where: { statusId: productionStatus.id, productionBatchId: null } })
+    triggerStatusIds.length > 0
+      ? prisma.order.count({ where: { statusId: { in: triggerStatusIds }, productionBatchId: null } })
       : 0,
     prisma.order.count(),
     prisma.smsCampaign.count({ where: { isActive: true } }),

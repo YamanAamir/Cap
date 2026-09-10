@@ -139,8 +139,13 @@ exports.createOrderStatus = async (req, res) => {
 exports.updateOrderStatus = async (req, res) => {
   try {
     const { name, sortOrder, isInternal, isVisibleToProduction, triggersProduction, isActive, color, customerEmailTemplateId, isInstallmentTrigger, installmentTriggerIndex } = req.body;
-    const data = { sortOrder, isInternal, triggersProduction, isActive, color };
+    const data = {};
+    if (sortOrder !== undefined) data.sortOrder = parseInt(sortOrder);
+    if (isInternal !== undefined) data.isInternal = !!isInternal;
     if (isVisibleToProduction !== undefined) data.isVisibleToProduction = !!isVisibleToProduction;
+    if (triggersProduction !== undefined) data.triggersProduction = !!triggersProduction;
+    if (isActive !== undefined) data.isActive = !!isActive;
+    if (color !== undefined) data.color = color;
     if (customerEmailTemplateId !== undefined) data.customerEmailTemplateId = customerEmailTemplateId ? parseInt(customerEmailTemplateId) : null;
     if (isInstallmentTrigger !== undefined) {
       data.isInstallmentTrigger = !!isInstallmentTrigger;
@@ -327,8 +332,8 @@ exports.generateProductionBatch = async (req, res) => {
 
 exports.sendProductionBatch = async (req, res) => {
   try {
-    const { recipientEmail, emailSubject, emailBody, sendExcel, sendZip } = req.body;
-    const batch = await sendProductionBatch(parseInt(req.params.id), req.user.id, { recipientEmail, emailSubject, emailBody, sendExcel, sendZip });
+    const { recipientEmail, emailSubject, emailBody, targetStatusId, sendExcel, sendZip } = req.body;
+    const batch = await sendProductionBatch(parseInt(req.params.id), req.user.id, { recipientEmail, emailSubject, emailBody, targetStatusId, sendExcel, sendZip });
     res.json(batch);
   } catch (err) {
     res.status(500).json({ message: err.message });

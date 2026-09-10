@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getOrder, updateOrderStatus, resendOrderEmails } from '../services/auth.service';
+import { getOrder, updateOrderStatus } from '../services/auth.service';
 import { getOrderStatuses } from '../services/admin.service';
 import {
   ChevronLeft, Loader2, User, Mail, Package, Calendar,
@@ -10,6 +10,9 @@ import {
 import { cn } from '@/lib/utils';
 import ConfigBlueprintCards from '../components/orders/ConfigBlueprintCards';
 import ConfirmModal from '../components/common/ConfirmModal';
+import OrderHistoryTimeline from '../components/orders/OrderHistoryTimeline';
+import SendOrderEmailsModal from '../components/orders/SendOrderEmailsModal';
+import { formatDenmarkDateTime } from '../utils/dateUtils';
 
 const OrderDetailPage = () => {
   const { id } = useParams();
@@ -28,8 +31,8 @@ const OrderDetailPage = () => {
   // Confirmation Modal
   const [confirmModal, setConfirmModal] = useState({ isOpen: false });
 
-  // Resend Email State
-  const [resendingEmails, setResendingEmails] = useState(false);
+  // Send Emails Modal
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   const fetchOrder = async () => {
     setLoading(true);
@@ -66,20 +69,6 @@ const OrderDetailPage = () => {
     } finally {
       setUpdating(false);
       setConfirmModal({ isOpen: false });
-    }
-  };
-
-  const handleResendEmails = async () => {
-    if (!window.confirm("Are you sure you want to force-resend confirmation emails for this order? This will send confirmation emails to the Customer, Admin, and Factory using the latest configuration.")) return;
-    setResendingEmails(true);
-    try {
-      await resendOrderEmails(id);
-      alert('Emails resent successfully!');
-    } catch (err) {
-      console.error('Failed to resend emails:', err);
-      alert(err.response?.data?.message || 'Failed to resend emails. Please try again.');
-    } finally {
-      setResendingEmails(false);
     }
   };
 
@@ -185,29 +174,22 @@ const OrderDetailPage = () => {
               <h1 className="text-2xl font-bold text-slate-800">#{order.orderNumber}</h1>
               {getStatusBadge(order.orderStatus, order.status)}
             </div>
-            <p className="text-xs text-slate-500 flex items-center gap-1 mt-1 font-bold">
-              <Calendar className="h-3 w-3" />
-              {new Date(order.createdAt).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-1 font-bold">
+              <Calendar className="h-3.5 w-3.5 text-slate-400" />
+              <span>Dansk Tid: {formatDenmarkDateTime(order.createdAt, { includeSeconds: true, monthFormat: 'long' })}</span>
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          {/* Force Send Email Button */}
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto justify-end">
           <button
-            onClick={handleResendEmails}
-            disabled={resendingEmails}
-            className="flex items-center justify-center h-10 px-4 rounded bg-emerald-600 text-white font-bold transition-colors hover:bg-emerald-700 disabled:bg-slate-300 shrink-0 text-sm"
+            type="button"
+            onClick={() => setIsEmailModalOpen(true)}
+            className="flex items-center gap-2 h-10 px-4 rounded bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-sm transition-colors shrink-0 cursor-pointer"
+            title="Send ordrebekræftelse og specifikationer til kunde, admin eller fabrik"
           >
-            {resendingEmails ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Sending...
-              </>
-            ) : (
-              <>
-                <Mail className="h-4 w-4 mr-1.5" /> Send Order Emails
-              </>
-            )}
+            <Mail className="h-4 w-4" />
+            <span>Send Order Emails</span>
           </button>
 
           <div className="flex items-center gap-2 bg-[#fafafa] p-1.5 rounded border border-slate-200 w-full md:w-auto">
@@ -240,6 +222,9 @@ const OrderDetailPage = () => {
         {/* Left Column: Info & Registry */}
         <div className="lg:col-span-2 space-y-6">
           
+          {/* Order History Timeline Component */}
+          <OrderHistoryTimeline order={order} />
+
           <div className="bg-white border border-slate-200 rounded p-6">
             <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-6 pb-4 border-b border-slate-100">
               <User className="h-4 w-4 text-slate-400" />
@@ -495,6 +480,13 @@ const OrderDetailPage = () => {
           </div>
         </div>
       )}
+
+      <SendOrderEmailsModal
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        order={order}
+        onSuccess={() => fetchOrder()}
+      />
 
       <ConfirmModal
         isOpen={confirmModal.isOpen}

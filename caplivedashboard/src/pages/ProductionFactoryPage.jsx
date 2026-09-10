@@ -30,45 +30,6 @@ const ProductionFactoryPage = () => {
       // Only production-visible statuses
       setStatuses(res.filter(s => s.isVisibleToProduction));
     }).catch(console.error);
-
-    // Auto-translate to English
-    document.cookie = "googtrans=/da/en; path=/";
-    document.cookie = "googtrans=/da/en; domain=" + document.domain + "; path=/";
-
-    // Inject Google Translate script if not present
-    if (!document.getElementById('google-translate-script')) {
-      const style = document.createElement('style');
-      style.innerHTML = `
-        .goog-te-banner-frame { display: none !important; }
-        .goog-te-combo { display: none !important; }
-        body { top: 0px !important; }
-        #google_translate_element { display: none !important; }
-      `;
-      document.head.appendChild(style);
-
-      const script = document.createElement('script');
-      script.id = 'google-translate-script';
-      script.src = '//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
-      script.async = true;
-      document.body.appendChild(script);
-
-      window.googleTranslateElementInit = () => {
-        if (window.google && window.google.translate) {
-          new window.google.translate.TranslateElement({
-            pageLanguage: 'da',
-            includedLanguages: 'en',
-            layout: window.google.translate.TranslateElement.InlineLayout.SIMPLE,
-            autoDisplay: true
-          }, 'google_translate_element');
-        }
-      };
-    }
-
-    return () => {
-      document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-      document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=" + document.domain + "; path=/;";
-      document.documentElement.classList.remove('translated-ltr', 'translated-rtl');
-    };
   }, []);
 
   useEffect(() => {
@@ -82,34 +43,39 @@ const ProductionFactoryPage = () => {
       const response = await getOrders({
         page,
         search: debounceSearch,
-        limit: 20,
+        sortBy,
+        order,
+        limit,
         statusId: statusFilter,
-        isVisibleToProduction: 'true'
+        isVisibleToProduction: 'true',
       });
       setData(response);
     } catch (error) {
-      toast.error('Failed to load production queue');
+      console.error('Failed to fetch factory orders:', error);
+      toast.error('Failed to load production orders');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchOrders();
-  }, [page, debounceSearch, statusFilter]);
+    setPage(1);
+  }, [debounceSearch, statusFilter, limit]);
 
-  const handleStatusUpdate = async () => {
-    if (!confirmModal.orderId || !confirmModal.statusId) return;
-    setUpdatingId(confirmModal.orderId);
+  useEffect(() => {
+    fetchOrders();
+  }, [page, debounceSearch, sortBy, order, statusFilter, limit]);
+
+  const handleStatusChange = async (orderId, newStatusId) => {
+    setUpdatingId(orderId);
     try {
-      await updateOrderStatus(confirmModal.orderId, { statusId: parseInt(confirmModal.statusId) });
+      await updateOrderStatus(orderId, { statusId: parseInt(newStatusId) });
       toast.success('Status updated');
       fetchOrders();
     } catch (error) {
       toast.error('Failed to update status');
     } finally {
       setUpdatingId(null);
-      setConfirmModal({ isOpen: false, orderId: null, statusId: null });
     }
   };
 
@@ -127,7 +93,6 @@ const ProductionFactoryPage = () => {
         <div>
            <h2 className="text-xl font-bold text-slate-800">Production Queue</h2>
            <p className="text-sm text-slate-500 mb-2">Manage orders currently in the factory pipeline.</p>
-           <div id="google_translate_element"></div>
         </div>
         <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="relative w-full md:w-[250px]">

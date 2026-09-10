@@ -34,8 +34,8 @@ export const updateOrderStatus = async (id, data) => {
   return response.data;
 };
 
-export const resendOrderEmails = async (id) => {
-  const response = await api.post(`/orders/${id}/resend-email`);
+export const resendOrderEmails = async (id, data = {}) => {
+  const response = await api.post(`/orders/${id}/resend-email`, data);
   return response.data;
 };
 

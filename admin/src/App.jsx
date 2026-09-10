@@ -22,6 +22,7 @@ import ProductionFactoryPage from './pages/ProductionFactoryPage';
 import ProductionOrderDetailPage from './pages/ProductionOrderDetailPage';
 import ExcelTemplatesPage from './pages/ExcelTemplatesPage';
 import InstallmentPlansPage from './pages/InstallmentPlansPage';
+import MediaPage from './pages/MediaPage';
 
 
 function App() {
@@ -50,6 +51,7 @@ function App() {
             <Route index element={<DashboardPage />} />
             <Route path="orders" element={<OrdersPage />} />
             <Route path="orders/:id" element={<OrderDetailPage />} />
+            <Route path="media" element={<MediaPage />} />
             <Route path="customers" element={<CustomersPage />} />
             <Route path="excel-templates" element={<ExcelTemplatesPage />} />
             <Route path="production" element={<ProductionPage />} />

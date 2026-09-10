@@ -3,7 +3,8 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, ShoppingCart, LogOut, Menu, Flag, Users, Factory,
-  ListOrdered, Tag, MessageSquare, FileSpreadsheet, Mail, Settings, CreditCard
+  ListOrdered, Tag, MessageSquare, FileSpreadsheet, Mail, Settings, CreditCard,
+  Image as ImageIcon
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -17,6 +18,7 @@ const getNavItems = (role) => {
   return [
     { title: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { title: 'Orders', icon: ShoppingCart, path: '/dashboard/orders' },
+    { title: 'Media Gallery', icon: ImageIcon, path: '/dashboard/media' },
     { title: 'Customers', icon: Users, path: '/dashboard/customers' },
     { title: 'Production Export', icon: Factory, path: '/dashboard/production' },
     { title: 'Order Statuses', icon: ListOrdered, path: '/dashboard/statuses' },
@@ -35,6 +37,7 @@ const getNavItems = (role) => {
 const pageTitles = {
   '/dashboard': 'Dashboard',
   '/dashboard/orders': 'Orders',
+  '/dashboard/media': 'Media Gallery',
   '/dashboard/customers': 'Customers',
   '/dashboard/production': 'Production',
   '/dashboard/statuses': 'Order Statuses',
@@ -53,6 +56,7 @@ const pageTitles = {
 const pageSubtitles = {
   '/dashboard': 'Everything here',
   '/dashboard/orders': 'Cap Orders Listing',
+  '/dashboard/media': 'Order Artwork & 3D Visual Assets',
   '/dashboard/customers': 'StudentLife Users Listing',
   '/dashboard/production': 'Production Exports',
   '/dashboard/statuses': 'Order Statuses Listing',
@@ -96,16 +100,6 @@ const DashboardLayout = () => {
     }
   }, [location.pathname, isMobile]);
 
-  const isFactoryRoute = location.pathname.startsWith('/dashboard/factory');
-
-  useEffect(() => {
-    if (!isFactoryRoute) {
-      document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-      document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=" + document.domain + "; path=/;";
-      document.documentElement.classList.remove('translated-ltr', 'translated-rtl');
-    }
-  }, [location.pathname, isFactoryRoute]);
-
   const handleLogout = async () => {
     try {
       await logout();
@@ -128,7 +122,7 @@ const DashboardLayout = () => {
     pageSubtitles[location.pathname] || '';
 
   return (
-    <div className={cn("flex h-screen bg-[#f8f9fa] overflow-hidden font-sans", !isFactoryRoute && "notranslate")} translate={!isFactoryRoute ? "no" : undefined}>
+    <div className="flex h-screen bg-[#f8f9fa] overflow-hidden font-sans">
       
       {/* Mobile Overlay */}
       {isMobile && isSidebarOpen && (
@@ -141,10 +135,9 @@ const DashboardLayout = () => {
       {/* Sidebar */}
       <aside
         className={cn(
-          'absolute lg:relative flex flex-col transition-transform duration-300 ease-in-out z-30 bg-white shadow-[2px_0_10px_rgba(0,0,0,0.05)] border-r border-slate-100 h-full notranslate',
+          'absolute lg:relative flex flex-col transition-transform duration-300 ease-in-out z-30 bg-white shadow-[2px_0_10px_rgba(0,0,0,0.05)] border-r border-slate-100 h-full',
           isSidebarOpen ? 'w-[260px] translate-x-0' : 'w-[260px] lg:w-[70px] -translate-x-full lg:translate-x-0'
         )}
-        translate="no"
       >
         <div className="p-4 border-b border-slate-100 flex items-center h-[72px] justify-between lg:justify-start">
           {(!isMobile && !isSidebarOpen) ? (
@@ -222,7 +215,7 @@ const DashboardLayout = () => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         
         {/* Header */}
-        <header className="h-[72px] bg-white flex items-center justify-between px-4 md:px-8 shadow-sm z-10 notranslate" translate="no">
+        <header className="h-[72px] bg-white flex items-center justify-between px-4 md:px-8 shadow-sm z-10">
           <div className="flex items-center gap-3">
             {isMobile && (
               <button 

@@ -1,3 +1,5 @@
+const { translateFactoryValue } = require('./factoryTranslations');
+
 const slugify = (text) =>
   text
     .toLowerCase()
@@ -16,6 +18,18 @@ const interpolateTemplate = (template, vars = {}) => {
   );
 };
 
+const safeDateIso = (d) => {
+  if (!d) return '';
+  const date = new Date(d);
+  return isNaN(date.getTime()) ? String(d) : date.toISOString().split('T')[0];
+};
+
+const safeDateLocale = (d) => {
+  if (!d) return '';
+  const date = new Date(d);
+  return isNaN(date.getTime()) ? String(d) : date.toLocaleString('da-DK');
+};
+
 const extractOrderField = (order, fieldKey) => {
   const customerDetails =
     typeof order.customerDetails === 'string'
@@ -29,9 +43,9 @@ const extractOrderField = (order, fieldKey) => {
   const map = {
     orderId: order.id,
     orderNumber: order.orderNumber,
-    orderDate: new Date(order.orderDate || order.createdAt).toISOString().split('T')[0],
-    createdAt: new Date(order.createdAt).toLocaleString('da-DK'),
-    updatedAt: new Date(order.updatedAt).toLocaleString('da-DK'),
+    orderDate: safeDateIso(order.orderDate || order.createdAt),
+    createdAt: safeDateLocale(order.createdAt),
+    updatedAt: safeDateLocale(order.updatedAt),
     customerId: order.customerId || '',
     customerName: `${customerDetails.firstName || ''} ${customerDetails.lastName || ''}`.trim() || customerDetails.name || '',
     customerEmail: order.customerEmail || customerDetails.email || '',
@@ -59,10 +73,26 @@ const extractOrderField = (order, fieldKey) => {
     const path = fieldKey.replace('options.', '').split('.');
     let current = selectedOptions;
     for (const part of path) {
-      if (current == null) return 'x';
-      current = current[part];
+      if (current == null || typeof current !== 'object') return 'x';
+      if (current[part] !== undefined) {
+        current = current[part];
+      } else {
+        const lowerPart = part.toLowerCase();
+        const foundKey = Object.keys(current).find(k => k.toLowerCase() === lowerPart);
+        if (foundKey) {
+          current = current[foundKey];
+        } else {
+          return 'x';
+        }
+      }
     }
     
+    // If it's an array (e.g. selectedFlags)
+    if (Array.isArray(current)) {
+      if (current.length === 0) return 'x';
+      current = current.map(item => (typeof item === 'object' && item !== null ? (item.name || item.value || JSON.stringify(item)) : item)).join(', ');
+    }
+
     // If it's an object like { name: 'Rød', color: '#fff' } or similar, extract the meaningful string
     if (typeof current === 'object' && current !== null) {
       if (current.name) current = current.name;
@@ -73,50 +103,8 @@ const extractOrderField = (order, fieldKey) => {
 
     if (current === '' || current == null) return 'x';
 
-    // Translate common Danish terms to English
-    const valStr = String(current).trim();
-    const translations = {
-      'Sort': 'Black',
-      'Hvid': 'White',
-      'Guld': 'Gold',
-      'Sølv': 'Silver',
-      'Rød': 'Red',
-      'Blå': 'Blue',
-      'Grøn': 'Green',
-      'Gul': 'Yellow',
-      'Lilla': 'Purple',
-      'Rosa': 'Pink',
-      'Mat': 'Matte',
-      'Hvid med glimmer': 'White with glitter',
-      'Sort med glimmer': 'Black with glitter',
-      'Ingen': 'None',
-      'Ja': 'Yes',
-      'Nej': 'No',
-      'Uden kant': 'Without edge',
-      'Med kant': 'With edge',
-      'Glimmer': 'Glitter',
-      'Kunstlæder': 'Faux Leather',
-      'Læder': 'Leather',
-      'Ruskin': 'Suede',
-      'Alcantra': 'Alcantara',
-      'Polyester': 'Polyester',
-      'Silke': 'Silk',
-      'BOMULD': 'Cotton',
-      'SATIN': 'Satin',
-      'VELOUR': 'Velvet',
-      'Sort med sorteknuder': 'Black with black knots',
-      'Guld hagerem med guld knuder': 'Gold chinstrap with gold knots',
-      'Sort hagerem med guld knuder': 'Black chinstrap with gold knots',
-      'Guld hagerem med sort knuder': 'Gold chinstrap with black knots',
-      'Sølv hagerem med sølvknuder': 'Silver chinstrap with silver knots',
-      'Sølv hagerem med sort knuder': 'Silver chinstrap with black knots',
-      'Sort hagerem med sølv knuder': 'Black chinstrap with silver knots',
-      'Sølv hagerem med sølv knuder': 'Silver chinstrap with silver knots',
-    };
-
-    // Case insensitive lookup
-    const found = Object.keys(translations).find(k => k.toLowerCase() === valStr.toLowerCase());
-    return found ? translations[found] : valStr;
+    // Translate Danish terms to English for factory export
+    return translateFactoryValue(current);
   }
 
   if (fieldKey.startsWith('static:')) {

@@ -102,7 +102,7 @@ const getOrders = async (req, res) => {
       where.statusId = parseInt(statusId);
     }
     if (isVisibleToProduction === 'true') {
-      where.orderStatus = { isVisibleToProduction: true };
+      where.productionBatch = { status: 'SENT' };
     }
     if (installment === 'yes') {
       where.installmentDetails = { not: Prisma.AnyNull };
@@ -179,6 +179,15 @@ const updateOrderStatus = async (req, res) => {
     const { id } = req.params;
     const { status, statusId } = req.body;
 
+    const existingOrder = await prisma.order.findUnique({
+      where: { id: parseInt(id) },
+      include: { orderStatus: true },
+    });
+
+    if (!existingOrder) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
     const data = {};
     let newOrderStatus = null;
     
@@ -200,10 +209,48 @@ const updateOrderStatus = async (req, res) => {
       }
     }
 
+    // Append to audit history
+    if (newOrderStatus) {
+      let custDetails = existingOrder.customerDetails;
+      if (typeof custDetails === 'string') {
+        try { custDetails = JSON.parse(custDetails); } catch { custDetails = {}; }
+      } else if (!custDetails || typeof custDetails !== 'object') {
+        custDetails = {};
+      }
+      if (!Array.isArray(custDetails._history)) {
+        custDetails._history = [];
+      }
+
+      const prevStatusName = existingOrder.orderStatus?.name || existingOrder.status;
+      const prevStatusColor = existingOrder.orderStatus?.color || '#6366f1';
+
+      custDetails._history.unshift({
+        id: `hist_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        type: 'STATUS_CHANGE',
+        badge: `${prevStatusName} ➔ ${newOrderStatus.name}`,
+        title: `Status opdateret til "${newOrderStatus.name}"`,
+        description: `Status blev ændret fra "${prevStatusName}" til "${newOrderStatus.name}". ${newOrderStatus.customerEmailTemplateId ? 'Kunde-email blev automatisk afsendt.' : ''}`,
+        oldStatus: prevStatusName,
+        newStatus: newOrderStatus.name,
+        oldStatusColor: prevStatusColor,
+        newStatusColor: newOrderStatus.color,
+        performedBy: req.user?.name || req.user?.email || 'Admin',
+      });
+
+      data.customerDetails = custDetails;
+    }
+
     const updatedOrder = await prisma.order.update({
       where: { id: parseInt(id) },
       data,
-      include: { orderStatus: true },
+      include: {
+        orderStatus: true,
+        customer: true,
+        discountCode: true,
+        productionBatch: true,
+        installmentPlan: true,
+      },
     });
 
     if (newOrderStatus && newOrderStatus.customerEmailTemplateId) {
@@ -267,21 +314,68 @@ const updateOrder = async (req, res) => {
     const { id } = req.params;
     const { customerEmail, customerDetails, totalPrice, statusId, packageName, program } = req.body;
 
+    const data = {};
+    if (customerEmail !== undefined) data.customerEmail = customerEmail;
+    if (customerDetails !== undefined) data.customerDetails = customerDetails;
+    if (totalPrice !== undefined) data.totalPrice = parseFloat(totalPrice);
+    if (packageName !== undefined) data.packageName = packageName;
+    if (program !== undefined) data.program = program;
+
+    let newOrderStatus = null;
+    if (statusId) {
+      const orderStatus = await prisma.orderStatus.findUnique({
+        where: { id: parseInt(statusId) }
+      });
+      if (orderStatus) {
+        data.statusId = orderStatus.id;
+        data.status = orderStatus.name.toUpperCase().replace(/\s+/g, '_');
+        newOrderStatus = orderStatus;
+      }
+    }
+
     const updatedOrder = await prisma.order.update({
       where: { id: parseInt(id) },
-      data: {
-        customerEmail,
-        customerDetails,
-        totalPrice: parseFloat(totalPrice),
-        statusId: statusId ? parseInt(statusId) : undefined,
-        packageName,
-        program
-      },
+      data,
       include: {
         orderStatus: true,
         customer: true,
       }
     });
+
+    if (newOrderStatus && newOrderStatus.customerEmailTemplateId) {
+      sendCustomerStatusEmail(updatedOrder.id, newOrderStatus.customerEmailTemplateId).catch(err => {
+        console.error('Failed to send customer status email in background:', err);
+      });
+    }
+
+    if (newOrderStatus && newOrderStatus.isInstallmentTrigger && newOrderStatus.installmentTriggerIndex !== null) {
+      const idx = newOrderStatus.installmentTriggerIndex;
+      if (updatedOrder.installmentDetails && updatedOrder.installmentDetails.installments && updatedOrder.installmentDetails.installments[idx]) {
+        const installment = updatedOrder.installmentDetails.installments[idx];
+        if (installment.status !== 'Paid') {
+          const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+          const host = req.headers['x-forwarded-host'] || req.get('host');
+          const rawUrl = process.env.API_BASE_URL || process.env.VITE_API_BASE_URL || `${protocol}://${host}`;
+          
+          const apiRoot = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl.replace(/\/$/, '')}/api`;
+          const paymentLink = `${apiRoot}/sendEmail/pay-installment?orderId=${updatedOrder.id}&installmentIndex=${idx}`;
+          
+          const subject = `Din næste rate for ordre ${updatedOrder.orderNumber} er klar til betaling`;
+          const body = `
+            <h2>Hej ${updatedOrder.customerDetails?.firstName || ''},</h2>
+            <p>Din næste rate (<strong>${installment.label}</strong>) på <strong>${installment.amount} DKK</strong> er nu klar til at blive betalt.</p>
+            <p>Klik på linket nedenfor for at fuldføre betalingen sikkert via Stripe:</p>
+            <p><a href="${paymentLink}" style="display:inline-block; padding:10px 20px; background-color:#16a34a; color:#fff; text-decoration:none; border-radius:5px; font-weight:bold;">Betal nu</a></p>
+            <p>Tak fordi du handler hos os!</p>
+          `;
+          
+          const { sendOrderEmail } = require('../services/core.service');
+          sendOrderEmail(updatedOrder.customerEmail, subject, body).catch(err => {
+            console.error('Failed to send installment payment email:', err);
+          });
+        }
+      }
+    }
 
     res.status(200).json(updatedOrder);
   } catch (error) {
@@ -293,66 +387,169 @@ const updateOrder = async (req, res) => {
 const resendOrderEmails = async (req, res) => {
   try {
     const { id } = req.params;
+    const {
+      sendToCustomer = true,
+      sendToAdmin = true,
+      sendToFactory = true,
+      customCustomerEmail,
+      customAdminEmail,
+      customFactoryEmail,
+    } = req.body;
+
     const order = await prisma.order.findUnique({
-      where: { id: parseInt(id) }
+      where: { id: parseInt(id) },
+      include: { orderStatus: true, customer: true }
     });
 
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    console.log(`♻️ Dashboard Action: Resending confirmation emails for Order: ${order.orderNumber} to Customer: ${order.customerEmail}...`);
+    const {
+      createEmailTransporter,
+      capOrderEmail,
+      capOrderAdminEmail,
+      factoryOrderEmail
+    } = require('./sendEmail.controller');
 
-    // Dynamically require to avoid circular dependencies
-    const { sendCapEmail } = require('./sendEmail.controller');
+    const safeParse = (data) => {
+      if (!data) return {};
+      if (typeof data === 'object') return data;
+      try { return JSON.parse(data); } catch { return {}; }
+    };
 
-    // Simulate response payload capture
-    let responseStatus = 200;
-    let responseData = null;
+    const customerDetails = safeParse(order.customerDetails);
+    const selectedOptions = safeParse(order.selectedOptions);
+    const capImages = safeParse(order.capImages);
 
-    const mockRes = {
-      status: (code) => {
-        responseStatus = code;
-        return {
-          json: (data) => {
-            responseData = data;
+    // Prepare attachments for customer email if capImages exist
+    let capAttachments = [];
+    if (capImages && typeof capImages === 'object') {
+      Object.entries(capImages).forEach(([key, val]) => {
+        if (typeof val === 'string' && val.startsWith('data:image')) {
+          const parts = val.split(';base64,');
+          if (parts[1]) {
+            capAttachments.push({
+              filename: `cap-${key}.png`,
+              content: Buffer.from(parts[1], 'base64'),
+              cid: `cap_${key}_image`
+            });
           }
-        };
-      },
-      json: (data) => {
-        responseData = data;
-      }
-    };
-
-    const mockReq = {
-      body: {
-        customerDetails: order.customerDetails,
-        selectedOptions: order.selectedOptions,
-        totalPrice: order.totalPrice,
-        currency: order.currency,
-        orderNumber: order.orderNumber,
-        orderDate: order.orderDate,
-        email: order.customerEmail,
-        packageName: order.packageName,
-        program: order.program,
-        capImages: order.capImages,
-        installmentDetails: order.installmentDetails,
-      }
-    };
-
-    await sendCapEmail(mockReq, mockRes);
-
-    if (responseStatus === 200) {
-      console.log(`✅ Dashboard Action: Successfully force-resent confirmation emails for Order: ${order.orderNumber}`);
-      return res.status(200).json({ message: 'Emails sent successfully', details: responseData });
-    } else {
-      console.error(`❌ Dashboard Action: Failed to force-send emails for Order: ${order.orderNumber}:`, responseData);
-      return res.status(responseStatus).json({ message: 'Failed to send emails', error: responseData });
+        }
+      });
     }
 
+    const orderPayload = {
+      customerDetails,
+      selectedOptions,
+      totalPrice: order.totalPrice,
+      currency: order.currency || 'DKK',
+      orderNumber: order.orderNumber,
+      orderDate: order.orderDate ? new Date(order.orderDate) : new Date(),
+      packageName: order.packageName,
+      program: order.program,
+      email: customCustomerEmail || order.customerEmail,
+    };
+
+    const transporter = createEmailTransporter();
+    const sentResults = [];
+    const errors = [];
+
+    // 1. Send to Customer
+    if (sendToCustomer) {
+      const targetEmail = customCustomerEmail || order.customerEmail;
+      if (targetEmail) {
+        try {
+          const emailContent = capOrderEmail(orderPayload);
+          await transporter.sendMail({
+            from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+            to: targetEmail,
+            subject: emailContent.subject,
+            html: emailContent.html,
+            text: emailContent.text,
+            attachments: capAttachments,
+          });
+          sentResults.push(`Kunde (${targetEmail})`);
+        } catch (err) {
+          console.error('Failed to send customer email:', err);
+          errors.push(`Kunde: ${err.message}`);
+        }
+      }
+    }
+
+    // 2. Send to Admin
+    if (sendToAdmin) {
+      const targetAdminEmail = customAdminEmail || 'salg@studentlife.dk';
+      try {
+        const emailContentAdmin = capOrderAdminEmail(orderPayload);
+        await transporter.sendMail({
+          from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+          to: targetAdminEmail,
+          subject: emailContentAdmin.subject,
+          html: emailContentAdmin.html,
+          text: emailContentAdmin.text,
+        });
+        sentResults.push(`Admin (${targetAdminEmail})`);
+      } catch (err) {
+        console.error('Failed to send admin email:', err);
+        errors.push(`Admin: ${err.message}`);
+      }
+    }
+
+    // 3. Send to Factory
+    if (sendToFactory) {
+      try {
+        const manufacturerSetting = await prisma.systemSetting.findUnique({ where: { key: 'manufacturer_email' } });
+        const targetFactoryEmail = customFactoryEmail || manufacturerSetting?.value?.email || 'salg@studentlife.dk';
+        const emailContentFactory = factoryOrderEmail(orderPayload);
+        await transporter.sendMail({
+          from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+          to: targetFactoryEmail,
+          subject: emailContentFactory.subject,
+          html: emailContentFactory.html,
+          text: emailContentFactory.text,
+        });
+        sentResults.push(`Fabrik (${targetFactoryEmail})`);
+      } catch (err) {
+        console.error('Failed to send factory email:', err);
+        errors.push(`Fabrik: ${err.message}`);
+      }
+    }
+
+    if (sentResults.length === 0 && errors.length > 0) {
+      return res.status(500).json({ message: 'Kunne ikke afsende valgte emails', errors });
+    }
+
+    // Log to order history
+    if (sentResults.length > 0) {
+      let custDetails = customerDetails;
+      if (!Array.isArray(custDetails._history)) custDetails._history = [];
+      custDetails._history.unshift({
+        id: `hist_email_${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        type: 'EMAIL_SENT',
+        badge: 'Email Sendt',
+        badgeColor: '#10b981',
+        title: `Ordre-emails afsendt`,
+        description: `Manuel afsendelse af ordredokumenter til: ${sentResults.join(', ')}`,
+        performedBy: req.user?.name || req.user?.email || 'Admin',
+      });
+
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { customerDetails: custDetails }
+      });
+    }
+
+    return res.status(200).json({
+      message: `Emails succesfuldt sendt til: ${sentResults.join(', ')}`,
+      sentTo: sentResults,
+      errors: errors.length > 0 ? errors : undefined,
+    });
+
   } catch (error) {
-    console.error('Error resending order emails:', error);
-    res.status(500).json({ message: 'Error resending emails', error: error.message });
+    console.error('Error in resendOrderEmails:', error);
+    res.status(500).json({ message: 'Error sending order emails', error: error.message });
   }
 };
 

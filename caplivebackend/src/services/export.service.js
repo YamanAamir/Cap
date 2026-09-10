@@ -4,35 +4,20 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const archiver = require('archiver');
 const { extractOrderField } = require('../utils/helpers');
-const { translate } = require('@vitalets/google-translate-api');
+const { translateFactoryValue } = require('../utils/factoryTranslations');
 
 const EXPORTS_DIR = path.join(__dirname, '../../public/exports');
 
-const translationCache = new Map();
-
-const STANDARD_FIELDS = new Set([
+const RAW_PASSTHROUGH_FIELDS = new Set([
   'orderId', 'orderNumber', 'orderDate', 'createdAt', 'updatedAt',
   'customerId', 'customerName', 'customerEmail', 'customerPhone',
   'customerAddress', 'customerCity', 'customerPostalCode',
-  'customerDeliveryCountry', 'schoolName', 'deliveryType',
-  'totalPrice', 'currency', 'packageName', 'program',
+  'customerDeliveryCountry', 'schoolName',
+  'totalPrice', 'currency', 'packageName',
   'status', 'paymentStatus', 'paymentIntentId', 'discountCode', 'discountAmount'
 ]);
 
-const translateText = async (text) => {
-  if (!text || typeof text !== 'string' || text === 'x') return text;
-  if (translationCache.has(text)) return translationCache.get(text);
-  
-  try {
-    const res = await translate(text, { to: 'en' });
-    translationCache.set(text, res.text);
-    return res.text;
-  } catch (error) {
-    console.error('Translation error for', text, ':', error.message);
-    translationCache.set(text, text); // prevent retrying on failure
-    return text;
-  }
-};
+const translateText = (text) => translateFactoryValue(text);
 
 const ensureExportsDir = () => {
   if (!fs.existsSync(EXPORTS_DIR)) {
@@ -65,8 +50,10 @@ const generateExcelFile = async (orders, columns, batchId) => {
     for (const col of visibleColumns) {
       let val = extractOrderField(order, col.fieldKey);
       
-      if (!STANDARD_FIELDS.has(col.fieldKey) && typeof val === 'string' && val.trim() !== '') {
-        val = await translateText(val);
+      if (col.fieldKey === 'program' && typeof val === 'string') {
+        val = translateFactoryValue(val);
+      } else if (!RAW_PASSTHROUGH_FIELDS.has(col.fieldKey) && val !== null && val !== undefined) {
+        val = translateFactoryValue(val);
       }
       
       row[col.fieldKey] = val;
