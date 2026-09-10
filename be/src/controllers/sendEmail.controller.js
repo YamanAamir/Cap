@@ -3650,8 +3650,13 @@ const payInstallment = async (req, res) => {
       return res.status(404).send('Ordrer eller afdragsordning ikke fundet.');
     }
 
+    let details = order.installmentDetails;
+    if (typeof details === 'string') {
+      try { details = JSON.parse(details); } catch (e) { details = {}; }
+    }
+
     const idx = parseInt(installmentIndex);
-    const installment = order.installmentDetails.installments[idx];
+    const installment = details && Array.isArray(details.installments) ? details.installments[idx] : null;
 
     if (!installment) {
       return res.status(404).send('Rate ikke fundet.');
@@ -3661,18 +3666,18 @@ const payInstallment = async (req, res) => {
       return res.status(400).send('Denne rate er allerede betalt.');
     }
 
-    let clientUrl = frontendUrl || req.headers.referer || req.headers.origin;
+    let clientUrl = frontendUrl || req.headers.referer || req.headers.origin || process.env.FRONTEND_URL || 'https://studentlife.dk';
     try {
       const parsedUrl = new URL(clientUrl);
       clientUrl = parsedUrl.origin;
     } catch (e) {
-      // ignore
+      clientUrl = 'https://studentlife.dk';
     }
     if (clientUrl.endsWith('/')) {
       clientUrl = clientUrl.slice(0, -1);
     }
-    if (!clientUrl.includes('/devstudentlife')) {
-      clientUrl = `${clientUrl}/devstudentlife`;
+    if (!clientUrl.includes('/studentlife')) {
+      clientUrl = `${clientUrl}/studentlife`;
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -3691,7 +3696,7 @@ const payInstallment = async (req, res) => {
             product_data: {
               name: `Cap Order : ${order.orderNumber} - ${installment.label}`,
             },
-            unit_amount: Math.round(installment.amount * 100),
+            unit_amount: Math.round(parseFloat(installment.amount || 0) * 100),
           },
           quantity: 1,
         },
@@ -3705,7 +3710,7 @@ const payInstallment = async (req, res) => {
     res.redirect(303, session.url);
   } catch (err) {
     console.error("Error creating installment payment session:", err);
-    res.status(500).send("Der opstod en fejl.");
+    res.status(500).send("Der opstod en fejl: " + (err.message || 'Ukendt fejl'));
   }
 };
 
@@ -3758,13 +3763,16 @@ const stripeWebhook = async (req, res) => {
         const order = await prisma.order.findUnique({ where: { id: orderId } });
         if (order && order.installmentDetails) {
           let details = order.installmentDetails;
-          if (details.installments && details.installments[installmentIndex]) {
+          if (typeof details === 'string') {
+            try { details = JSON.parse(details); } catch (e) { details = {}; }
+          }
+          if (details && Array.isArray(details.installments) && details.installments[installmentIndex]) {
             details.installments[installmentIndex].status = 'Paid';
             details.installments[installmentIndex].paidAt = new Date().toISOString();
 
             await prisma.order.update({
               where: { id: orderId },
-              data: { installmentDetails: details }
+              data: { installmentDetails: JSON.stringify(details) }
             });
             console.log(`✅ Installment ${installmentIndex + 1} paid for order ${orderId}`);
           }
