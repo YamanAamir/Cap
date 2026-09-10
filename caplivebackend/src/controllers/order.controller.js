@@ -179,8 +179,13 @@ const updateOrderStatus = async (req, res) => {
     const { id } = req.params;
     const { status, statusId } = req.body;
 
+    const orderId = parseInt(id);
+    if (isNaN(orderId)) {
+      return res.status(400).json({ message: 'Invalid order ID' });
+    }
+
     const existingOrder = await prisma.order.findUnique({
-      where: { id: parseInt(id) },
+      where: { id: orderId },
       include: { orderStatus: true },
     });
 
@@ -191,12 +196,17 @@ const updateOrderStatus = async (req, res) => {
     const data = {};
     let newOrderStatus = null;
     
-    if (statusId) {
-      const orderStatus = await prisma.orderStatus.findUnique({ where: { id: parseInt(statusId) } });
-      if (orderStatus) {
-        data.statusId = orderStatus.id;
-        data.status = orderStatus.name.toUpperCase().replace(/\s+/g, '_');
-        newOrderStatus = orderStatus;
+    if (statusId !== undefined && statusId !== null && statusId !== '') {
+      const numericStatusId = parseInt(statusId);
+      if (!isNaN(numericStatusId)) {
+        const orderStatus = await prisma.orderStatus.findUnique({ where: { id: numericStatusId } });
+        if (orderStatus) {
+          data.statusId = orderStatus.id;
+          data.status = orderStatus.name.toUpperCase().replace(/\s+/g, '_');
+          newOrderStatus = orderStatus;
+        } else {
+          return res.status(400).json({ message: `Order status with ID ${statusId} not found` });
+        }
       }
     } else if (status) {
       data.status = status;
@@ -216,12 +226,16 @@ const updateOrderStatus = async (req, res) => {
         try { custDetails = JSON.parse(custDetails); } catch { custDetails = {}; }
       } else if (!custDetails || typeof custDetails !== 'object') {
         custDetails = {};
+      } else {
+        custDetails = { ...custDetails };
       }
       if (!Array.isArray(custDetails._history)) {
-        custDetails._history = [];
+        custDetails._history = custDetails._history ? [custDetails._history] : [];
+      } else {
+        custDetails._history = [...custDetails._history];
       }
 
-      const prevStatusName = existingOrder.orderStatus?.name || existingOrder.status;
+      const prevStatusName = existingOrder.orderStatus?.name || existingOrder.status || 'Pending';
       const prevStatusColor = existingOrder.orderStatus?.color || '#6366f1';
 
       custDetails._history.unshift({
@@ -242,13 +256,12 @@ const updateOrderStatus = async (req, res) => {
     }
 
     const updatedOrder = await prisma.order.update({
-      where: { id: parseInt(id) },
+      where: { id: orderId },
       data,
       include: {
         orderStatus: true,
         customer: true,
         discountCode: true,
-        productionBatch: true,
         installmentPlan: true,
       },
     });
@@ -260,39 +273,53 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
-    if (newOrderStatus && newOrderStatus.isInstallmentTrigger && newOrderStatus.installmentTriggerIndex !== null) {
+    if (newOrderStatus && newOrderStatus.isInstallmentTrigger && newOrderStatus.installmentTriggerIndex !== null && newOrderStatus.installmentTriggerIndex !== undefined) {
       const idx = newOrderStatus.installmentTriggerIndex;
-      if (updatedOrder.installmentDetails && updatedOrder.installmentDetails.installments && updatedOrder.installmentDetails.installments[idx]) {
-        const installment = updatedOrder.installmentDetails.installments[idx];
+      let instDetails = updatedOrder.installmentDetails;
+      if (typeof instDetails === 'string') {
+        try { instDetails = JSON.parse(instDetails); } catch { instDetails = null; }
+      }
+      if (instDetails && instDetails.installments && instDetails.installments[idx]) {
+        const installment = instDetails.installments[idx];
         if (installment.status !== 'Paid') {
           // Use API_BASE_URL from env, or dynamically generate it from the incoming request headers
           const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-          const host = req.headers['x-forwarded-host'] || req.get('host');
+          const host = req.headers['x-forwarded-host'] || (req.get ? req.get('host') : 'localhost');
           const rawUrl = process.env.API_BASE_URL || process.env.VITE_API_BASE_URL || `${protocol}://${host}`;
           
           const apiRoot = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl.replace(/\/$/, '')}/api`;
           const paymentLink = `${apiRoot}/sendEmail/pay-installment?orderId=${updatedOrder.id}&installmentIndex=${idx}`;
           
+          let custDetailsObj = updatedOrder.customerDetails;
+          if (typeof custDetailsObj === 'string') {
+            try { custDetailsObj = JSON.parse(custDetailsObj); } catch { custDetailsObj = {}; }
+          }
           const subject = `Din næste rate for ordre ${updatedOrder.orderNumber} er klar til betaling`;
           const body = `
-            <h2>Hej ${updatedOrder.customerDetails?.firstName || ''},</h2>
+            <h2>Hej ${custDetailsObj?.firstName || ''},</h2>
             <p>Din næste rate (<strong>${installment.label}</strong>) på <strong>${installment.amount} DKK</strong> er nu klar til at blive betalt.</p>
             <p>Klik på linket nedenfor for at fuldføre betalingen sikkert via Stripe:</p>
             <p><a href="${paymentLink}" style="display:inline-block; padding:10px 20px; background-color:#16a34a; color:#fff; text-decoration:none; border-radius:5px; font-weight:bold;">Betal nu</a></p>
             <p>Tak fordi du handler hos os!</p>
           `;
           
-          const { sendOrderEmail } = require('../services/core.service');
-          sendOrderEmail(updatedOrder.customerEmail, subject, body).catch(err => {
-            console.error('Failed to send installment payment email:', err);
-          });
+          try {
+            const { sendOrderEmail } = require('../services/core.service');
+            sendOrderEmail(updatedOrder.customerEmail, subject, body).catch(err => {
+              console.error('Failed to send installment payment email:', err);
+            });
+          } catch (mailErr) {
+            console.error('Failed to load email service:', mailErr);
+          }
         }
       }
     }
 
-    res.status(200).json(updatedOrder);
+    const fixedOrder = await fixCorruptedInstallments(updatedOrder);
+    res.status(200).json(fixedOrder || updatedOrder);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating order status' });
+    console.error('Error updating order status:', error);
+    res.status(500).json({ message: 'Error updating order status', error: error.message });
   }
 };
 
