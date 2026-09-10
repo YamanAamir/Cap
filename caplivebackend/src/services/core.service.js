@@ -415,7 +415,7 @@ const sendProductionBatch = async (batchId, adminUserId, overrides = {}) => {
       batchId,
       adminUserId,
       orderCount: batch.orderCount,
-      fileNames,
+      fileNames: JSON.stringify(fileNames),
     },
   });
 
