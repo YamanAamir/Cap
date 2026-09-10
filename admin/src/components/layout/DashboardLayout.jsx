@@ -12,7 +12,8 @@ import logo from '../../assets/logo.png';
 const getNavItems = (role) => {
   if (role === 'production') {
     return [
-      { title: 'Production Tasks', icon: Factory, path: '/dashboard/factory' }
+      { title: 'Production Tasks', icon: Factory, path: '/dashboard/factory' },
+      { title: 'Factory Media', icon: ImageIcon, path: '/dashboard/factory/media' }
     ];
   }
   return [
@@ -21,6 +22,8 @@ const getNavItems = (role) => {
     { title: 'Media Gallery', icon: ImageIcon, path: '/dashboard/media' },
     { title: 'Customers', icon: Users, path: '/dashboard/customers' },
     { title: 'Production Export', icon: Factory, path: '/dashboard/production' },
+    { title: 'Factory Queue', icon: Factory, path: '/dashboard/factory' },
+    { title: 'Factory Media', icon: ImageIcon, path: '/dashboard/factory/media' },
     { title: 'Order Statuses', icon: ListOrdered, path: '/dashboard/statuses' },
     { title: 'Excel Template', icon: FileSpreadsheet, path: '/dashboard/excel-templates' },
     { title: 'Email Templates', icon: Mail, path: '/dashboard/emails' },
@@ -51,6 +54,7 @@ const pageTitles = {
   '/dashboard/settings/production': 'Production Display Settings',
   '/dashboard/users': 'Users & Roles',
   '/dashboard/factory': 'Factory Tasks',
+  '/dashboard/factory/media': 'Factory Media Gallery',
 };
 
 const pageSubtitles = {
@@ -69,6 +73,7 @@ const pageSubtitles = {
 
   '/dashboard/users': 'Manage Admin Permissions',
   '/dashboard/factory': 'Manage Production Queue',
+  '/dashboard/factory/media': 'Artwork & images for production queue orders',
 };
 
 const DashboardLayout = () => {

@@ -85,11 +85,21 @@ const ProductionFactoryPage = () => {
 
   return (
     <div className="animate-in fade-in duration-300 max-w-[1400px] mx-auto pb-12">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-           <h2 className="text-xl font-bold text-slate-800">Production Queue</h2>
-           <p className="text-sm text-slate-500 mb-2">Manage orders currently in the factory pipeline.</p>
+          <h2 className="text-xl font-bold text-slate-800">Production Queue</h2>
+          <p className="text-sm text-slate-500">Manage orders currently in the factory pipeline.</p>
         </div>
+        <button
+          onClick={() => navigate('/dashboard/factory/media')}
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-900 to-indigo-800 hover:from-blue-950 hover:to-indigo-900 text-white font-bold text-xs rounded-lg shadow-sm transition-all shrink-0 cursor-pointer self-start sm:self-center"
+        >
+          <ImageIcon className="w-4 h-4 text-blue-300" />
+          Factory Media Gallery
+        </button>
+      </div>
+
+      <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="relative w-full md:w-[250px]">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />

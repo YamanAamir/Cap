@@ -1,20 +1,26 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getOrders } from '../services/auth.service';
 import { getOrderStatuses } from '../services/admin.service';
+import { useAuth } from '../context/AuthContext';
 import {
   Search, Filter, Loader2, RefreshCw, FolderArchive, Download,
   Eye, ExternalLink, Package, Image as ImageIcon, Sparkles,
   CheckSquare, Square, Layers, Calendar, User, ArrowUpDown,
-  Maximize2, RotateCw, CheckCircle2, ChevronRight, SlidersHorizontal
+  Maximize2, RotateCw, CheckCircle2, ChevronRight, SlidersHorizontal,
+  Factory, ListOrdered
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { extractOrderImages, downloadSingleImage, downloadOrderZip, downloadBatchOrdersZip } from '../utils/mediaUtils';
 import ImageLightboxModal from '../components/media/ImageLightboxModal';
 
-const MediaPage = () => {
+const MediaPage = ({ isFactoryView = false }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
+
+  const isFactoryMode = isFactoryView || location.pathname.includes('/factory') || user?.role === 'production';
 
   // State
   const [orders, setOrders] = useState([]);
@@ -48,8 +54,16 @@ const MediaPage = () => {
 
   // Load Statuses
   useEffect(() => {
-    getOrderStatuses().then(setStatuses).catch(console.error);
-  }, []);
+    getOrderStatuses()
+      .then((res) => {
+        if (isFactoryMode) {
+          setStatuses((res || []).filter((s) => s.isVisibleToProduction));
+        } else {
+          setStatuses(res || []);
+        }
+      })
+      .catch(console.error);
+  }, [isFactoryMode]);
 
   // Debounce search
   useEffect(() => {
@@ -61,14 +75,18 @@ const MediaPage = () => {
   const fetchOrdersData = async () => {
     setLoading(true);
     try {
-      const response = await getOrders({
+      const queryParams = {
         page,
         search: debounceSearch,
         sortBy,
         order: orderSort,
         limit,
         statusId: statusFilter,
-      });
+      };
+      if (isFactoryMode) {
+        queryParams.isVisibleToProduction = 'true';
+      }
+      const response = await getOrders(queryParams);
 
       setOrders(response.orders || []);
       setPagination(response.pagination || {});
@@ -86,7 +104,7 @@ const MediaPage = () => {
 
   useEffect(() => {
     fetchOrdersData();
-  }, [page, debounceSearch, sortBy, orderSort, statusFilter, limit]);
+  }, [page, debounceSearch, sortBy, orderSort, statusFilter, limit, isFactoryMode]);
 
   // Extract media items for each order and apply filters
   const ordersWithMedia = useMemo(() => {
@@ -216,6 +234,34 @@ const MediaPage = () => {
 
   return (
     <div className="space-y-6 max-w-[1440px] mx-auto pb-12 animate-in fade-in duration-300">
+      {/* Factory Mode Banner */}
+      {isFactoryMode && (
+        <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white rounded-xl p-4.5 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-blue-700/40">
+          <div className="flex items-center gap-3.5">
+            <div className="p-3 bg-blue-500/20 text-blue-300 rounded-xl border border-blue-400/30 shrink-0">
+              <Factory className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-bold text-base text-white flex items-center gap-2">
+                Factory Media Gallery
+                <span className="text-[10px] bg-blue-500/30 text-blue-200 border border-blue-400/30 px-2.5 py-0.5 rounded-full uppercase tracking-wider font-bold">
+                  Factory Queue Only
+                </span>
+              </h3>
+              <p className="text-xs text-blue-200 mt-0.5">
+                Exclusively displaying 3D renders, cap images, and custom uploaded assets for orders sent to the factory.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => navigate('/dashboard/factory')}
+            className="text-xs font-bold text-slate-900 bg-white hover:bg-slate-100 px-4 py-2 rounded-lg shadow transition-colors flex items-center gap-1.5 self-start sm:self-center shrink-0 cursor-pointer"
+          >
+            <ListOrdered className="w-4 h-4 text-blue-900" /> Back to Factory Queue
+          </button>
+        </div>
+      )}
+
       {/* Top Banner / Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-sm">

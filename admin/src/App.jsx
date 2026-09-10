@@ -66,6 +66,7 @@ function App() {
             <Route path="settings/production" element={<ProductionSettingsPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="factory" element={<ProductionFactoryPage />} />
+            <Route path="factory/media" element={<MediaPage isFactoryView={true} />} />
             <Route path="factory/orders/:id" element={<ProductionOrderDetailPage />} />
           </Route>
 
