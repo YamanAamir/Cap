@@ -182,7 +182,7 @@ const ProductionPage = () => {
 
   const getBaseUrl = () => {
     if (window.location.hostname === 'localhost') return 'http://localhost:3000';
-    return 'https://caplivevapi.studentlife.dk';
+    return 'https://capliveapi.studentlife.dk';
   };
 
   return (
