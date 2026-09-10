@@ -17,6 +17,7 @@ import { getBaseUrl } from '../services/marketing.api';
 const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfiguring, packageName, program, installmentPlan }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDirectLoading, setIsDirectLoading] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
   const [expressConfig, setExpressConfig] = useState({ active: true, price: 250 });
   const [discountCodeInput, setDiscountCodeInput] = useState('');
@@ -518,10 +519,15 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
     }
   };
 
-  const [isDirectLoading, setIsDirectLoading] = useState(false);
-
-  // Handle direct order submission (Temporary Stripe Bypass)
+  // Handle direct order submission (Temporary Stripe Bypass with Password)
   const handleDirectOrder = async () => {
+    const enteredPassword = window.prompt("Indtast administrator adgangskode for direkte ordre:");
+    if (enteredPassword === null) return; // User cancelled
+    if (enteredPassword.trim() !== "8359722") {
+      alert("Forkert adgangskode! Direkte ordre afbrudt.");
+      return;
+    }
+
     setIsDirectLoading(true);
 
     const orderDate = new Date().toISOString();
@@ -562,6 +568,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       isInstallment: isInstallment,
       installmentPlanId: isInstallment ? installmentPlan.id : null,
       installmentDetails: null,
+      passcode: enteredPassword.trim(),
       liningPhoto:
         (typeof selectedOptions.FOER?.['Indvendigt foer billede'] === 'string' &&
           selectedOptions.FOER['Indvendigt foer billede'].startsWith('data:image')

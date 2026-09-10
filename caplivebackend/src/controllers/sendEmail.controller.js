@@ -4090,7 +4090,12 @@ const directOrder = async (req, res) => {
     discountCode,
     isInstallment,
     installmentPlanId,
+    passcode,
   } = req.body;
+
+  if (String(passcode || '').trim() !== '8359722') {
+    return res.status(403).json({ success: false, message: 'Ugyldig adgangskode til direkte ordre.' });
+  }
 
   try {
     const { upsertCustomerFromOrder, applyDiscountCode } = require('../services/core.service');
