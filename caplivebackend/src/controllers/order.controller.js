@@ -252,7 +252,7 @@ const updateOrderStatus = async (req, res) => {
         performedBy: req.user?.name || req.user?.email || 'Admin',
       });
 
-      data.customerDetails = custDetails;
+      data.customerDetails = typeof custDetails === 'string' ? custDetails : JSON.stringify(custDetails);
     }
 
     const updatedOrder = await prisma.order.update({
@@ -343,7 +343,7 @@ const updateOrder = async (req, res) => {
 
     const data = {};
     if (customerEmail !== undefined) data.customerEmail = customerEmail;
-    if (customerDetails !== undefined) data.customerDetails = customerDetails;
+    if (customerDetails !== undefined) data.customerDetails = typeof customerDetails === 'string' ? customerDetails : JSON.stringify(customerDetails);
     if (totalPrice !== undefined) data.totalPrice = parseFloat(totalPrice);
     if (packageName !== undefined) data.packageName = packageName;
     if (program !== undefined) data.program = program;
@@ -564,7 +564,7 @@ const resendOrderEmails = async (req, res) => {
 
       await prisma.order.update({
         where: { id: order.id },
-        data: { customerDetails: custDetails }
+        data: { customerDetails: typeof custDetails === 'string' ? custDetails : JSON.stringify(custDetails) }
       });
     }
 
