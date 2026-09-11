@@ -24,12 +24,14 @@ function App() {
     const searchParams = new URLSearchParams(window.location.search);
     const program = searchParams.get("program") || undefined;
     const school = searchParams.get("school") || undefined;
+    const pkg = searchParams.get("package") || searchParams.get("pakke") || undefined;
 
     identifyVisitor('graduation_cap', 'gradcap_configurator', { 
       educationType: program, 
-      school: school 
+      school: school,
+      package: pkg
     });
-    pushEvent('configurator_started', {}, 'gradcap_configurator');
+    pushEvent('configurator_started', { package: pkg }, 'gradcap_configurator');
     // startRecording();
   }, []);
 
