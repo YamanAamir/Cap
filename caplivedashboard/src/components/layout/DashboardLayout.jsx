@@ -22,8 +22,6 @@ const getNavItems = (role) => {
     { title: 'Media Gallery', icon: ImageIcon, path: '/dashboard/media' },
     { title: 'Customers', icon: Users, path: '/dashboard/customers' },
     { title: 'Production Export', icon: Factory, path: '/dashboard/production' },
-    { title: 'Factory Queue', icon: Factory, path: '/dashboard/factory' },
-    { title: 'Factory Media', icon: ImageIcon, path: '/dashboard/factory/media' },
     { title: 'Order Statuses', icon: ListOrdered, path: '/dashboard/statuses' },
     { title: 'Excel Template', icon: FileSpreadsheet, path: '/dashboard/excel-templates' },
     { title: 'Email Templates', icon: Mail, path: '/dashboard/emails' },
