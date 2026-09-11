@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { getBaseUrl } from "../services/marketing.api";
 import img1 from "../assets/menuCapPics/1.webp";
 import img2 from "../assets/menuCapPics/2.webp";
@@ -43,6 +43,7 @@ import pau from "../Default/pau";
 import ernæringsassisten from "../Default/ernæringsassisten";
 import { getTilbehorForTier, syncTilbehorToIframes } from "../utils/tilbehorDefaults";
 import { sendToActiveIframe, getActiveIframeId, isDesktopDevice } from "../utils/iframeMessenger";
+import { useProgressTracking } from "../hooks/useProgressTracking";
 
 const StudentDashboard = () => {
   const [activeMenu, setActiveMenu] = useState("KOKARDE");
@@ -471,6 +472,23 @@ const StudentDashboard = () => {
     { name: "STØRRELSE", icon: img9 },
   ];
 
+  const progKey = program ? program.toUpperCase() : 'STX';
+  const visibilityConfig = dynamicConfig?.programOptionVisibility?.[progKey] || {};
+
+  const visibleSteps = useMemo(() => {
+    return menuItems
+      .filter((item) => visibilityConfig?.[item.name] !== false)
+      .map((item) => item.name);
+  }, [visibilityConfig]);
+
+  const { markCompleted } = useProgressTracking({
+    activeStep: activeMenu,
+    steps: visibleSteps,
+    configuratorName: 'gradcap_configurator',
+    packageName: packageName || 'standard',
+    program: program || 'STX',
+  });
+
   // Generic handler for all option changes
   const handleOptionChange = useCallback((section, keyOrValue, maybeValue) => {
     setSelectedOptions((prev) => ({
@@ -484,8 +502,11 @@ const StudentDashboard = () => {
 
   // Function to collect all selected options
   const collectSelectedOptions = useCallback(() => {
+    markCompleted({
+      total_price: calculateTotalPrice(),
+    });
     setIsQuoteModalOpen(true);
-  }, []);
+  }, [markCompleted, calculateTotalPrice]);
 
   useEffect(() => {
     if (isIframeLoaded && isAppReady && program) {
@@ -821,9 +842,6 @@ const StudentDashboard = () => {
       </div>
     );
   }
-
-  const progKey = program ? program.toUpperCase() : 'STX';
-  const visibilityConfig = dynamicConfig?.programOptionVisibility?.[progKey] || {};
 
   return (
     <div className="h-screen bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
