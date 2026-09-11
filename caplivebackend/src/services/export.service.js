@@ -15,7 +15,7 @@ const RAW_PASSTHROUGH_FIELDS = new Set([
   'customerDeliveryCountry', 'schoolName',
   'totalPrice', 'currency', 'packageName',
   'status', 'paymentStatus', 'paymentIntentId', 'discountCode', 'discountAmount',
-  'options.SKYGGE.Laserengravering'
+  'options.SKYGGE.Laserengravering', 'options.BETRÆK.Stjerner farve'
 ]);
 
 const translateText = (text) => translateFactoryValue(text);

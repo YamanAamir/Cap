@@ -70,6 +70,7 @@ const STATIC_FIELD_GROUPS = [
       { label: 'Topkant (Top Cord / Piping: Guld, Sølv, etc.)', value: 'options.BETRÆK.Topkant', defaultHeader: 'Topkant' },
       { label: 'Kantbånd (Edge Ribbon Color)', value: 'options.BETRÆK.Kantbånd', defaultHeader: 'Kantbånd' },
       { label: 'Stjerner (Stars Count: 1-6 Stars)', value: 'options.BETRÆK.Stjerner', defaultHeader: 'Stjerner' },
+      { label: 'Stjerner farve (Stars Color: Guld / Sølv)', value: 'options.BETRÆK.Stjerner farve', defaultHeader: 'Stjerner farve' },
       { label: 'Flagbånd (Flag Ribbon Band: International, Europe, etc.)', value: 'options.BETRÆK.Flagbånd', defaultHeader: 'Flagbånd' },
     ]
   },

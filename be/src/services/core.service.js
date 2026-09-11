@@ -32,6 +32,7 @@ const DEFAULT_EXCEL_COLUMNS = [
   { fieldKey: 'options.BETRÆK.Topkant', headerLabel: 'Top Edging', sortOrder: 16 },
   { fieldKey: 'options.BETRÆK.Kantbånd', headerLabel: 'Edge Ribbon', sortOrder: 17 },
   { fieldKey: 'options.BETRÆK.Stjerner', headerLabel: 'Stars', sortOrder: 18 },
+  { fieldKey: 'options.BETRÆK.Stjerner farve', headerLabel: 'Stars Color', sortOrder: 18.5 },
   { fieldKey: 'options.BETRÆK.Flagbånd', headerLabel: 'Flag Ribbon', sortOrder: 19 },
   { fieldKey: 'options.FOER.Svederem', headerLabel: 'Sweatband Material', sortOrder: 20 },
   { fieldKey: 'options.FOER.Farve', headerLabel: 'Inner Lining Color', sortOrder: 21 },

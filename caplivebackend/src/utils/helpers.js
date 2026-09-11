@@ -80,6 +80,30 @@ const extractOrderField = (order, fieldKey) => {
     return 'x';
   }
 
+  if (fieldKey === 'options.BETRÆK.Stjerner farve' || fieldKey === 'Stjerner farve') {
+    const betraek = selectedOptions.BETRÆK || selectedOptions.betraek || {};
+    let stjernerVal = betraek.Stjerner ?? betraek.stjerner ?? selectedOptions.Stjerner ?? selectedOptions.stjerner;
+    if (typeof stjernerVal === 'object' && stjernerVal !== null) {
+      stjernerVal = stjernerVal.name || stjernerVal.value || stjernerVal.label || '';
+    }
+    const starStr = String(stjernerVal || '').trim().toUpperCase();
+    const noStars = !starStr || starStr === 'NONE' || starStr === 'INGEN' || starStr === '0' || starStr === 'X' || starStr === 'NO' || starStr === 'UDEN STJERNER';
+
+    if (noStars) {
+      return 'x';
+    }
+
+    const kokarde = selectedOptions.KOKARDE || selectedOptions.kokarde || {};
+    let emblemVal = kokarde.Emblem ?? kokarde.emblem ?? selectedOptions.Emblem ?? selectedOptions.emblem;
+    if (typeof emblemVal === 'object' && emblemVal !== null) {
+      emblemVal = emblemVal.name || emblemVal.value || emblemVal.label || '';
+    }
+    if (!emblemVal || emblemVal === 'x' || emblemVal === 'NONE') {
+      return 'x';
+    }
+    return translateFactoryValue(emblemVal);
+  }
+
   if (fieldKey.startsWith('options.')) {
     const path = fieldKey.replace('options.', '').split('.');
     let current = selectedOptions;

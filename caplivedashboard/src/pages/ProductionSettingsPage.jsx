@@ -9,7 +9,7 @@ const MASTER_TEMPLATE = {
   KOKARDE: ['Emblem', 'Kokarde', 'Roset farve', 'Type'],
   'UDDANNELSESBÅND': ['Broderi farve', 'Broderi foran', 'Hagerem', 'Huebånd', 'Knap farve', 'Materiale', 'År'],
   BRODERI: ['Broderifarve', 'Navne broderi', 'Skolebroderi', 'Skolebroderi farve', 'Top broderi'],
-  BETRÆK: ['Farve', 'Kantbånd', 'Stjerner', 'Topkant', 'Flagbånd'],
+  BETRÆK: ['Farve', 'Kantbånd', 'Stjerner', 'Stjerner farve', 'Topkant', 'Flagbånd'],
   SKYGGE: ['Materiale', 'Skyggebånd', 'Laserengravering', 'Skyggegravering Line 1', 'Skyggegravering Line 2', 'Skyggegravering Line 3', 'Type'],
   FOER: ['Farve', 'Foer', 'Sløjfe', 'Svederem', 'Silk Type', 'Satin Type', 'Indvendigt foer billede'],
   EKSTRABETRÆK: ['Tilvælg', 'Farve', 'Topkant', 'Kantbånd', 'Stjerner', 'Flagbånd', 'Roset farve', 'Kokarde', 'Emblem', 'Type', 'Extra Top broderi'],
