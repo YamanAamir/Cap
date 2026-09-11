@@ -69,6 +69,17 @@ const extractOrderField = (order, fieldKey) => {
 
   if (map[fieldKey] !== undefined) return map[fieldKey];
 
+  if (fieldKey === 'options.SKYGGE.Laserengravering' || fieldKey === 'Laserengravering') {
+    const skygge = selectedOptions.SKYGGE || selectedOptions.skygge || {};
+    const line1 = String(skygge['Skyggegravering Line 1'] || skygge['skyggegravering line 1'] || skygge.line1 || '').trim();
+    const line2 = String(skygge['Skyggegravering Line 2'] || skygge['skyggegravering line 2'] || skygge.line2 || '').trim();
+    const line3 = String(skygge['Skyggegravering Line 3'] || skygge['skyggegravering line 3'] || skygge.line3 || '').trim();
+    if (line1 || line2 || line3) {
+      return 'Yes';
+    }
+    return 'x';
+  }
+
   if (fieldKey.startsWith('options.')) {
     const path = fieldKey.replace('options.', '').split('.');
     let current = selectedOptions;

@@ -93,6 +93,7 @@ const STATIC_FIELD_GROUPS = [
       { label: 'Type (Shade Finish: Mat, Shiny, Glimmer, Shimmer)', value: 'options.SKYGGE.Type', defaultHeader: 'Skygge Type' },
       { label: 'Materiale (Shade Edge: Uden kant / Med kant)', value: 'options.SKYGGE.Materiale', defaultHeader: 'Skygge Kant' },
       { label: 'Skyggebånd (Brim Ribbon: Guld / Sølv)', value: 'options.SKYGGE.Skyggebånd', defaultHeader: 'Skyggebånd' },
+      { label: 'Laserengravering (Laser Engraving: Yes / No)', value: 'options.SKYGGE.Laserengravering', defaultHeader: 'Laserengravering' },
       { label: 'Skyggegravering Line 1 (Engraving Line 1 Text)', value: 'options.SKYGGE.Skyggegravering Line 1', defaultHeader: 'Skyggegravering 1' },
       { label: 'Skyggegravering Line 2 (Engraving Line 2 Text)', value: 'options.SKYGGE.Skyggegravering Line 2', defaultHeader: 'Skyggegravering 2' },
       { label: 'Skyggegravering Line 3 (Engraving Line 3 Text)', value: 'options.SKYGGE.Skyggegravering Line 3', defaultHeader: 'Skyggegravering 3' },

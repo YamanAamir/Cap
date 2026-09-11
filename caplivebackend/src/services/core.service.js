@@ -43,6 +43,7 @@ const DEFAULT_EXCEL_COLUMNS = [
   { fieldKey: 'options.SKYGGE.Type', headerLabel: 'Brim Type', sortOrder: 27 },
   { fieldKey: 'options.SKYGGE.Materiale', headerLabel: 'Brim edge', sortOrder: 28 },
   { fieldKey: 'options.SKYGGE.Skyggebånd', headerLabel: 'Shadow Band', sortOrder: 29 },
+  { fieldKey: 'options.SKYGGE.Laserengravering', headerLabel: 'Laserengravering', sortOrder: 29.5 },
   { fieldKey: 'options.SKYGGE.Skyggegravering Line 1', headerLabel: 'Line 1', sortOrder: 30 },
   { fieldKey: 'options.SKYGGE.Skyggegravering Line 2', headerLabel: 'Line 2', sortOrder: 31 },
   { fieldKey: 'options.SKYGGE.Skyggegravering Line 3', headerLabel: 'Line 3', sortOrder: 32 },
