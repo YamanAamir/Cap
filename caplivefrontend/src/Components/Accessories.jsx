@@ -2,6 +2,113 @@ import React, { useEffect, useRef, useState } from 'react';
 import { getTilbehorForTier, hueæskeToTier, syncTilbehorToIframes } from '../utils/tilbehorDefaults';
 import { sendToActiveIframe } from '../utils/iframeMessenger';
 
+const SearchableFlagSelect = ({ selectedFlag, programFlags, onSelectFlag, placeholder = "Vælg flag..." }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const filteredFlags = programFlags.filter(flag =>
+        flag.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+        <div ref={dropdownRef} className="relative w-full">
+            <button
+                type="button"
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full flex items-center justify-between px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 bg-white text-slate-700 font-medium text-left shadow-xs"
+            >
+                <span className={selectedFlag ? 'text-slate-800 font-medium' : 'text-slate-400'}>
+                    {selectedFlag
+                        ? `${selectedFlag.name} ${selectedFlag.price > 0 ? `(+${selectedFlag.price} DKK)` : '(Inkluderet)'}`
+                        : placeholder
+                    }
+                </span>
+                <svg className={`w-5 h-5 text-slate-400 transition-transform duration-200 ml-2 shrink-0 ${isOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+
+            {isOpen && (
+                <div className="absolute z-50 left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 space-y-2 animate-in fade-in zoom-in-95 duration-150">
+                    <div className="relative">
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Søg efter flag..."
+                            autoFocus
+                            className="w-full pl-9 pr-8 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-sm text-slate-700 bg-slate-50 placeholder-slate-400 outline-none"
+                        />
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
+                        {searchTerm && (
+                            <button
+                                type="button"
+                                onClick={() => setSearchTerm('')}
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold w-4 h-4 rounded-full flex items-center justify-center bg-slate-200"
+                            >
+                                ✕
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="max-h-56 overflow-y-auto divide-y divide-slate-100 rounded-xl">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                onSelectFlag('');
+                                setIsOpen(false);
+                                setSearchTerm('');
+                            }}
+                            className={`w-full text-left px-3 py-2.5 text-sm transition-colors flex items-center justify-between ${!selectedFlag ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-500 hover:bg-slate-50'}`}
+                        >
+                            <span>Vælg flag... (Ryd valg)</span>
+                            {!selectedFlag && <span>✓</span>}
+                        </button>
+
+                        {filteredFlags.length === 0 ? (
+                            <div className="px-3 py-4 text-center text-xs text-slate-400 italic">
+                                Ingen flag fundet matching "{searchTerm}"
+                            </div>
+                        ) : (
+                            filteredFlags.map((flag) => {
+                                const isSelected = String(selectedFlag?.id) === String(flag.id);
+                                return (
+                                    <button
+                                        key={flag.id}
+                                        type="button"
+                                        onClick={() => {
+                                            onSelectFlag(flag.id);
+                                            setIsOpen(false);
+                                            setSearchTerm('');
+                                        }}
+                                        className={`w-full text-left px-3 py-2.5 text-sm transition-colors flex items-center justify-between ${isSelected ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-700 hover:bg-slate-50'}`}
+                                    >
+                                        <span>{flag.name}</span>
+                                        <span className="text-xs text-slate-400 font-medium">
+                                            {flag.price > 0 ? `+${flag.price} DKK` : 'Inkluderet'}
+                                        </span>
+                                    </button>
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const AccessorySelector = ({ label, currentSelection, onSelectionChange, accessoryOptions }) => (
     <div className="space-y-4">
         <div>
@@ -333,18 +440,12 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
                                     </span>
                                 )}
                             </div>
-                            <select
-                                value={selectedFlags[index]?.id || ''}
-                                onChange={(e) => handleFlagSelection(index, e.target.value)}
-                                className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 bg-white text-slate-700"
-                            >
-                                <option value="">Vælg flag...</option>
-                                {programFlags.map((flag) => (
-                                    <option key={flag.id} value={flag.id}>
-                                        {flag.name} {flag.price > 0 ? `(+${flag.price} DKK)` : '(Inkluderet)'}
-                                    </option>
-                                ))}
-                            </select>
+                            <SearchableFlagSelect
+                                selectedFlag={selectedFlags[index]}
+                                programFlags={programFlags}
+                                onSelectFlag={(flagId) => handleFlagSelection(index, flagId)}
+                                placeholder="Vælg flag..."
+                            />
                         </div>
                     );
                 })}

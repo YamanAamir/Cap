@@ -597,6 +597,10 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
                             </button>
                         </div>
                     </div>
+                    <p className="text-xs text-amber-700 bg-amber-50/90 border border-amber-200/80 rounded-xl p-2.5 mt-2 font-medium flex items-start gap-1.5 shadow-2xs">
+                        <span className="text-sm shrink-0">💡</span>
+                        <span>Hvis du konverterer teksten til arabisk, skal du bagefter klikke på <strong>“Anvend tekst”</strong>, før den vises på huen.</span>
+                    </p>
                 </div>
             </div>
 
