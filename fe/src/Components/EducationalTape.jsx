@@ -773,14 +773,6 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
                     </div>
                 </div>
 
-                {/* Language availability badge */}
-                <div className="mb-3">
-                    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-50/90 text-blue-800 border border-blue-200/80 shadow-2xs">
-                        <span className="text-sm">🇩🇰 🇬🇧 🇸🇦</span>
-                        <span>Engelsk, Dansk & Arabisk tekst tilgængelig</span>
-                    </span>
-                </div>
-
                 <div className="space-y-4">
                     <div className="relative">
                         <input

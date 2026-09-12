@@ -9,6 +9,7 @@ import {
     isArabicText,
     sendArabicTextToIframes,
 } from '../utils/embroideryAlphabet';
+import { translateTextToArabic } from '../utils/arabicTranslator';
 
 import topDesign1Gold from '../assets/topDesignImg/1Gold.webp';
 import topDesign2Gold from '../assets/topDesignImg/2Gold.webp';
@@ -108,6 +109,7 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
 
     const [isApplyingName, setIsApplyingName] = useState(false);
     const [isApplyingSchool, setIsApplyingSchool] = useState(false);
+    const [isConvertingNameArabic, setIsConvertingNameArabic] = useState(false);
     const lastAppliedNameRef = useRef(selectedOptions['Navne broderi'] || '');
     const lastAppliedSchoolRef = useRef(selectedOptions.Skolebroderi || '');
 
@@ -223,6 +225,23 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
             console.error('Error clearing school embroidery:', err);
         } finally {
             setIsApplyingSchool(false);
+        }
+    };
+
+    const handleConvertNameToArabic = async () => {
+        if (isConvertingNameArabic || isApplyingName) return;
+        if (!inputNameText.trim()) return;
+
+        setIsConvertingNameArabic(true);
+        try {
+            const arabic = await translateTextToArabic(inputNameText, 26);
+            if (arabic) {
+                setInputNameText(arabic);
+            }
+        } catch (err) {
+            console.error('Error converting name embroidery to Arabic:', err);
+        } finally {
+            setIsConvertingNameArabic(false);
         }
     };
 
@@ -484,22 +503,23 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
             )}
 
             {/* Name Embroidery */}
-            <div className="bg-white/70 border border-white/50 rounded-2xl mt-6">
-                <div className="flex items-center justify-between mb-4 mt-6">
+            <div className="bg-white/70 border border-white/50 rounded-2xl p-4 mt-6">
+                <div className="flex items-center justify-between mb-2">
                     <div>
                         <h4 className="font-semibold text-slate-800">Navne broderi</h4>
                         {pakke?.toLowerCase() === 'luksus' || pakke?.toLowerCase() === 'premium' ? (
-                            <div className="flex items-center gap-2 mt-1">
+                            <div className="flex items-center gap-2 mt-1 mb-1">
                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-amber-100 to-yellow-200 text-amber-800">
                                     Inkluderet i pakken
                                 </span>
                             </div>
                         ) : null}
-                        <span className="inline-flex items-center px-3 pt-2 rounded-full text-xs font-bold">
+                        <span className="inline-flex items-center pt-1 text-xs font-bold text-slate-500">
                             Maks. 26 Tegn
                         </span>
                     </div>
                 </div>
+
                 <div className="space-y-4">
                     <div className="relative">
                         <input
@@ -515,23 +535,46 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
                             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                         </div>
                     </div>
-                    <div className="flex justify-end space-x-4 mt-2 px-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2 mt-2 px-1">
                         <button
                             type="button"
-                            onClick={handleApplyNameText}
-                            disabled={isApplyingName}
-                            className={`text-sm font-semibold transition-all duration-200 ${isApplyingName ? 'text-blue-400 cursor-wait' : 'text-blue-600 hover:text-blue-800 hover:underline'}`}
+                            onClick={handleConvertNameToArabic}
+                            disabled={isConvertingNameArabic || !inputNameText.trim()}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95"
                         >
-                            {isApplyingName ? 'Anvender...' : 'Anvend tekst'}
+                            {isConvertingNameArabic ? (
+                                <>
+                                    <svg className="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span>Oversætter...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="text-sm">🌐</span>
+                                    <span>Konverter til arabisk</span>
+                                </>
+                            )}
                         </button>
-                        <button
-                            type="button"
-                            onClick={handleClearNameText}
-                            disabled={isApplyingName}
-                            className={`text-sm font-semibold transition-all duration-200 ${isApplyingName ? 'text-gray-400 cursor-not-allowed' : 'text-red-500 hover:text-red-700 hover:underline'}`}
-                        >
-                            Ryd tekst
-                        </button>
+                        <div className="flex items-center space-x-4">
+                            <button
+                                type="button"
+                                onClick={handleApplyNameText}
+                                disabled={isApplyingName}
+                                className={`text-sm font-semibold transition-all duration-200 ${isApplyingName ? 'text-blue-400 cursor-wait' : 'text-blue-600 hover:text-blue-800 hover:underline'}`}
+                            >
+                                {isApplyingName ? 'Anvender...' : 'Anvend tekst'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleClearNameText}
+                                disabled={isApplyingName}
+                                className={`text-sm font-semibold transition-all duration-200 ${isApplyingName ? 'text-gray-400 cursor-not-allowed' : 'text-red-500 hover:text-red-700 hover:underline'}`}
+                            >
+                                Ryd tekst
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>

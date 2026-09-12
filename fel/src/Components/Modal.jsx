@@ -1019,7 +1019,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
               id="regularDelivery"
             />
             <label htmlFor="regularDelivery" className="ml-2 text-sm text-gray-700">
-              Regelmæssig levering – estimeret leveringstid (6 uger)
+              Regelmæssig levering
             </label>
 
             <br />

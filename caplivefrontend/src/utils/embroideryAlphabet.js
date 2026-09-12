@@ -159,7 +159,7 @@ export async function generateAllEmbroideryMaps(text) {
     }
 
     const chars = text.split('');
-    const baseUrl = import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5175/devstudentlife';
+    const baseUrl = import.meta.env.VITE_FRONTEND_BASE_URL || 'http://localhost:5173/studentlife';
     const base = `${baseUrl}/alphabets`;
 
     // ── 1. Layout calculation ────────────────────────────────

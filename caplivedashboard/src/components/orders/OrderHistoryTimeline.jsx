@@ -43,7 +43,7 @@ export const generateOrderTimeline = (order) => {
       { label: 'Kunde', value: `${customerDetails.firstName || ''} ${customerDetails.lastName || ''}`.trim() || customerDetails.name || order.customerEmail },
       { label: 'Pakke', value: order.packageName || 'Standard Issue' },
       { label: 'Uddannelse', value: order.program || customerDetails.Skolenavn || 'N/A' },
-      { label: 'Levering', value: customerDetails.deliveryType === 'express' ? 'Ekspreslevering (3 uger)' : 'Standardlevering (6 uger)' },
+      { label: 'Levering', value: customerDetails.deliveryType === 'express' ? 'Ekspreslevering (3 uger)' : 'Standardlevering' },
     ],
     performedBy: 'Kunde (Webshop Checkout)',
   });

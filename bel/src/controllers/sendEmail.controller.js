@@ -426,7 +426,7 @@ const factoryOrderEmail = (orderData) => {
                 <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px;">Phone: ${customerDetails.phone || 'Not Provided'}</td></tr>
                 <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px;">School Name: ${customerDetails.Skolenavn}</td></tr>
                 <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px;">Deliver to school: ${customerDetails.deliverToSchool ? "Yes" : "No"}</td></tr>
-                <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px; color:#d97706;">Delivery Type: ${customerDetails.deliveryType === 'express' ? "EKSPRES (3 UGER)" : "Normal (6 Uger)"}</td></tr>
+                <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px; color:#d97706;">Delivery Type: ${customerDetails.deliveryType === 'express' ? "EKSPRES (3 UGER)" : "Normal"}</td></tr>
               </table>
 
               <!-- Order Details Header -->
