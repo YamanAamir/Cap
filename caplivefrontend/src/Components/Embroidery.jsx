@@ -7,7 +7,6 @@ import {
     sanitizeEmbroideryLetters,
     sendEmbroideryMapsToIframes,
     isArabicText,
-    sendArabicTextToIframes,
 } from '../utils/embroideryAlphabet';
 import { translateTextToArabic } from '../utils/arabicTranslator';
 
@@ -126,10 +125,7 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
             lastAppliedNameRef.current = clean;
             setNameEmbroideryText(clean);
             onOptionChange('Navne broderi', clean);
-            if (isArabicText(clean)) {
-                sendArabicTextToIframes(clean);
-            } else {
-                sendArabicTextToIframes('clear');
+            if (!isArabicText(clean)) {
                 const result = await generateAllEmbroideryMaps(clean);
                 sendEmbroideryMapsToIframes('backTop', result);
             }
@@ -149,19 +145,13 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
         setIsApplyingName(true);
         await new Promise(r => setTimeout(r, 10));
         try {
-            const wasArabic = isArabicText(nameEmbroideryText) || isArabicText(inputNameText);
             setInputNameText('');
             setNameEmbroideryText('');
             onOptionChange('Navne broderi', '');
             if (lastAppliedNameRef.current) {
                 lastAppliedNameRef.current = '';
-                if (wasArabic) {
-                    sendArabicTextToIframes('clear');
-                } else {
-                    const result = await generateAllEmbroideryMaps('');
-                    sendEmbroideryMapsToIframes('backTop', result);
-                    sendArabicTextToIframes('clear');
-                }
+                const result = await generateAllEmbroideryMaps('');
+                sendEmbroideryMapsToIframes('backTop', result);
                 sendToActiveIframe('nameEmbroidery:');
             }
         } catch (err) {
@@ -183,10 +173,7 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
             lastAppliedSchoolRef.current = clean;
             setSchoolEmbroideryText(clean);
             onOptionChange('Skolebroderi', clean);
-            if (isArabicText(clean)) {
-                sendArabicTextToIframes(clean);
-            } else {
-                sendArabicTextToIframes('clear');
+            if (!isArabicText(clean)) {
                 const result = await generateAllEmbroideryMaps(clean);
                 sendEmbroideryMapsToIframes('backBottom', result);
             }
@@ -206,19 +193,13 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
         setIsApplyingSchool(true);
         await new Promise(r => setTimeout(r, 10));
         try {
-            const wasArabic = isArabicText(schoolEmbroideryText) || isArabicText(inputSchoolText);
             setInputSchoolText('');
             setSchoolEmbroideryText('');
             onOptionChange('Skolebroderi', '');
             if (lastAppliedSchoolRef.current) {
                 lastAppliedSchoolRef.current = '';
-                if (wasArabic) {
-                    sendArabicTextToIframes('clear');
-                } else {
-                    const result = await generateAllEmbroideryMaps('');
-                    sendEmbroideryMapsToIframes('backBottom', result);
-                    sendArabicTextToIframes('clear');
-                }
+                const result = await generateAllEmbroideryMaps('');
+                sendEmbroideryMapsToIframes('backBottom', result);
                 sendToActiveIframe('schoolEmbroidery:');
             }
         } catch (err) {
@@ -269,15 +250,12 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
                 ambient: null,
                 opacity: null
             });
-            sendArabicTextToIframes('clear');
             return;
         }
 
         if (!schoolEmbroideryText || !schoolEmbroideryText.trim()) return;
 
-        if (isArabicText(schoolEmbroideryText)) {
-            sendArabicTextToIframes(schoolEmbroideryText);
-        } else {
+        if (!isArabicText(schoolEmbroideryText)) {
             generateAllEmbroideryMaps(schoolEmbroideryText)
                 .then((result) => {
                     sendEmbroideryMapsToIframes(
@@ -308,7 +286,6 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
                 ambient: null,
                 opacity: null
             });
-            sendArabicTextToIframes('clear');
             sendToActiveIframe('schoolEmbroidery:');
         }
     }, [ingenButton]);
@@ -318,9 +295,7 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
 
         if (nameEmbroideryText && nameEmbroideryText.trim()) {
             lastAppliedNameRef.current = nameEmbroideryText.trim();
-            if (isArabicText(nameEmbroideryText)) {
-                sendArabicTextToIframes(nameEmbroideryText);
-            } else {
+            if (!isArabicText(nameEmbroideryText)) {
                 generateAllEmbroideryMaps(nameEmbroideryText)
                     .then((result) => {
                         sendEmbroideryMapsToIframes(
@@ -334,9 +309,7 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
 
         if (!ingenButton && schoolEmbroideryText && schoolEmbroideryText.trim()) {
             lastAppliedSchoolRef.current = schoolEmbroideryText.trim();
-            if (isArabicText(schoolEmbroideryText)) {
-                sendArabicTextToIframes(schoolEmbroideryText);
-            } else {
+            if (!isArabicText(schoolEmbroideryText)) {
                 generateAllEmbroideryMaps(schoolEmbroideryText)
                     .then((result) => {
                         sendEmbroideryMapsToIframes(
