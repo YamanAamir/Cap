@@ -44,6 +44,7 @@ import ernæringsassisten from "../Default/ernæringsassisten";
 import { getTilbehorForTier, syncTilbehorToIframes } from "../utils/tilbehorDefaults";
 import { sendToActiveIframe, getActiveIframeId, isDesktopDevice } from "../utils/iframeMessenger";
 import { useProgressTracking } from "../hooks/useProgressTracking";
+import { pushEvent } from "../lib/tracking";
 
 const StudentDashboard = () => {
   const [activeMenu, setActiveMenu] = useState("KOKARDE");
@@ -532,6 +533,77 @@ const StudentDashboard = () => {
     }
   };
 
+  const hasReportedCrashRef = useRef(false);
+
+  const reportIframeFailure = useCallback((errorInfo = {}) => {
+    if (hasReportedCrashRef.current) return;
+    hasReportedCrashRef.current = true;
+
+    const {
+      type = 'crash',
+      message = 'PlayCanvas 3D iframe failure detected',
+      details = null,
+    } = errorInfo;
+
+    const sourceApp = 'gradcap_configurator';
+    const activeId = isDesktop ? 'preview-iframe' : 'preview-iframe2';
+
+    // 1. Console log / error as requested
+    console.error(`🚨 [PlayCanvas 3D Error] Iframe ${type} detected in ${sourceApp}:`, {
+      type,
+      message,
+      sourceApp,
+      iframeId: activeId,
+      device: isDesktop ? 'desktop' : 'mobile',
+      program,
+      packageName,
+      details,
+      timestamp: new Date().toISOString(),
+    });
+
+    // 2. Dispatch event params to tracking API
+    pushEvent('iframe_crash', {
+      error_type: type,
+      message,
+      source_app: sourceApp,
+      iframe_id: activeId,
+      device: isDesktop ? 'desktop' : 'mobile',
+      program: program || 'STX',
+      package: packageName || 'standard',
+      active_menu: activeMenu,
+      is_iframe_loaded: isIframeLoaded,
+      is_app_ready: isAppReady,
+      is_model_loaded: isModelLoaded,
+      details: typeof details === 'object' && details !== null ? JSON.stringify(details) : String(details || ''),
+      timestamp: new Date().toISOString(),
+    }, sourceApp);
+  }, [isDesktop, program, packageName, activeMenu, isIframeLoaded, isAppReady, isModelLoaded]);
+
+  const handleIframeError = useCallback((e) => {
+    reportIframeFailure({
+      type: 'iframe_error',
+      message: 'Iframe DOM element failed to load or crashed',
+      details: e?.message || 'Iframe error event'
+    });
+  }, [reportIframeFailure]);
+
+  // Watchdog timer: If iframe is not ready within 20s or models not loaded within 25s, report stuck
+  useEffect(() => {
+    if (isAppReady && isModelLoaded) return;
+
+    const stuckTimer = setTimeout(() => {
+      if (!isAppReady || !isModelLoaded) {
+        reportIframeFailure({
+          type: 'stuck',
+          message: `PlayCanvas 3D iframe stuck on loading after 22s (loaded: ${isIframeLoaded}, ready: ${isAppReady}, model: ${isModelLoaded})`,
+          details: { isIframeLoaded, isAppReady, isModelLoaded, timeoutSeconds: 22 }
+        });
+      }
+    }, 22000);
+
+    return () => clearTimeout(stuckTimer);
+  }, [isAppReady, isModelLoaded, isIframeLoaded, reportIframeFailure]);
+
   const handleIframeLoad = () => {
     console.log("Iframe loaded");
     setIsIframeLoaded(true);
@@ -541,14 +613,32 @@ const StudentDashboard = () => {
       const iframe = document.getElementById(activeId);
       if (!iframe?.contentWindow) return;
       const iframeConsole = iframe.contentWindow.console;
-      const originalLog = iframeConsole.log.bind(iframeConsole);
-      iframeConsole.log = function (...args) {
-        originalLog(...args);
-        const msg = args.join(" ");
-        if (msg.includes("All Models & Assets Loaded Successfully!")) {
-          window.postMessage("All Models & Assets Loaded Successfully!", "*");
+      if (iframeConsole) {
+        const originalLog = iframeConsole.log?.bind(iframeConsole);
+        if (originalLog) {
+          iframeConsole.log = function (...args) {
+            originalLog(...args);
+            const msg = args.join(" ");
+            if (msg.includes("All Models & Assets Loaded Successfully!")) {
+              window.postMessage("All Models & Assets Loaded Successfully!", "*");
+            }
+          };
         }
-      };
+        const originalError = iframeConsole.error?.bind(iframeConsole);
+        if (originalError) {
+          iframeConsole.error = function (...args) {
+            originalError(...args);
+            const errMsg = args.join(" ");
+            if (
+              errMsg.toLowerCase().includes("playcanvas") ||
+              errMsg.toLowerCase().includes("webgl") ||
+              errMsg.toLowerCase().includes("context lost")
+            ) {
+              reportIframeFailure({ type: 'runtime_crash', message: errMsg, details: errMsg });
+            }
+          };
+        }
+      }
       console.log(`✅ console.log proxy injected into ${activeId}`);
     } catch (e) {
       console.log(`ℹ️ Cross-origin iframe (${activeId}), proxy not possible — relying on postMessage`);
@@ -561,13 +651,28 @@ const StudentDashboard = () => {
   // Listen for messages from the iframe
   useEffect(() => {
     const handleMessage = (event) => {
-
-
-      // Check for the model-loaded signal (string or object form)
+      // Check for error / crash messages from iframe
       const rawStr = typeof event.data === "string"
         ? event.data
         : (event.data ? JSON.stringify(event.data) : "");
 
+      const lowerStr = rawStr.toLowerCase();
+      if (
+        lowerStr.includes("webgl context lost") ||
+        lowerStr.includes("webgl: context lost") ||
+        lowerStr.includes("playcanvas:crash") ||
+        lowerStr.includes("playcanvas_crash") ||
+        (event.data && typeof event.data === 'object' && (event.data.type === 'error' || event.data.type === 'crash' || event.data.type === 'webglcontextlost'))
+      ) {
+        reportIframeFailure({
+          type: lowerStr.includes('webgl') ? 'webgl_context_lost' : 'runtime_crash',
+          message: rawStr,
+          details: event.data
+        });
+      }
+
+
+      // Check for the model-loaded signal (string or object form)
       if (rawStr.includes("All Models & Assets Loaded Successfully!")) {
         console.log("✅ Models loaded signal received — hiding loader in 2s");
         if (modelLoadTimerRef.current) clearTimeout(modelLoadTimerRef.current);
@@ -1069,6 +1174,7 @@ const StudentDashboard = () => {
                   frameBorder="0"
                   title="3D Student Card Preview"
                   onLoad={handleIframeLoad}
+                  onError={handleIframeError}
                 />
 
                 {/* Model Loading Overlay - Desktop */}
@@ -1194,6 +1300,7 @@ const StudentDashboard = () => {
                     frameBorder="0"
                     title="3D Student Card Preview"
                     onLoad={handleIframeLoad}
+                    onError={handleIframeError}
                     style={{ touchAction: 'pan-x pan-y' }}
                   />
 
