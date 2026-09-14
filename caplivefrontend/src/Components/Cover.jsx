@@ -6,6 +6,12 @@ import img3 from '../assets/stars/3-star.webp';
 import img4 from '../assets/stars/4-star.webp';
 import img5 from '../assets/stars/5-star.webp';
 import img6 from '../assets/stars/6-star.webp';
+import img1Silver from '../assets/stars/star silver.webp';
+import img2Silver from '../assets/stars/2-star-silver.webp';
+import img3Silver from '../assets/stars/3-star-silver.webp';
+import img4Silver from '../assets/stars/4-star-silver.webp';
+import img5Silver from '../assets/stars/5-star-silver.webp';
+import img6Silver from '../assets/stars/6-star-silver.webp';
 import whiteGlitter from '../assets/button images/white glitter.webp';
 import blackGlitter from '../assets/button images/black glitter.webp';
 import coverColorOptionsimg1 from '../assets/cover images/silverahh.webp';
@@ -185,14 +191,16 @@ const Cover = ({ selectedOptions = {}, onOptionChange, program, currentEmblem, v
         topKantColorOptions = topKantColorOptions.filter(opt => allowedSTUTopkant.includes(opt.name) || allowedSTUTopkant.includes(opt.value));
     }
 
+    const isSilver = currentEmblem?.name === 'Sølv' || currentEmblem?.value === 'Sølv' || currentEmblem?.name === 'Silver' || currentEmblem?.value === 'Silver';
+
     const starsOptions = [
         { name: 'NONE', value: 'NONE', img: coverColorOptionsimg2 },
-        { name: 'One Star', value: '1', img: img1 },
-        { name: 'Two Stars', value: '2', img: img2 },
-        { name: 'Three Stars', value: '3', img: img3 },
-        { name: 'Four Stars', value: '4', img: img4 },
-        { name: 'Five Stars', value: '5', img: img5 },
-        { name: 'Six Stars', value: '6', img: img6 },
+        { name: 'One Star', value: '1', img: isSilver ? img1Silver : img1 },
+        { name: 'Two Stars', value: '2', img: isSilver ? img2Silver : img2 },
+        { name: 'Three Stars', value: '3', img: isSilver ? img3Silver : img3 },
+        { name: 'Four Stars', value: '4', img: isSilver ? img4Silver : img4 },
+        { name: 'Five Stars', value: '5', img: isSilver ? img5Silver : img5 },
+        { name: 'Six Stars', value: '6', img: isSilver ? img6Silver : img6 },
     ].filter(opt => isVisible(`Stjerner_${opt.value}`));
 
     const flagbandOptions = [
