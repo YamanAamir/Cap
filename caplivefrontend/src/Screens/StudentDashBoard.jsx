@@ -1027,7 +1027,7 @@ const StudentDashboard = () => {
                   </span>
                   <span className="text-xl font-bold text-slate-900 flex items-center">
                     {calculateTotalPrice().toFixed(2)} DKK
-                    {packageName === 'premium' && <span className="text-sm text-green-600 ml-1">(Inclusive)</span>}
+                    {packageName === 'premium' && <span className="text-sm text-green-600 ml-1">(Inklusive)</span>}
                   </span>
                 </div>
                 <div className="flex justify-between items-center mb-6">
@@ -1441,7 +1441,7 @@ const StudentDashboard = () => {
               <div className="text-right">
                 <div className="text-xl font-bold text-slate-900 flex items-center justify-end">
                   {calculateTotalPrice().toFixed(2)} DKK
-                  {packageName === 'premium' && <span className="text-sm text-green-600 ml-1">(Inclusive)</span>}
+                  {packageName === 'premium' && <span className="text-sm text-green-600 ml-1">(Inklusive)</span>}
                 </div>
                 <div className="text-xs text-slate-500">
 

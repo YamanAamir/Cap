@@ -225,7 +225,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
     }
 
     if (packageName === 'premium' && (price > 0 || standardPrice > 0)) {
-      return `${displayValue} (Inclusive)`;
+      return `${displayValue} (Inklusive)`;
     } else if (price > 0 && packageName !== 'premium') {
       return `${displayValue} (+${price} DKK)`;
     }
