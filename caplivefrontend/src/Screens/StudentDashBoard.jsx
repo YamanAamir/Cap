@@ -282,6 +282,12 @@ const StudentDashboard = () => {
     return dynamicConfig.deliveryCharges[progKey]?.Denmark || dynamicConfig.deliveryCharges['STX']?.Denmark || 79;
   };
 
+  const getProgramFlags = () => {
+    if (!dynamicConfig?.programFlags) return [];
+    const progKey = Object.keys(dynamicConfig.programFlags).find(k => k.toLowerCase() === (program || '').toLowerCase());
+    return (progKey && dynamicConfig.programFlags[progKey]) || dynamicConfig.programFlags[(program || '').toUpperCase()] || [];
+  };
+
   const calculateTotalPrice = () => {
     let total = 0;
 
@@ -994,7 +1000,7 @@ const StudentDashboard = () => {
                     setErrors={setErrors}
                     pakke={packageName}
                     visibilityConfig={visibilityConfig}
-                    programFlags={dynamicConfig?.programFlags?.[(program || '').toUpperCase()] || []}
+                    programFlags={getProgramFlags()}
                   />
                 )}
                 {isDesktop && activeMenu === "STØRRELSE" && (
@@ -1402,7 +1408,7 @@ const StudentDashboard = () => {
                       setErrors={setErrors}
                       pakke={packageName}
                       visibilityConfig={visibilityConfig}
-                      programFlags={dynamicConfig?.programFlags?.[(program || '').toUpperCase()] || []}
+                      programFlags={getProgramFlags()}
                     />
                   )}
                   {!isDesktop && activeMenu === "STØRRELSE" && (
