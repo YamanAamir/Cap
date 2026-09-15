@@ -325,28 +325,6 @@ const sendProductionBatch = async (batchId, adminUserId, overrides = {}) => {
   if (overrides.targetStatusId) {
     sentStatus = await prisma.orderStatus.findUnique({ where: { id: parseInt(overrides.targetStatusId) } });
   }
-  if (!sentStatus) {
-    const statusSetting = await prisma.systemSetting.findUnique({ where: { key: 'sent_to_manufacturer_status_id' } });
-    if (statusSetting?.value?.statusId) {
-      sentStatus = await prisma.orderStatus.findUnique({ where: { id: parseInt(statusSetting.value.statusId) } });
-    }
-  }
-  if (!sentStatus) {
-    const sentStatusSetting = await prisma.systemSetting.findUnique({ where: { key: 'sent_to_manufacturer_slug' } });
-    const sentSlug = sentStatusSetting?.value?.slug || 'sent-to-manufacturer';
-    sentStatus = await prisma.orderStatus.findUnique({ where: { slug: sentSlug } });
-  }
-  if (!sentStatus) {
-    sentStatus = await prisma.orderStatus.findFirst({
-      where: {
-        OR: [
-          { slug: 'sent-to-manufacturer' },
-          { name: { contains: 'Sent To Manufacturer' } },
-          { name: { contains: 'Sendt til produktion' } },
-        ]
-      }
-    });
-  }
 
   const nodemailer = require('nodemailer');
   const transporter = nodemailer.createTransport({
