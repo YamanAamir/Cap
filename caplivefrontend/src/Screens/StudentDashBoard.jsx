@@ -772,9 +772,13 @@ const StudentDashboard = () => {
           "guld hagerem med guld knuder":
             "hagerem:guld hagerem med guld knuder",
           "sort hagerem med guld knuder":
+            "hagerem:guld hagerem med sort knuder",
+          "guld hagerem med sort knuder":
             "hagerem:sort hagerem med guld knuder",
           "sølv hagerem med sølvknuder": "hagerem:sølv hagerem med sølvknuder",
           "sølv hagerem med sort knuder":
+            "hagerem:sort hagerem med sølv knuder",
+          "sort hagerem med sølv knuder":
             "hagerem:sølv hagerem med sort knuder",
         };
         send(hageremMap[hagerem] || "hagerem:mat");
