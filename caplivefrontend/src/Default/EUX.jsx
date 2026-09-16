@@ -6,7 +6,7 @@ const EUX = {
     Type: "EUX Guld"
   },
   UDDANNELSESBÅND: {
-    "Broderi farve": "EUX",
+    "Broderi farve": "Guld", // Originally "EUX"
     "Broderi foran": "",
     Hagerem: "Mat",
 
@@ -16,7 +16,7 @@ const EUX = {
     år: "2025"
   },
   BRODERI: {
-    Broderifarve: "EUX",
+    Broderifarve: "Guld", // Originally "EUX"
     // Ingen: false,
     "Navne broderi": "",
     Skolebroderi: "",

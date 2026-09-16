@@ -6,7 +6,7 @@ const STX = {
     Type: "STX Guld"
   },
   UDDANNELSESBÅND: {
-    "Broderi farve": "STX",
+    "Broderi farve": "Guld", // Originally "STX"
     "Broderi foran": "",
     Hagerem: "Mat",
 
@@ -16,7 +16,7 @@ const STX = {
     år: "2025"
   },
   BRODERI: {
-    Broderifarve: "STX",
+    Broderifarve: "Guld", // Originally "STX"
     // Ingen: false,
     "Navne broderi": "",
     Skolebroderi: "",

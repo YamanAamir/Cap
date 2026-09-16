@@ -27,6 +27,8 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
     const nameTimeoutRef = useRef(null);
     const schoolTimeoutRef = useRef(null);
     const getDefaultNameEmbroideryColor = () => {
+        // Original program-specific color logic (uncomment to revert):
+        /*
         switch (program?.toLowerCase()) {
             case 'hhx': return 'HHX';
             case 'htx': return 'HTX';
@@ -36,6 +38,8 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
             case 'eud': return 'EUD';
             default: return 'Guld';
         }
+        */
+        return 'Guld';
     };
 
     const getDefaultSchoolEmbroideryColor = () => {

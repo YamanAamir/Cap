@@ -55,6 +55,8 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
         return 'Mat hagerem'; // Default button material
     };
     const getDefaultEmbroideryColor = () => {
+        // Original program-specific color logic (uncomment to revert):
+        /*
         switch (program?.toLowerCase()) {
             case 'hhx': return 'HHX';
             case 'htx': return 'HTX';
@@ -64,6 +66,8 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
             case 'eud': return 'EUD';
             default: return 'Guld';
         }
+        */
+        return 'Guld';
     };
     const getDefaultButtonColor = () => {
         return 'Guld'; // Default button color
