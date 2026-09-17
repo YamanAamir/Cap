@@ -157,10 +157,25 @@ export const pushEvent = (eventName, params = {}, sourceApp = '') => {
 
   // 1. Push to dataLayer for GTM
   window.dataLayer = window.dataLayer || [];
-  window.dataLayer.push({
-    event: eventName,
-    ...params
-  });
+  if (eventName === 'purchase') {
+    // Clear previous ecommerce object per Google Tag Manager best practice
+    window.dataLayer.push({ ecommerce: null });
+    window.dataLayer.push({
+      event: 'purchase',
+      ecommerce: {
+        transaction_id: params.transaction_id || params.order_ref,
+        value: params.value,
+        currency: params.currency || 'DKK',
+        items: params.items || []
+      },
+      ...params
+    });
+  } else {
+    window.dataLayer.push({
+      event: eventName,
+      ...params
+    });
+  }
 
   // 2. Send to GA4 / Google Ads when available
   if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
