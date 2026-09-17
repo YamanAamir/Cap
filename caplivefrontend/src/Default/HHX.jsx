@@ -6,7 +6,7 @@ const HHX = {
         Type: "HHX Guld"
       },
       UDDANNELSESBÅND: {
-        "Broderi farve": "HHX",
+        "Broderi farve": "Guld", // Originally "HHX"
         "Broderi foran": "",
         Hagerem: "Mat",
        
@@ -16,7 +16,7 @@ const HHX = {
         år: "2025"
       },
       BRODERI: {
-        Broderifarve: "HHX",
+        Broderifarve: "Guld", // Originally "HHX"
         // Ingen: false,
         "Navne broderi": "",
         Skolebroderi: "",

@@ -40,7 +40,7 @@ function App() {
       school: school 
     });
     pushEvent('configurator_started', {}, 'gradcap_configurator');
-    startRecording();
+    // startRecording();
   }, []);
 
   return (

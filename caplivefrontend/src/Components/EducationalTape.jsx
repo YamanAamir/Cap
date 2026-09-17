@@ -55,6 +55,8 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
         return 'Mat hagerem'; // Default button material
     };
     const getDefaultEmbroideryColor = () => {
+        // Original program-specific color logic (uncomment to revert):
+        /*
         switch (program?.toLowerCase()) {
             case 'hhx': return 'HHX';
             case 'htx': return 'HTX';
@@ -64,6 +66,8 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
             case 'eud': return 'EUD';
             default: return 'Guld';
         }
+        */
+        return 'Guld';
     };
     const getDefaultButtonColor = () => {
         return 'Guld'; // Default button color
@@ -290,11 +294,11 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
     useEffect(() => {
         const colorMap = {
             'sølv hagerem med sølvknuder': 'hagerem:sølv hagerem med sølvknuder',
-            'sølv hagerem med sort knuder': 'hagerem:sølv hagerem med sort knuder',
-            'sort hagerem med sølv knuder': 'hagerem:sort hagerem med sølv knuder',
+            'sølv hagerem med sort knuder': 'hagerem:sort hagerem med sølv knuder',
+            'sort hagerem med sølv knuder': 'hagerem:sølv hagerem med sort knuder',
             'guld hagerem med guld knuder': 'hagerem:guld hagerem med guld knuder',
-            'sort hagerem med guld knuder': 'hagerem:sort hagerem med guld knuder',
-            'guld hagerem med sort knuder': 'hagerem:guld hagerem med sort knuder',
+            'sort hagerem med guld knuder': 'hagerem:guld hagerem med sort knuder',
+            'guld hagerem med sort knuder': 'hagerem:sort hagerem med guld knuder',
             'mat': 'hagerem:mat',
             'shiny': 'hagerem:blank',
             'sort med sorteknuder': 'hagerem:sort med sorteknuder'

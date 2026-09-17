@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   getProductionBatches, generateProductionBatch, sendProductionBatch,
   getDispatchLogs, getSettings, updateSetting, getProductionBatch, getEmailTemplates,
-  getOrderStatuses, deleteProductionBatch
+  deleteProductionBatch
 } from '../services/admin.service';
 import { 
   Loader2, Send, FileSpreadsheet, Archive, CheckCircle2, Factory, 
@@ -23,9 +23,6 @@ const ProductionPage = () => {
   const [sending, setSending] = useState(false);
   const [manufacturerEmail, setManufacturerEmail] = useState('');
   const [autoExportDays, setAutoExportDays] = useState('0');
-  const [orderStatuses, setOrderStatuses] = useState([]);
-  const [defaultStatusId, setDefaultStatusId] = useState('');
-  const [targetStatusId, setTargetStatusId] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false });
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, batch: null, isDeleting: false });
@@ -45,35 +42,20 @@ const ProductionPage = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const [b, l, settings, tpls, allStatuses] = await Promise.all([
+      const [b, l, settings, tpls] = await Promise.all([
         getProductionBatches(),
         getDispatchLogs(),
         getSettings(),
-        getEmailTemplates(),
-        getOrderStatuses().catch(() => [])
+        getEmailTemplates()
       ]);
       setBatches(Array.isArray(b) ? b : []);
       setLogs(Array.isArray(l) ? l : []);
       setTemplates(Array.isArray(tpls) ? tpls : []);
-      const activeStatuses = Array.isArray(allStatuses) ? allStatuses.filter(s => s.isActive !== false) : [];
-      setOrderStatuses(activeStatuses);
 
       const mfg = settings.find(s => s.key === 'manufacturer_email');
       if (mfg?.value?.email) setManufacturerEmail(mfg.value.email);
       const autoExport = settings.find(s => s.key === 'auto_export_days');
       if (autoExport?.value?.days !== undefined) setAutoExportDays(autoExport.value.days.toString());
-      
-      const savedStatusSetting = settings.find(s => s.key === 'sent_to_manufacturer_status_id');
-      if (savedStatusSetting?.value?.statusId) {
-        setDefaultStatusId(savedStatusSetting.value.statusId.toString());
-        setTargetStatusId(savedStatusSetting.value.statusId.toString());
-      } else {
-        const defaultSt = activeStatuses.find(s => s.slug === 'sent-to-manufacturer' || s.name.toLowerCase().includes('sent to manufacturer'));
-        if (defaultSt) {
-          setDefaultStatusId(defaultSt.id.toString());
-          setTargetStatusId(defaultSt.id.toString());
-        }
-      }
     } catch (e) { 
       console.error(e); 
     } finally { 
@@ -220,11 +202,6 @@ const ProductionPage = () => {
 
   const handleSendClick = () => {
     if (!selectedBatch) return;
-    const finalStatusId = targetStatusId || defaultStatusId;
-    if (!finalStatusId) {
-      toast.error('Please select an order status before dispatching');
-      return;
-    }
     setConfirmModal({ isOpen: true });
   };
 
@@ -242,16 +219,10 @@ const ProductionPage = () => {
 
   const executeSend = async () => {
     if (!selectedBatch) return;
-    const finalStatusId = targetStatusId || defaultStatusId;
-    if (!finalStatusId) {
-      toast.error('Please select an order status before dispatching');
-      return;
-    }
     setSending(true);
     try {
       await sendProductionBatch(selectedBatch.id, {
         ...emailForm,
-        targetStatusId: parseInt(finalStatusId),
         sendExcel,
         sendZip
       });
@@ -283,15 +254,10 @@ const ProductionPage = () => {
   };
 
   const handleSaveManufacturerEmail = async () => {
-    if (!defaultStatusId) {
-      toast.error('Please select a default post-dispatch order status');
-      return;
-    }
     setSavingSettings(true);
     try {
       await updateSetting('manufacturer_email', { email: manufacturerEmail });
       await updateSetting('auto_export_days', { days: parseInt(autoExportDays) || 0 });
-      await updateSetting('sent_to_manufacturer_status_id', { statusId: parseInt(defaultStatusId) });
       toast.success('Production settings saved');
     } catch (e) {
       toast.error('Failed to save settings');
@@ -356,25 +322,6 @@ const ProductionPage = () => {
                 placeholder="e.g. 14 (0 to disable)"
                 className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
-            </div>
-
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">
-                Default Post-Dispatch Status <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={defaultStatusId}
-                onChange={e => {
-                  setDefaultStatusId(e.target.value);
-                  setTargetStatusId(e.target.value);
-                }}
-                className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
-              >
-                <option value="">-- Select Status (Required) --</option>
-                {orderStatuses.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
             </div>
 
             <div className="pt-2">
@@ -713,20 +660,6 @@ const ProductionPage = () => {
                     
                     <div className="p-4 space-y-3">
                       <div className="flex items-center border-b border-slate-100 pb-2">
-                        <span className="w-24 text-xs font-bold text-slate-500">Order Status:</span>
-                        <select
-                          value={targetStatusId || defaultStatusId}
-                          onChange={e => setTargetStatusId(e.target.value)}
-                          className="flex-1 text-xs bg-white border border-slate-200 rounded px-2.5 py-1.5 outline-none font-bold text-slate-700"
-                        >
-                          <option value="">-- Select Status upon Dispatch --</option>
-                          {orderStatuses.map(s => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="flex items-center border-b border-slate-100 pb-2">
                         <span className="w-24 text-xs font-bold text-slate-500">To:</span>
                         <input 
                           type="text"
@@ -760,9 +693,9 @@ const ProductionPage = () => {
                       <div className="space-y-2">
                         <button 
                           onClick={handleSendClick} 
-                          disabled={sending || !emailForm.recipientEmail || !emailForm.emailSubject || !emailForm.emailBody || !(targetStatusId || defaultStatusId)} 
+                          disabled={sending || !emailForm.recipientEmail || !emailForm.emailSubject || !emailForm.emailBody} 
                           className={cn("w-full text-white font-bold py-3.5 rounded shadow-sm transition-colors flex justify-center items-center text-sm",
-                            (sending || !emailForm.recipientEmail || !emailForm.emailSubject || !emailForm.emailBody || !(targetStatusId || defaultStatusId)) 
+                            (sending || !emailForm.recipientEmail || !emailForm.emailSubject || !emailForm.emailBody) 
                               ? "bg-slate-300 cursor-not-allowed text-slate-500" 
                               : "bg-[#1e3a8a] hover:bg-blue-800"
                           )}
@@ -777,11 +710,6 @@ const ProductionPage = () => {
                         {(!emailForm.emailSubject || !emailForm.emailBody) && (
                           <p className="text-center text-[10px] text-red-500 font-medium bg-red-50 py-1 rounded">
                             You must load an Email Template or enter a Subject and Body to dispatch.
-                          </p>
-                        )}
-                        {!(targetStatusId || defaultStatusId) && (
-                          <p className="text-center text-[10px] text-amber-600 font-medium bg-amber-50 py-1 rounded">
-                            Please select an Order Status to transition the batch orders to upon dispatch.
                           </p>
                         )}
                       </div>
