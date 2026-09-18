@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { pushEvent } from '../lib/tracking';
+import { pushEvent, getOrCreateVisitorId } from '../lib/tracking';
 
 const DEFAULT_STEPS = [
   "KOKARDE",
@@ -25,12 +25,37 @@ export const useProgressTracking = ({
   program = 'STX',
 }) => {
   const effectiveSteps = steps && steps.length > 0 ? steps : DEFAULT_STEPS;
+  const currentVisitorIdRef = useRef(getOrCreateVisitorId());
   const reachedMilestones = useRef(new Set());
   const visitedSteps = useRef(new Set());
   const stepStartTimeRef = useRef(Date.now());
   const timePerStepRef = useRef({});
   const prevStepRef = useRef(null);
   const isCompletedRef = useRef(false);
+
+  // Helper to reset progress tracking when visitorId changes
+  const resetTrackingState = useCallback((initialStep = "KOKARDE") => {
+    visitedSteps.current = new Set([initialStep || "KOKARDE"]);
+    reachedMilestones.current = new Set();
+    stepStartTimeRef.current = Date.now();
+    timePerStepRef.current = {};
+    prevStepRef.current = null;
+    isCompletedRef.current = false;
+  }, []);
+
+  // Listen for runtime visitor changes (e.g. cookie reset, new session)
+  useEffect(() => {
+    const handleVisitorChanged = (e) => {
+      const newId = e.detail?.visitorId || getOrCreateVisitorId();
+      currentVisitorIdRef.current = newId;
+      resetTrackingState(activeStep);
+    };
+
+    window.addEventListener('studentlife:visitor_changed', handleVisitorChanged);
+    return () => {
+      window.removeEventListener('studentlife:visitor_changed', handleVisitorChanged);
+    };
+  }, [activeStep, resetTrackingState]);
 
   // Helper to get total time spent across all steps
   const getTotalTimeSpent = useCallback(() => {
@@ -58,6 +83,12 @@ export const useProgressTracking = ({
   // Track Step Views, Time Spent, and Milestones on activeStep change
   useEffect(() => {
     if (!activeStep) return;
+
+    const currentVid = getOrCreateVisitorId();
+    if (currentVid !== currentVisitorIdRef.current) {
+      currentVisitorIdRef.current = currentVid;
+      resetTrackingState(activeStep);
+    }
 
     const now = Date.now();
     const prevStep = prevStepRef.current;

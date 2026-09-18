@@ -13,30 +13,79 @@ const generateUUID = () => {
   });
 };
 
-export const getOrCreateVisitorId = () => {
-  const cookieName = 'studentlife_visitor_id';
-  const match = document.cookie.match(new RegExp('(^| )' + cookieName + '=([^;]+)'));
-  
-  if (match) {
-    return match[2];
-  }
+let cachedVisitorId = null;
 
-  const newVisitorId = generateUUID();
-  
-  // Set cookie for 2 years
+export const setVisitorId = (newVisitorId) => {
+  if (!newVisitorId || typeof newVisitorId !== 'string') return;
+  const cookieName = 'studentlife_visitor_id';
   const expires = new Date();
   expires.setFullYear(expires.getFullYear() + 2);
-  
-  // Determine domain. Use .studentlife.dk for production, omit domain for localhost
   const domainString = window.location.hostname.includes('studentlife.dk') 
     ? '; domain=.studentlife.dk' 
     : '';
-    
   const isSecure = window.location.protocol === 'https:' ? '; Secure' : '';
 
   document.cookie = `${cookieName}=${newVisitorId}; expires=${expires.toUTCString()}${domainString}; path=/; SameSite=Lax${isSecure}`;
   
+  if (typeof sessionStorage !== 'undefined') {
+    sessionStorage.removeItem('studentlife_session_active');
+  }
+
+  const prevId = cachedVisitorId;
+  cachedVisitorId = newVisitorId;
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('studentlife:visitor_changed', {
+      detail: { visitorId: newVisitorId, previousVisitorId: prevId }
+    }));
+  }
+
   return newVisitorId;
+};
+
+export const resetVisitorSession = () => {
+  const newId = generateUUID();
+  return setVisitorId(newId);
+};
+
+export const getOrCreateVisitorId = () => {
+  const cookieName = 'studentlife_visitor_id';
+  const match = typeof document !== 'undefined' ? document.cookie.match(new RegExp('(^| )' + cookieName + '=([^;]+)')) : null;
+  
+  let currentId = null;
+  if (match) {
+    currentId = match[2];
+  } else {
+    currentId = generateUUID();
+    
+    // Set cookie for 2 years
+    const expires = new Date();
+    expires.setFullYear(expires.getFullYear() + 2);
+    
+    // Determine domain. Use .studentlife.dk for production, omit domain for localhost
+    const domainString = typeof window !== 'undefined' && window.location.hostname.includes('studentlife.dk') 
+      ? '; domain=.studentlife.dk' 
+      : '';
+      
+    const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
+
+    if (typeof document !== 'undefined') {
+      document.cookie = `${cookieName}=${currentId}; expires=${expires.toUTCString()}${domainString}; path=/; SameSite=Lax${isSecure}`;
+    }
+  }
+
+  // Detect runtime visitor ID transition
+  if (cachedVisitorId && cachedVisitorId !== currentId && typeof window !== 'undefined') {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem('studentlife_session_active');
+    }
+    window.dispatchEvent(new CustomEvent('studentlife:visitor_changed', {
+      detail: { visitorId: currentId, previousVisitorId: cachedVisitorId }
+    }));
+  }
+
+  cachedVisitorId = currentId;
+  return currentId;
 };
 
 // This needs to be configured based on the environment

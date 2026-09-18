@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Printer, Download, Mail, CheckCircle, Package, Star, User, CreditCard, ArrowLeft, ArrowRight, Loader2, ShoppingCart, Settings, Tag } from 'lucide-react';
 import { loadStripe } from "@stripe/stripe-js";
 import { useRef } from 'react';
-import { pushEvent } from '../lib/tracking';
+import { pushEvent, identifyVisitor } from '../lib/tracking';
 import { captureCapViews } from '../utils/capCapture';
 import { validateDiscountCode } from '../services/marketing.api';
 
@@ -502,11 +502,48 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       const { id: sessionId } = stripeData;
       const stripe = await stripePromise;
 
+      const customerName = `${customerDetails.firstName || ''} ${customerDetails.lastName || ''}`.trim();
+
       pushEvent('checkout_started', {
-        value: orderData.totalAmount || 0,
+        value: orderData.totalPrice || orderData.totalAmount || finalPrice || 0,
         currency: 'DKK',
-        package: orderData.packageName
+        package: orderData.packageName || packageName,
+        program: program,
+        name: customerName,
+        firstName: customerDetails.firstName,
+        lastName: customerDetails.lastName,
+        email: customerDetails.email,
+        phone: cleanPhone,
+        fullPhone: fullFormattedPhone,
+        school: customerDetails.Skolenavn,
+        schoolName: customerDetails.Skolenavn,
+        address: customerDetails.address,
+        city: customerDetails.city,
+        postalCode: customerDetails.postalCode,
+        country: customerDetails.country,
+        deliveryType: customerDetails.deliveryType,
+        deliverToSchool: customerDetails.deliverToSchool,
+        notes: customerDetails.notes,
+        isInstallment: isInstallment,
       }, 'gradcap_configurator');
+
+      identifyVisitor('graduation_cap', 'gradcap_configurator', {
+        name: customerName,
+        firstName: customerDetails.firstName,
+        lastName: customerDetails.lastName,
+        email: customerDetails.email,
+        phone: cleanPhone,
+        fullPhone: fullFormattedPhone,
+        school: customerDetails.Skolenavn,
+        schoolName: customerDetails.Skolenavn,
+        educationType: program,
+        package: packageName,
+        address: customerDetails.address,
+        city: customerDetails.city,
+        postalCode: customerDetails.postalCode,
+        country: customerDetails.country,
+        notes: customerDetails.notes,
+      });
 
       // 3️⃣ Redirect to Stripe Checkout
       await stripe.redirectToCheckout({ sessionId });
@@ -1335,6 +1372,49 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
                       if (!validateCustomerDetails()) {
                         return;
                       }
+
+                      const customerName = `${customerDetails.firstName || ''} ${customerDetails.lastName || ''}`.trim();
+                      const cleanCountryCode = (customerDetails.countryCode || '').replace(/\D/g, '');
+                      const cleanPhone = (customerDetails.phone || '').replace(/\D/g, '');
+                      const fullPhone = cleanCountryCode && cleanPhone ? `+${cleanCountryCode}${cleanPhone}` : cleanPhone;
+
+                      identifyVisitor('graduation_cap', 'gradcap_configurator', {
+                        name: customerName,
+                        firstName: customerDetails.firstName,
+                        lastName: customerDetails.lastName,
+                        email: customerDetails.email,
+                        phone: cleanPhone,
+                        fullPhone: fullPhone,
+                        school: customerDetails.Skolenavn,
+                        schoolName: customerDetails.Skolenavn,
+                        educationType: program,
+                        package: packageName,
+                        address: customerDetails.address,
+                        city: customerDetails.city,
+                        postalCode: customerDetails.postalCode,
+                        country: customerDetails.country,
+                        notes: customerDetails.notes,
+                      });
+
+                      pushEvent('checkout_step_completed', {
+                        step: 'delivery_details',
+                        step_number: 2,
+                        name: customerName,
+                        firstName: customerDetails.firstName,
+                        lastName: customerDetails.lastName,
+                        email: customerDetails.email,
+                        phone: cleanPhone,
+                        fullPhone: fullPhone,
+                        school: customerDetails.Skolenavn,
+                        schoolName: customerDetails.Skolenavn,
+                        address: customerDetails.address,
+                        city: customerDetails.city,
+                        postalCode: customerDetails.postalCode,
+                        country: customerDetails.country,
+                        notes: customerDetails.notes,
+                        package: packageName,
+                        program: program,
+                      }, 'gradcap_configurator');
                     }
                     setCurrentStep(prev => prev + 1);
                   }}
