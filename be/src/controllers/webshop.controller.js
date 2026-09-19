@@ -667,37 +667,10 @@ exports.adminUpdateEmailTemplate = async (req, res) => {
 
 exports.adminGetEmailTemplates = async (req, res) => {
   try {
-    let templates = await prisma.webshopEmailTemplate.findMany({
+    const templates = await prisma.webshopEmailTemplate.findMany({
       include: { webshopStatuses: true },
       orderBy: { sortOrder: 'asc' },
     });
-
-    if (templates.length === 0) {
-      await prisma.webshopEmailTemplate.createMany({
-        data: [
-          {
-            key: 'ORDER_CONFIRMATION',
-            name: 'Order Confirmation Email',
-            subject: 'Order Confirmation - {order_number}',
-            body: '<h2>Thank you for your order!</h2><p>Hi {customer_name},</p><p>We have received your order <strong>{order_number}</strong> for total {order_total}.</p>',
-            isActive: true,
-            sortOrder: 1,
-          },
-          {
-            key: 'ORDER_SHIPPED',
-            name: 'Order Shipped Email',
-            subject: 'Your order {order_number} has been shipped!',
-            body: '<h2>Your Order is on the way!</h2><p>Hi {customer_name},</p><p>Your order <strong>{order_number}</strong> has been shipped and is on its way to you.</p>',
-            isActive: true,
-            sortOrder: 2,
-          },
-        ],
-      });
-      templates = await prisma.webshopEmailTemplate.findMany({
-        include: { webshopStatuses: true },
-        orderBy: { sortOrder: 'asc' },
-      });
-    }
 
     return res.status(200).json({ success: true, data: templates });
   } catch (error) {
@@ -720,8 +693,8 @@ exports.adminCreateEmailTemplate = async (req, res) => {
         name,
         subject,
         body: body || '',
-        isActive: Boolean(isActive),
         sortOrder: parseInt(sortOrder) || 0,
+        isActive: Boolean(isActive),
       },
     });
 
@@ -743,8 +716,8 @@ exports.adminUpdateEmailTemplateById = async (req, res) => {
         ...(name && { name }),
         ...(subject && { subject }),
         ...(body !== undefined && { body }),
-        ...(isActive !== undefined && { isActive: Boolean(isActive) }),
         ...(sortOrder !== undefined && { sortOrder: parseInt(sortOrder) || 0 }),
+        ...(isActive !== undefined && { isActive: Boolean(isActive) }),
       },
     });
 
@@ -798,32 +771,10 @@ exports.adminReorderEmailTemplates = async (req, res) => {
 
 exports.adminGetStatuses = async (req, res) => {
   try {
-    let statuses = await prisma.webshopOrderStatus.findMany({
+    const statuses = await prisma.webshopOrderStatus.findMany({
       include: { emailTemplate: true },
       orderBy: { sortOrder: 'asc' },
     });
-
-    if (statuses.length === 0) {
-      const confirmationTpl = await prisma.webshopEmailTemplate.findFirst({ where: { key: 'ORDER_CONFIRMATION' } });
-      const shippedTpl = await prisma.webshopEmailTemplate.findFirst({ where: { key: 'ORDER_SHIPPED' } });
-
-      const defaultStatuses = [
-        { name: 'Pending', slug: 'PENDING', color: '#f59e0b', sortOrder: 1, webshopEmailTemplateId: confirmationTpl ? confirmationTpl.id : null },
-        { name: 'Processing', slug: 'PROCESSING', color: '#3b82f6', sortOrder: 2 },
-        { name: 'Shipped', slug: 'SHIPPED', color: '#6366f1', sortOrder: 3, webshopEmailTemplateId: shippedTpl ? shippedTpl.id : null },
-        { name: 'Delivered', slug: 'DELIVERED', color: '#10b981', sortOrder: 4 },
-        { name: 'Cancelled', slug: 'CANCELLED', color: '#ef4444', sortOrder: 5 },
-      ];
-
-      for (const st of defaultStatuses) {
-        await prisma.webshopOrderStatus.create({ data: st });
-      }
-
-      statuses = await prisma.webshopOrderStatus.findMany({
-        include: { emailTemplate: true },
-        orderBy: { sortOrder: 'asc' },
-      });
-    }
 
     return res.status(200).json({ success: true, data: statuses });
   } catch (error) {
