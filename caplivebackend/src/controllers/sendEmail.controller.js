@@ -3771,6 +3771,12 @@ const stripeWebhook = async (req, res) => {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
 
+    if (session.metadata && session.metadata.isWebshop === 'true') {
+      const { handleWebshopCheckoutSuccess } = require('./webshop.controller');
+      await handleWebshopCheckoutSuccess(session);
+      return res.json({ received: true });
+    }
+
     if (session.metadata.type === 'installment_payment') {
       try {
         const orderId = parseInt(session.metadata.orderId);

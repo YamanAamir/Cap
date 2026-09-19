@@ -1,0 +1,508 @@
+import React, { useState, useEffect } from 'react';
+import { Search, ShoppingBag, Eye, X, CheckCircle2, Clock, Truck, AlertCircle, RefreshCw, Tag, Filter } from 'lucide-react';
+import toast from 'react-hot-toast';
+import ConfirmModal from '../../components/common/ConfirmModal';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+const WebshopOrdersPage = () => {
+  const [orders, setOrders] = useState([]);
+  const [statuses, setStatuses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [updatingOrderId, setUpdatingOrderId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState('all');
+  const [selectedOrder, setSelectedOrder] = useState(null);
+
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'primary',
+    confirmText: 'Confirm',
+    loading: false,
+    onConfirm: null,
+  });
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [ordRes, stRes] = await Promise.all([
+        fetch(`${API_URL}/webshop/admin/orders`),
+        fetch(`${API_URL}/webshop/admin/statuses`),
+      ]);
+      const ordData = await ordRes.json();
+      const stData = await stRes.json();
+
+      if (ordData.success) {
+        setOrders(ordData.data);
+      }
+      if (stData.success) {
+        setStatuses(stData.data);
+      }
+    } catch (error) {
+      console.error('Error fetching webshop orders and statuses:', error);
+      toast.error('Failed to load orders');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const handleRequestUpdateStatus = (orderId, orderNumber, newStatus) => {
+    const statusObj = statuses.find(
+      (s) => s.slug === newStatus || s.name.toUpperCase() === newStatus.toUpperCase()
+    );
+    const hasEmail = statusObj && statusObj.emailTemplate && statusObj.emailTemplate.isActive;
+    const emailNotice = hasEmail
+      ? ` (Attached email "${statusObj.emailTemplate.name}" will be automatically sent to customer)`
+      : '';
+
+    setConfirmModal({
+      isOpen: true,
+      title: 'Update Order Status',
+      message: `Are you sure you want to change order #${orderNumber} status to "${newStatus}"?${emailNotice}`,
+      type: 'primary',
+      confirmText: `Update to ${newStatus}`,
+      loading: false,
+      onConfirm: () => executeUpdateStatus(orderId, newStatus),
+    });
+  };
+
+  const executeUpdateStatus = async (orderId, newStatus) => {
+    try {
+      setUpdatingOrderId(orderId);
+      setConfirmModal((prev) => ({ ...prev, loading: true }));
+      const res = await fetch(`${API_URL}/webshop/admin/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderStatus: newStatus }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Order status updated to ${newStatus}`);
+        setConfirmModal((prev) => ({ ...prev, isOpen: false, loading: false }));
+        fetchData();
+        if (selectedOrder && selectedOrder.id === orderId) {
+          setSelectedOrder({ ...selectedOrder, orderStatus: newStatus });
+        }
+      } else {
+        toast.error(data.message || 'Failed to update status');
+        setConfirmModal((prev) => ({ ...prev, loading: false }));
+      }
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      toast.error('Status update failed');
+      setConfirmModal((prev) => ({ ...prev, loading: false }));
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
+
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, selectedStatusFilter, limit]);
+
+  const filteredOrders = orders.filter((order) => {
+    const matchesSearch =
+      order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.customerEmail.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (order.customerDetails?.name && order.customerDetails.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const matchesStatus =
+      selectedStatusFilter === 'all' ||
+      (order.orderStatus && order.orderStatus.toLowerCase() === selectedStatusFilter.toLowerCase());
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const totalPages = Math.ceil(filteredOrders.length / limit) || 1;
+  const paginatedOrders = filteredOrders.slice((page - 1) * limit, page * limit);
+
+  const getStatusBadge = (statusName) => {
+    const matched = statuses.find(
+      (s) => s.slug === statusName || s.name.toLowerCase() === (statusName || '').toLowerCase()
+    );
+    const color = matched?.color || '#6366f1';
+
+    return (
+      <span
+        className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full border shadow-sm"
+        style={{
+          backgroundColor: `${color}15`,
+          borderColor: `${color}40`,
+          color: color,
+        }}
+      >
+        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+        {statusName}
+      </span>
+    );
+  };
+
+  return (
+    <div className="animate-in fade-in duration-500 max-w-[1400px] mx-auto pb-12">
+      {/* Confirm Status Change Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText={confirmModal.confirmText}
+        loading={confirmModal.loading}
+      />
+
+      {/* Top Controls */}
+      <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div className="relative w-full sm:w-[260px]">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search orders..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-500" />
+            <select
+              value={selectedStatusFilter}
+              onChange={(e) => setSelectedStatusFilter(e.target.value)}
+              className="px-3 py-2 border border-slate-200 rounded text-sm font-semibold text-slate-700 bg-white focus:outline-none focus:border-blue-500 cursor-pointer"
+            >
+              <option value="all">All Statuses ({orders.length})</option>
+              {statuses.map((st) => {
+                const count = orders.filter(
+                  (o) => o.orderStatus && o.orderStatus.toLowerCase() === st.slug.toLowerCase()
+                ).length;
+                return (
+                  <option key={st.id} value={st.slug}>
+                    {st.name} ({count})
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        </div>
+
+        <button 
+          onClick={fetchData}
+          className="flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 h-9 w-9 rounded border border-slate-200 transition-colors"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+
+      {/* Table Section */}
+      <div className="bg-white rounded border border-slate-200 overflow-x-auto relative">
+        {loading && (
+          <div className="absolute top-0 left-0 right-0 h-1 bg-blue-100 overflow-hidden z-20">
+            <div className="h-full bg-blue-500 animate-pulse w-1/3 rounded-r-full"></div>
+          </div>
+        )}
+
+        <table className="w-full text-left text-sm whitespace-nowrap">
+          <thead className="bg-[#fafafa] border-b border-slate-200">
+            <tr>
+              <th className="px-6 py-4 font-bold text-slate-500">Order #</th>
+              <th className="px-6 py-4 font-bold text-slate-500">Date</th>
+              <th className="px-6 py-4 font-bold text-slate-500">Customer Details</th>
+              <th className="px-6 py-4 font-bold text-slate-500">Current Status</th>
+              <th className="px-6 py-4 font-bold text-slate-500 text-right">Total Amount</th>
+              <th className="px-6 py-4 font-bold text-slate-500 text-center w-16">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {filteredOrders.length === 0 && !loading ? (
+              <tr>
+                <td colSpan="6" className="px-6 py-8 text-center text-slate-500 font-medium">No webshop orders found.</td>
+              </tr>
+            ) : (
+              paginatedOrders.map((order) => {
+                const customerName = order.customerDetails?.name || 'Guest Checkout';
+                const isUpdatingThis = updatingOrderId === order.id;
+                return (
+                  <tr key={order.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4 font-bold text-slate-700">{order.orderNumber}</td>
+                    <td className="px-6 py-4 text-slate-600">
+                      {new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-bold text-slate-700">{order.customerEmail}</span>
+                        <span className="text-xs text-slate-400">{customerName}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {isUpdatingThis ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Updating...
+                        </span>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          {getStatusBadge(order.orderStatus)}
+                          <select
+                            value={order.orderStatus}
+                            onChange={(e) => handleRequestUpdateStatus(order.id, order.orderNumber, e.target.value)}
+                            className="text-xs font-bold py-1 px-2 rounded border border-slate-200 bg-white focus:outline-none cursor-pointer"
+                          >
+                            {statuses.map((st) => (
+                              <option key={st.id} value={st.slug}>
+                                Change to: {st.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-right font-bold text-slate-800">
+                      {order.totalAmount} {order.currency}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <button
+                        onClick={() => setSelectedOrder(order)}
+                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        title="View Order Details"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination Footer */}
+      <div className="mt-4 px-5 py-4 bg-slate-50 border border-slate-200 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4 text-sm shrink-0">
+        <div className="flex items-center gap-2 text-slate-600">
+          <span>Show</span>
+          <select
+            value={limit}
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setPage(1);
+            }}
+            className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:border-blue-500 bg-white font-bold"
+          >
+            {[5, 10, 20, 50, 100].map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+          <span>entries</span>
+        </div>
+
+        <div className="text-slate-500 font-medium">
+          {filteredOrders.length > 0 ? (
+            <>
+              Showing <span className="font-bold text-slate-800">{(page - 1) * limit + 1}</span> to{' '}
+              <span className="font-bold text-slate-800">{Math.min(page * limit, filteredOrders.length)}</span> of{' '}
+              <span className="font-bold text-slate-800">{filteredOrders.length}</span> orders
+            </>
+          ) : (
+            'No orders to display'
+          )}
+        </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+              disabled={page === 1}
+              className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+              .map((p, index, array) => {
+                const showEllipsis = index > 0 && p - array[index - 1] > 1;
+                return (
+                  <React.Fragment key={p}>
+                    {showEllipsis && <span className="px-2 text-slate-400">...</span>}
+                    <button
+                      onClick={() => setPage(p)}
+                      className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${
+                        page === p
+                          ? 'bg-[#1e3a8a] text-white shadow-sm'
+                          : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+
+            <button
+              onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={page === totalPages}
+              className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Order Details Modal */}
+      {selectedOrder && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden my-8">
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">
+                  Order Details: {selectedOrder.orderNumber}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Confirmed via Stripe on {new Date(selectedOrder.createdAt).toLocaleString()}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedOrder(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1 space-y-6 text-sm">
+              {/* Status Selector */}
+              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
+                <div>
+                  <div className="text-xs font-semibold text-slate-500 uppercase">Change Order Status</div>
+                  <div className="mt-1">{getStatusBadge(selectedOrder.orderStatus)}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {updatingOrderId === selectedOrder.id && (
+                    <RefreshCw className="w-4 h-4 animate-spin text-[#1e3a8a]" />
+                  )}
+                  <select
+                    value={selectedOrder.orderStatus}
+                    disabled={updatingOrderId === selectedOrder.id}
+                    onChange={(e) =>
+                      handleRequestUpdateStatus(selectedOrder.id, selectedOrder.orderNumber, e.target.value)
+                    }
+                    className="px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#1e3a8a] disabled:opacity-50"
+                  >
+                    {statuses.length > 0 ? (
+                      statuses.map((st) => (
+                        <option key={st.id} value={st.slug || st.name}>
+                          {st.name} {st.emailTemplate ? '📧' : ''}
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="PENDING">PENDING</option>
+                        <option value="PROCESSING">PROCESSING</option>
+                        <option value="SHIPPED">SHIPPED</option>
+                        <option value="DELIVERED">DELIVERED</option>
+                        <option value="CANCELLED">CANCELLED</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              {/* Customer Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border border-slate-200 p-4 rounded-xl">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Customer Information</h4>
+                  <div className="font-semibold text-slate-900">{selectedOrder.customerDetails?.name || 'N/A'}</div>
+                  <div className="text-slate-600">{selectedOrder.customerEmail}</div>
+                  <div className="text-slate-600">{selectedOrder.customerDetails?.phone || 'No phone provided'}</div>
+                </div>
+
+                <div>
+                  <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Shipping Address</h4>
+                  {selectedOrder.shippingAddress ? (
+                    <div className="text-slate-700">
+                      <div>{selectedOrder.shippingAddress.address}</div>
+                      <div>
+                        {selectedOrder.shippingAddress.zip} {selectedOrder.shippingAddress.city}
+                      </div>
+                      <div>{selectedOrder.shippingAddress.country || 'Denmark'}</div>
+                    </div>
+                  ) : (
+                    <div className="text-slate-400 italic">No shipping address provided</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Order Items Table */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-500 uppercase mb-3">Order Items</h4>
+                <div className="border border-slate-200 rounded-xl overflow-hidden">
+                  <table className="w-full text-left">
+                    <thead className="bg-slate-50 text-slate-600 text-xs font-semibold uppercase">
+                      <tr>
+                        <th className="p-3">Product</th>
+                        <th className="p-3 text-center">Qty</th>
+                        <th className="p-3 text-right">Price</th>
+                        <th className="p-3 text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {(Array.isArray(selectedOrder.items) ? selectedOrder.items : []).map((item, idx) => {
+                        const itemTotal = (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 1);
+                        return (
+                          <tr key={idx}>
+                            <td className="p-3 font-semibold text-slate-900">{item.title || 'Product'}</td>
+                            <td className="p-3 text-center font-bold">{item.quantity}</td>
+                            <td className="p-3 text-right">{item.price} DKK</td>
+                            <td className="p-3 text-right font-bold text-slate-900">{itemTotal.toFixed(2)} DKK</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between font-bold text-base text-slate-900">
+                    <span>Total Amount Paid</span>
+                    <span className="text-[#1e3a8a]">
+                      {selectedOrder.totalAmount} {selectedOrder.currency}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stripe Session Info */}
+              <div className="text-xs text-slate-400 font-mono bg-slate-50 p-3 rounded-lg border border-slate-200">
+                Stripe Session ID: {selectedOrder.stripeSessionId || 'N/A'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText={confirmModal.confirmText}
+        loading={confirmModal.loading}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+      />
+    </div>
+  );
+};
+
+export default WebshopOrdersPage;

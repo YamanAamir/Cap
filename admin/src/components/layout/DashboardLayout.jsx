@@ -4,12 +4,24 @@ import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, ShoppingCart, LogOut, Menu, Flag, Users, Factory,
   ListOrdered, Tag, MessageSquare, FileSpreadsheet, Mail, Settings, CreditCard,
-  Image as ImageIcon
+  Image as ImageIcon, ShoppingBag, Globe
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import logo from '../../assets/logo.png';
-const getNavItems = (role) => {
+
+const getNavItems = (role, mode) => {
+  if (mode === 'web') {
+    return [
+      { title: 'Dashboard', icon: LayoutDashboard, path: '/dashboard/webshop' },
+      { title: 'Products', icon: ShoppingBag, path: '/dashboard/webshop/products' },
+      { title: 'Orders', icon: ShoppingCart, path: '/dashboard/webshop/orders' },
+      { title: 'Customers', icon: Users, path: '/dashboard/webshop/customers' },
+      { title: 'Order Statuses', icon: ListOrdered, path: '/dashboard/webshop/statuses' },
+      { title: 'Email Templates', icon: Mail, path: '/dashboard/webshop/emails' },
+    ];
+  }
+
   if (role === 'production') {
     return [
       { title: 'Production Tasks', icon: Factory, path: '/dashboard/factory' },
@@ -53,6 +65,13 @@ const pageTitles = {
   '/dashboard/users': 'Users & Roles',
   '/dashboard/factory': 'Factory Tasks',
   '/dashboard/factory/media': 'Factory Media Gallery',
+
+  '/dashboard/webshop': 'Webshop Dashboard',
+  '/dashboard/webshop/products': 'Webshop Products',
+  '/dashboard/webshop/orders': 'Webshop Orders',
+  '/dashboard/webshop/customers': 'Webshop Customers',
+  '/dashboard/webshop/statuses': 'Webshop Order Statuses',
+  '/dashboard/webshop/emails': 'Webshop Email Templates',
 };
 
 const pageSubtitles = {
@@ -72,6 +91,13 @@ const pageSubtitles = {
   '/dashboard/users': 'Manage Admin Permissions',
   '/dashboard/factory': 'Manage Production Queue',
   '/dashboard/factory/media': 'Artwork & images for production queue orders',
+
+  '/dashboard/webshop': 'Webshop sales, revenue & product metrics',
+  '/dashboard/webshop/products': 'Manage catalog, prices, descriptions & stock',
+  '/dashboard/webshop/orders': 'Confirmed webshop orders & Stripe payments',
+  '/dashboard/webshop/customers': 'Registered customers from webshop sales',
+  '/dashboard/webshop/statuses': 'Manage custom order statuses and email attachments',
+  '/dashboard/webshop/emails': 'Configure email templates and message content',
 };
 
 const DashboardLayout = () => {
@@ -80,6 +106,49 @@ const DashboardLayout = () => {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+
+  // Mode switcher: 'cap' (default) or 'web'
+  const [dashboardMode, setDashboardMode] = useState(() => {
+    if (location.pathname.startsWith('/dashboard/webshop')) return 'web';
+    return 'cap';
+  });
+
+  useEffect(() => {
+    if (user?.role === 'production' && !location.pathname.startsWith('/dashboard/factory')) {
+      navigate('/dashboard/factory', { replace: true });
+    }
+  }, [user, location.pathname, navigate]);
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/dashboard/webshop')) {
+      setDashboardMode('web');
+    } else {
+      setDashboardMode('cap');
+    }
+  }, [location.pathname]);
+
+  const [isSwitching, setIsSwitching] = useState(false);
+  const [switchingTarget, setSwitchingTarget] = useState('');
+
+  const handleSwitchMode = (newMode) => {
+    if (newMode === dashboardMode && !isSwitching) return;
+
+    setIsSwitching(true);
+    setSwitchingTarget(newMode);
+    setDashboardMode(newMode);
+    localStorage.setItem('cap_dashboard_mode', newMode);
+
+    if (newMode === 'web') {
+      navigate('/dashboard/webshop');
+    } else {
+      navigate('/dashboard');
+    }
+
+    // Smooth real-time load transition while target dashboard page & data mount
+    setTimeout(() => {
+      setIsSwitching(false);
+    }, 850);
+  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -105,6 +174,8 @@ const DashboardLayout = () => {
 
   const handleLogout = async () => {
     try {
+      localStorage.removeItem('cap_dashboard_mode');
+      setDashboardMode('cap');
       await logout();
       navigate('/login');
     } catch (error) {
@@ -113,7 +184,9 @@ const DashboardLayout = () => {
   };
 
   const isActive = (path) => {
-    if (path === '/dashboard') return location.pathname === '/dashboard';
+    if (path === '/dashboard' || path === '/dashboard/webshop' || path === '/dashboard/factory') {
+      return location.pathname === path || (path === '/dashboard/factory' && location.pathname.startsWith('/dashboard/factory/orders/'));
+    }
     return location.pathname.startsWith(path);
   };
 
@@ -174,8 +247,25 @@ const DashboardLayout = () => {
           )}
         </div>
 
+        {/* Dashboard View Indicator Banner in Sidebar */}
+        {(isSidebarOpen || isMobile) && user?.role !== 'production' && (
+          <div className="mx-4 mt-3 px-3 py-2 bg-slate-100 rounded-lg flex items-center gap-2 text-xs font-bold text-slate-700 border border-slate-200">
+            {dashboardMode === 'web' ? (
+              <>
+                <Globe className="w-4 h-4 text-[#1e3a8a]" />
+                <span>Web Dashboard View</span>
+              </>
+            ) : (
+              <>
+                <LayoutDashboard className="w-4 h-4 text-[#1e3a8a]" />
+                <span>Cap Dashboard View</span>
+              </>
+            )}
+          </div>
+        )}
+
         <nav className="flex-1 py-4 overflow-y-auto custom-scrollbar space-y-1">
-          {getNavItems(user?.role).map((item) => {
+          {getNavItems(user?.role, dashboardMode).map((item) => {
             const active = isActive(item.path);
             return (
               <Link
@@ -236,12 +326,38 @@ const DashboardLayout = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-5 md:gap-8">
-            <div className="hidden md:flex flex-col items-end">
+          <div className="flex items-center gap-4 md:gap-6">
+            {/* Dashboard Mode Switcher */}
+            {user?.role !== 'production' && (
+              <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => handleSwitchMode('cap')}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-bold rounded-lg transition-all",
+                    dashboardMode === 'cap' ? "bg-white text-[#1e3a8a] shadow-sm" : "text-slate-600 hover:text-slate-900"
+                  )}
+                >
+                  Cap Dashboard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSwitchMode('web')}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-bold rounded-lg transition-all",
+                    dashboardMode === 'web' ? "bg-[#1e3a8a] text-white shadow-sm" : "text-slate-600 hover:text-slate-900"
+                  )}
+                >
+                  Web Dashboard
+                </button>
+              </div>
+            )}
+
+            <div className="hidden lg:flex flex-col items-end">
               <span className="text-[10px] text-slate-500 leading-none mb-1">Hello,</span>
               <span className="text-sm font-bold text-slate-900 leading-none">{user?.name || 'Admin User'}</span>
             </div>
-            <div className="hidden md:block w-px h-8 bg-slate-200"></div>
+            <div className="hidden lg:block w-px h-8 bg-slate-200"></div>
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-bold text-xs uppercase tracking-wider transition-colors"
@@ -256,6 +372,29 @@ const DashboardLayout = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Real-time Dashboard Switcher Loading Overlay */}
+      {isSwitching && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-8 max-w-sm w-full text-center space-y-4 transform transition-all scale-100">
+            <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full border-4 border-blue-100 border-t-[#1e3a8a] animate-spin" />
+              <Globe className="w-7 h-7 text-[#1e3a8a] animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">
+                Switching to {switchingTarget === 'web' ? 'Web Dashboard' : 'Cap Dashboard'}
+              </h3>
+              <p className="text-xs text-slate-500 font-medium mt-1">
+                Loading real-time workspace & page data...
+              </p>
+            </div>
+            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+              <div className="bg-[#1e3a8a] h-full animate-pulse w-full rounded-full" />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

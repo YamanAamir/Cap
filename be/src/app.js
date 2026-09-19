@@ -9,6 +9,7 @@ const authRoutes = require('./routes/auth.routes');
 const orderRoutes = require('./routes/order.routes');
 const adminRoutes = require('./routes/admin.routes');
 const marketingRoutes = require('./routes/marketing.routes');
+const webshopRoutes = require('./routes/webshop.routes');
 const cookieParser = require('cookie-parser');
 
 const app = express();
@@ -77,6 +78,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/marketing', marketingRoutes);
+app.use('/api/webshop', webshopRoutes);
 
 // root
 app.get('/', (req, res) => {

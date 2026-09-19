@@ -247,3 +247,75 @@ model InstallmentPlan {
   updatedAt           DateTime @updatedAt
   orders              Order[]
 }
+
+model WebshopProduct {
+  id               Int      @id @default(autoincrement())
+  title            String
+  slug             String   @unique
+  shortDescription String?  @db.Text
+  longDescription  String?  @db.Text
+  price            Float    @default(0)
+  stockCount       Int      @default(0)
+  isActive         Boolean  @default(true)
+  isOutOfStock     Boolean  @default(false)
+  images           Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model WebshopCustomer {
+  id        Int            @id @default(autoincrement())
+  name      String
+  email     String         @unique
+  phone     String?
+  address   Json?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  orders    WebshopOrder[]
+}
+
+model WebshopOrder {
+  id                Int              @id @default(autoincrement())
+  orderNumber       String           @unique
+  stripeSessionId   String?          @unique
+  customerEmail     String
+  customerDetails   Json
+  shippingAddress   Json?
+  items             Json
+  totalAmount       Float
+  currency          String           @default("DKK")
+  paymentStatus     String           @default("PAID")
+  orderStatus       String           @default("PENDING")
+  orderDate         DateTime         @default(now())
+  webshopCustomerId Int?
+  webshopCustomer   WebshopCustomer? @relation(fields: [webshopCustomerId], references: [id])
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+}
+
+model WebshopEmailTemplate {
+  id              Int                  @id @default(autoincrement())
+  key             String               @unique
+  name            String?
+  subject         String
+  body            String               @db.Text
+  isActive        Boolean              @default(true)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  webshopStatuses WebshopOrderStatus[]
+}
+
+model WebshopOrderStatus {
+  id                     Int                   @id @default(autoincrement())
+  name                   String                @unique
+  slug                   String                @unique
+  color                  String                @default("#6366f1")
+  sortOrder              Int                   @default(0)
+  isActive               Boolean               @default(true)
+  webshopEmailTemplateId Int?
+  emailTemplate          WebshopEmailTemplate? @relation(fields: [webshopEmailTemplateId], references: [id], onDelete: SetNull)
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+}
+
+

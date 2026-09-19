@@ -20,8 +20,9 @@ const LoginPage = () => {
     setErr('');
     setIsLoading(true);
     try {
+      localStorage.removeItem('cap_dashboard_mode');
       await login(email, password);
-      navigate(from, { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (error) {
       setErr(error.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {

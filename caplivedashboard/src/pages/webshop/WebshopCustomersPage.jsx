@@ -1,0 +1,197 @@
+import React, { useState, useEffect } from 'react';
+import { Search, Users, Mail, Phone, Calendar, ShoppingBag, RefreshCw } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+const WebshopCustomersPage = () => {
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_URL}/webshop/admin/customers`);
+      const data = await res.json();
+      if (data.success) {
+        setCustomers(data.data);
+      } else {
+        toast.error(data.message || 'Failed to fetch webshop customers');
+      }
+    } catch (error) {
+      console.error('Error fetching webshop customers:', error);
+      toast.error('Failed to load customers');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
+
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, limit]);
+
+  const filteredCustomers = customers.filter(c =>
+    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (c.phone && c.phone.includes(searchQuery))
+  );
+
+  const totalPages = Math.ceil(filteredCustomers.length / limit) || 1;
+  const paginatedCustomers = filteredCustomers.slice((page - 1) * limit, page * limit);
+
+  return (
+    <div className="animate-in fade-in duration-500 max-w-[1400px] mx-auto pb-12">
+      {/* Top Controls */}
+      <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+        <div className="relative w-full md:w-[300px]">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search customers..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
+
+        <button 
+          onClick={fetchCustomers}
+          className="flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 h-9 w-9 rounded border border-slate-200 transition-colors"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+
+      {/* Table Section */}
+      <div className="bg-white rounded border border-slate-200 overflow-x-auto relative">
+        {loading && (
+          <div className="absolute top-0 left-0 right-0 h-1 bg-blue-100 overflow-hidden z-20">
+            <div className="h-full bg-blue-500 animate-pulse w-1/3 rounded-r-full"></div>
+          </div>
+        )}
+
+        <table className="w-full text-left text-sm whitespace-nowrap">
+          <thead className="bg-[#fafafa] border-b border-slate-200">
+            <tr>
+              <th className="px-6 py-4 font-bold text-slate-500">Customer Name</th>
+              <th className="px-6 py-4 font-bold text-slate-500">Email Address</th>
+              <th className="px-6 py-4 font-bold text-slate-500">Phone</th>
+              <th className="px-6 py-4 font-bold text-slate-500">Total Orders</th>
+              <th className="px-6 py-4 font-bold text-slate-500">Total Spent</th>
+              <th className="px-6 py-4 font-bold text-slate-500">Joined Date</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {filteredCustomers.length === 0 && !loading ? (
+              <tr>
+                <td colSpan="6" className="px-6 py-8 text-center text-slate-500 font-medium">No webshop customers found.</td>
+              </tr>
+            ) : (
+              paginatedCustomers.map((customer) => {
+                const ordersList = Array.isArray(customer.orders) ? customer.orders : [];
+                const totalSpent = ordersList.reduce((sum, o) => sum + (parseFloat(o.totalAmount) || 0), 0);
+                return (
+                  <tr key={customer.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4 font-bold text-slate-700">{customer.name}</td>
+                    <td className="px-6 py-4 text-slate-600">{customer.email}</td>
+                    <td className="px-6 py-4 text-slate-600">{customer.phone || 'N/A'}</td>
+                    <td className="px-6 py-4 font-bold text-slate-700">{ordersList.length} orders</td>
+                    <td className="px-6 py-4 font-bold text-slate-800">{totalSpent.toFixed(2)} DKK</td>
+                    <td className="px-6 py-4 text-slate-500">
+                      {new Date(customer.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination Footer */}
+      <div className="mt-4 px-5 py-4 bg-slate-50 border border-slate-200 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4 text-sm shrink-0">
+        <div className="flex items-center gap-2 text-slate-600">
+          <span>Show</span>
+          <select
+            value={limit}
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setPage(1);
+            }}
+            className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:border-blue-500 bg-white font-bold"
+          >
+            {[5, 10, 20, 50, 100].map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
+            ))}
+          </select>
+          <span>entries</span>
+        </div>
+
+        <div className="text-slate-500 font-medium">
+          {filteredCustomers.length > 0 ? (
+            <>
+              Showing <span className="font-bold text-slate-800">{(page - 1) * limit + 1}</span> to{' '}
+              <span className="font-bold text-slate-800">{Math.min(page * limit, filteredCustomers.length)}</span> of{' '}
+              <span className="font-bold text-slate-800">{filteredCustomers.length}</span> customers
+            </>
+          ) : (
+            'No customers to display'
+          )}
+        </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+              disabled={page === 1}
+              className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+              .map((p, index, array) => {
+                const showEllipsis = index > 0 && p - array[index - 1] > 1;
+                return (
+                  <React.Fragment key={p}>
+                    {showEllipsis && <span className="px-2 text-slate-400">...</span>}
+                    <button
+                      onClick={() => setPage(p)}
+                      className={`px-3 py-1.5 rounded text-xs font-bold transition-all ${
+                        page === p
+                          ? 'bg-[#1e3a8a] text-white shadow-sm'
+                          : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+
+            <button
+              onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={page === totalPages}
+              className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default WebshopCustomersPage;

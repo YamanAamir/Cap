@@ -24,6 +24,13 @@ import ExcelTemplatesPage from './pages/ExcelTemplatesPage';
 import InstallmentPlansPage from './pages/InstallmentPlansPage';
 import MediaPage from './pages/MediaPage';
 
+// Webshop Dashboard Pages
+import WebshopDashboardPage from './pages/webshop/WebshopDashboardPage';
+import WebshopProductsPage from './pages/webshop/WebshopProductsPage';
+import WebshopOrdersPage from './pages/webshop/WebshopOrdersPage';
+import WebshopCustomersPage from './pages/webshop/WebshopCustomersPage';
+import WebshopEmailSettingsPage from './pages/webshop/WebshopEmailSettingsPage';
+import WebshopOrderStatusesPage from './pages/webshop/WebshopOrderStatusesPage';
 
 function App() {
   return (
@@ -68,6 +75,14 @@ function App() {
             <Route path="factory" element={<ProductionFactoryPage />} />
             <Route path="factory/media" element={<MediaPage isFactoryView={true} />} />
             <Route path="factory/orders/:id" element={<ProductionOrderDetailPage />} />
+
+            {/* Webshop Dashboard Sub-Routes */}
+            <Route path="webshop" element={<WebshopDashboardPage />} />
+            <Route path="webshop/products" element={<WebshopProductsPage />} />
+            <Route path="webshop/orders" element={<WebshopOrdersPage />} />
+            <Route path="webshop/customers" element={<WebshopCustomersPage />} />
+            <Route path="webshop/statuses" element={<WebshopOrderStatusesPage />} />
+            <Route path="webshop/emails" element={<WebshopEmailSettingsPage />} />
           </Route>
 
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
