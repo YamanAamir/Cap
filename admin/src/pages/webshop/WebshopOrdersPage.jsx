@@ -100,7 +100,7 @@ const generateOrderTimeline = (order) => {
         badge: h.newStatus || 'Statusændring',
         badgeColor: '#8b5cf6',
         title: h.title || `Status ændret til "${h.newStatus}"`,
-        description: h.description || `Ordrestatus opdateret fra "${h.oldStatus}" til "${h.newStatus}".`,
+        description: h.description || `Ordrestatus blev opdateret fra "${h.oldStatus}" til "${h.newStatus}".`,
         performedBy: h.performedBy || 'Admin Webshop Dashboard',
       });
     });
@@ -176,7 +176,7 @@ const WebshopOrdersPage = () => {
 
   const handleRequestUpdateStatus = (orderId, orderNumber, newStatus) => {
     const statusObj = statuses.find(
-      (s) => s.slug === newStatus || s.name.toUpperCase() === newStatus.toUpperCase()
+      (s) => (s.slug || s.name || '').toUpperCase() === newStatus.toUpperCase()
     );
     const hasEmail = statusObj && statusObj.emailTemplate && statusObj.emailTemplate.isActive;
     const emailNotice = hasEmail
@@ -286,7 +286,7 @@ const WebshopOrdersPage = () => {
 
   const getStatusBadge = (statusName) => {
     const matched = statuses.find(
-      (s) => s.slug === statusName || s.name.toLowerCase() === (statusName || '').toLowerCase()
+      (s) => (s.slug || s.name || '').toUpperCase() === (statusName || '').toUpperCase()
     );
     const color = matched?.color || '#6366f1';
 
@@ -308,6 +308,13 @@ const WebshopOrdersPage = () => {
   // RENDER FULL PAGE ORDER DETAILS VIEW IF AN ORDER IS SELECTED
   if (selectedOrder) {
     const timelineEvents = generateOrderTimeline(selectedOrder);
+    const hasCurrentMatch = statuses.some(
+      (s) => (s.slug || s.name || '').toUpperCase() === (selectedOrder.orderStatus || '').toUpperCase()
+    );
+    const matchedStatus = statuses.find(
+      (s) => (s.slug || s.name || '').toUpperCase() === (selectedOrder.orderStatus || '').toUpperCase()
+    );
+    const selectValue = matchedStatus ? (matchedStatus.slug || matchedStatus.name) : selectedOrder.orderStatus;
 
     return (
       <div className="animate-in fade-in duration-300 max-w-[1400px] mx-auto pb-12 space-y-6">
@@ -356,28 +363,23 @@ const WebshopOrdersPage = () => {
               <RefreshCw className="w-4 h-4 animate-spin text-[#1e3a8a]" />
             )}
             <select
-              value={selectedOrder.orderStatus}
+              value={selectValue}
               disabled={updatingOrderId === selectedOrder.id}
               onChange={(e) =>
                 handleRequestUpdateStatus(selectedOrder.id, selectedOrder.orderNumber, e.target.value)
               }
-              className="px-4 py-2.5 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#1e3a8a] bg-slate-50"
+              className="px-4 py-2.5 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#1e3a8a] bg-slate-50 cursor-pointer"
             >
-              {statuses.length > 0 ? (
-                statuses.map((st) => (
-                  <option key={st.id} value={st.slug || st.name}>
-                    {st.name} {st.emailTemplate ? '📧' : ''}
-                  </option>
-                ))
-              ) : (
-                <>
-                  <option value="PENDING">PENDING</option>
-                  <option value="PROCESSING">PROCESSING</option>
-                  <option value="SHIPPED">SHIPPED</option>
-                  <option value="DELIVERED">DELIVERED</option>
-                  <option value="CANCELLED">CANCELLED</option>
-                </>
+              {!hasCurrentMatch && (
+                <option value={selectedOrder.orderStatus} disabled>
+                  Current Status: {selectedOrder.orderStatus}
+                </option>
               )}
+              {statuses.map((st) => (
+                <option key={st.id || st.slug} value={st.slug || st.name}>
+                  {st.name} {st.emailTemplate ? '📧' : ''}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -594,7 +596,7 @@ const WebshopOrdersPage = () => {
           >
             <option value="all">All Statuses</option>
             {statuses.map((s) => (
-              <option key={s.id} value={s.slug || s.name}>
+              <option key={s.id || s.slug} value={s.slug || s.name}>
                 {s.name}
               </option>
             ))}
@@ -641,6 +643,14 @@ const WebshopOrdersPage = () => {
                 const isUpdatingThis = updatingOrderId === order.id;
                 const customerName = order.customerDetails?.name || 'Guest Customer';
 
+                const hasCurrentMatch = statuses.some(
+                  (s) => (s.slug || s.name || '').toUpperCase() === (order.orderStatus || '').toUpperCase()
+                );
+                const matchedStatus = statuses.find(
+                  (s) => (s.slug || s.name || '').toUpperCase() === (order.orderStatus || '').toUpperCase()
+                );
+                const selectValue = matchedStatus ? (matchedStatus.slug || matchedStatus.name) : order.orderStatus;
+
                 return (
                   <tr key={order.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4 font-bold text-slate-900">
@@ -664,13 +674,18 @@ const WebshopOrdersPage = () => {
                         <div className="flex items-center gap-2">
                           {getStatusBadge(order.orderStatus)}
                           <select
-                            value={order.orderStatus}
+                            value={selectValue}
                             onChange={(e) => handleRequestUpdateStatus(order.id, order.orderNumber, e.target.value)}
                             className="text-xs font-bold py-1 px-2 rounded border border-slate-200 bg-white focus:outline-none cursor-pointer"
                           >
+                            {!hasCurrentMatch && (
+                              <option value={order.orderStatus} disabled>
+                                Current: {order.orderStatus}
+                              </option>
+                            )}
                             {statuses.map((st) => (
-                              <option key={st.id} value={st.slug}>
-                                Change to: {st.name}
+                              <option key={st.id || st.slug} value={st.slug || st.name}>
+                                Change to: {st.name} {st.emailTemplate ? '📧' : ''}
                               </option>
                             ))}
                           </select>
