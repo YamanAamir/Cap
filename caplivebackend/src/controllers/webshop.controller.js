@@ -195,22 +195,69 @@ exports.createCheckoutSession = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Customer email is required' });
     }
 
-    const line_items = items.map((item) => {
-      const unitAmount = Math.round((parseFloat(item.price) || 0) * 100);
-      const imgArray = parseJsonSafely(item.images, []);
-      return {
+    // Verify each item against backend database for anti-tampering
+    const line_items = [];
+    const verifiedCartItems = [];
+
+    for (const item of items) {
+      const productId = parseInt(item.id);
+      if (isNaN(productId)) {
+        return res.status(400).json({
+          success: false,
+          priceMismatch: true,
+          message: `Ugyldigt produkt i kurven. Venligst gå til din kurv og fjern produktet.`
+        });
+      }
+
+      const dbProduct = await prisma.webshopProduct.findUnique({
+        where: { id: productId }
+      });
+
+      if (!dbProduct) {
+        return res.status(400).json({
+          success: false,
+          priceMismatch: true,
+          message: `Produktet "${item.title || 'ukendt'}" blev ikke fundet i vores database. Venligst gå til din kurv og fjern produktet.`
+        });
+      }
+
+      const dbPrice = parseFloat(dbProduct.price) || 0;
+      const clientPrice = parseFloat(item.price) || 0;
+      const dbTitle = (dbProduct.title || '').trim();
+      const clientTitle = (item.title || '').trim();
+
+      if (Math.abs(dbPrice - clientPrice) > 0.01 || dbTitle !== clientTitle) {
+        return res.status(400).json({
+          success: false,
+          priceMismatch: true,
+          message: `Der er opstået en pris- eller produktfejl i din kurv for "${item.title || dbProduct.title}". Venligst fjern produktet fra din kurv og tilføj det igen.`
+        });
+      }
+
+      const unitAmount = Math.round(dbPrice * 100);
+      const imgArray = parseJsonSafely(dbProduct.images, []);
+
+      line_items.push({
         price_data: {
           currency: 'dkk',
           product_data: {
-            name: item.title || 'Webshop Product',
-            description: item.shortDescription || undefined,
+            name: dbProduct.title,
+            description: dbProduct.shortDescription || undefined,
             images: Array.isArray(imgArray) && imgArray.length > 0 ? [imgArray[0]] : [],
           },
           unit_amount: unitAmount,
         },
         quantity: parseInt(item.quantity) || 1,
-      };
-    });
+      });
+
+      verifiedCartItems.push({
+        id: dbProduct.id,
+        title: dbProduct.title,
+        price: dbProduct.price,
+        quantity: parseInt(item.quantity) || 1,
+        image: Array.isArray(imgArray) && imgArray.length > 0 ? imgArray[0] : null
+      });
+    }
 
     const clientOrigin = origin || req.headers.origin || 'http://localhost:5173';
     
@@ -226,16 +273,7 @@ exports.createCheckoutSession = async (req, res) => {
         zip: customerDetails.zip || '',
         country: customerDetails.country || 'Denmark',
       }),
-      cartItems: JSON.stringify(items.map(i => {
-        const itemImgs = parseJsonSafely(i.images, []);
-        return {
-          id: i.id,
-          title: i.title,
-          price: i.price,
-          quantity: i.quantity,
-          image: Array.isArray(itemImgs) && itemImgs.length > 0 ? itemImgs[0] : null
-        };
-      })),
+      cartItems: JSON.stringify(verifiedCartItems),
     };
 
     const session = await stripe.checkout.sessions.create({
