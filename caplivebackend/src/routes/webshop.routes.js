@@ -8,6 +8,7 @@ router.get('/products/:identifier', webshopController.getPublicProductBySlugOrId
 router.post('/checkout/create-session', webshopController.createCheckoutSession);
 
 // Admin Web Dashboard Endpoints
+router.post('/admin/upload', webshopController.uploadMiddleware, webshopController.adminUploadProductImage);
 router.get('/admin/stats', webshopController.adminGetWebshopStats);
 router.get('/admin/products', webshopController.adminGetProducts);
 router.post('/admin/products', webshopController.adminCreateProduct);

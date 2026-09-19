@@ -3,6 +3,62 @@ const Stripe = require('stripe');
 const nodemailer = require('nodemailer');
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+const uploadDir = path.join(__dirname, '../../public/uploads/webshop');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname) || '.jpg';
+    cb(null, `webshop-${uniqueSuffix}${ext}`);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed!'), false);
+    }
+  }
+});
+
+exports.uploadMiddleware = (req, res, next) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ success: false, message: err.message || 'File upload error' });
+    }
+    next();
+  });
+};
+
+exports.adminUploadProductImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No image file uploaded' });
+    }
+    const relativeUrl = `/uploads/webshop/${req.file.filename}`;
+    return res.status(200).json({
+      success: true,
+      url: relativeUrl
+    });
+  } catch (error) {
+    console.error('Error uploading product image:', error);
+    return res.status(500).json({ success: false, message: 'Failed to upload image' });
+  }
+};
 
 const createEmailTransporter = () => {
   return nodemailer.createTransport({

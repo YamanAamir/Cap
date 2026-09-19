@@ -14,6 +14,7 @@ const WebshopProductsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const [confirmModal, setConfirmModal] = useState({
     isOpen: false,
@@ -75,6 +76,15 @@ const WebshopProductsPage = () => {
     setIsModalOpen(true);
   };
 
+  const getImageUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+      return url;
+    }
+    const backendBase = API_URL.replace(/\/api\/?$/, '');
+    return `${backendBase}${url.startsWith('/') ? '' : '/'}${url}`;
+  };
+
   const parseImages = (imagesVal) => {
     if (Array.isArray(imagesVal)) return imagesVal.filter((img) => typeof img === 'string' && img.trim() !== '');
     if (typeof imagesVal === 'string') {
@@ -104,36 +114,43 @@ const WebshopProductsPage = () => {
     setIsModalOpen(true);
   };
 
-  // Handle File Upload
+  // Handle Local File Selection (Preview only)
   const handleFileUpload = (e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
 
+    const newItems = [];
     files.forEach((file) => {
-      if (file.size > 8 * 1024 * 1024) {
-        toast.error(`File "${file.name}" exceeds 8MB limit`);
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`File "${file.name}" exceeds 10MB limit`);
         return;
       }
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (reader.result) {
-          setFormData((prev) => ({
-            ...prev,
-            images: [...prev.images, reader.result],
-          }));
-        }
-      };
-      reader.readAsDataURL(file);
+      newItems.push({
+        file,
+        preview: URL.createObjectURL(file),
+        isNew: true,
+      });
     });
+
+    setFormData((prev) => ({
+      ...prev,
+      images: [...prev.images, ...newItems],
+    }));
+
     e.target.value = '';
   };
 
   const handleRemoveImage = (indexToRemove) => {
-    setFormData((prev) => ({
-      ...prev,
-      images: prev.images.filter((_, idx) => idx !== indexToRemove),
-    }));
+    setFormData((prev) => {
+      const target = prev.images[indexToRemove];
+      if (typeof target === 'object' && target !== null && target.preview) {
+        URL.revokeObjectURL(target.preview);
+      }
+      return {
+        ...prev,
+        images: prev.images.filter((_, idx) => idx !== indexToRemove),
+      };
+    });
   };
 
   const handleRequestSubmit = (e) => {
@@ -160,17 +177,40 @@ const WebshopProductsPage = () => {
   };
 
   const executeSubmitProduct = async () => {
-    const cleanImages = formData.images.filter((img) => typeof img === 'string' && img.trim() !== '');
-    const payload = {
-      ...formData,
-      price: parseFloat(formData.price),
-      stockCount: parseInt(formData.stockCount) || 0,
-      images: cleanImages,
-    };
-
     try {
       setSubmitting(true);
       setConfirmModal((prev) => ({ ...prev, loading: true }));
+
+      // Upload any new image files first
+      const finalImages = [];
+      for (const item of formData.images) {
+        if (typeof item === 'string' && item.trim() !== '') {
+          finalImages.push(item.trim());
+        } else if (typeof item === 'object' && item !== null && item.file) {
+          const uploadData = new FormData();
+          uploadData.append('image', item.file);
+
+          const res = await fetch(`${API_URL}/webshop/admin/upload`, {
+            method: 'POST',
+            body: uploadData,
+          });
+
+          const data = await res.json();
+          if (data.success && data.url) {
+            finalImages.push(data.url);
+          } else {
+            throw new Error(data.message || `Failed to upload image "${item.file.name}"`);
+          }
+        }
+      }
+
+      const payload = {
+        ...formData,
+        price: parseFloat(formData.price),
+        stockCount: parseInt(formData.stockCount) || 0,
+        images: finalImages,
+      };
+
       const url = editingProduct
         ? `${API_URL}/webshop/admin/products/${editingProduct.id}`
         : `${API_URL}/webshop/admin/products`;
@@ -194,7 +234,7 @@ const WebshopProductsPage = () => {
       }
     } catch (error) {
       console.error('Error saving product:', error);
-      toast.error('Failed to save product');
+      toast.error(error.message || 'Failed to save product');
       setConfirmModal((prev) => ({ ...prev, loading: false }));
     } finally {
       setSubmitting(false);
@@ -324,7 +364,7 @@ const WebshopProductsPage = () => {
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
                           {firstImg ? (
-                            <img src={firstImg} alt={product.title} className="w-full h-full object-cover" />
+                            <img src={getImageUrl(firstImg)} alt={product.title} className="w-full h-full object-cover" />
                           ) : (
                             <ImageIcon className="w-5 h-5 text-slate-400" />
                           )}
@@ -593,27 +633,31 @@ const WebshopProductsPage = () => {
                 {/* Previews Grid */}
                 {formData.images.length > 0 && (
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                    {formData.images.map((imgSrc, index) => (
-                      <div
-                        key={index}
-                        className="relative w-full h-24 rounded-xl border border-slate-200 overflow-hidden group bg-slate-50 shadow-sm"
-                      >
-                        <img src={imgSrc} alt={`Product image ${index + 1}`} className="w-full h-full object-cover" />
-                        {index === 0 && (
-                          <span className="absolute top-1 left-1 bg-[#1e3a8a] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow">
-                            Main
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveImage(index)}
-                          className="absolute inset-0 bg-slate-900/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                          title="Remove image"
+                    {formData.images.map((item, index) => {
+                      const isObj = typeof item === 'object' && item !== null && item.preview;
+                      const displaySrc = isObj ? item.preview : getImageUrl(item);
+                      return (
+                        <div
+                          key={index}
+                          className="relative w-full h-24 rounded-xl border border-slate-200 overflow-hidden group bg-slate-50 shadow-sm"
                         >
-                          <Trash2 className="w-5 h-5 text-red-400 hover:text-red-200" />
-                        </button>
-                      </div>
-                    ))}
+                          <img src={displaySrc} alt={`Product image ${index + 1}`} className="w-full h-full object-cover" />
+                          {index === 0 && (
+                            <span className="absolute top-1 left-1 bg-[#1e3a8a] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow">
+                              Main
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage(index)}
+                            className="absolute inset-0 bg-slate-900/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Remove image"
+                          >
+                            <Trash2 className="w-5 h-5 text-red-400 hover:text-red-200" />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 

@@ -23,6 +23,7 @@ yarn-debug.log*
 # Uploads (user-generated files)
 # ===========================
 public/uploads/
+public/exports/
 
 # ===========================
 # Prisma
