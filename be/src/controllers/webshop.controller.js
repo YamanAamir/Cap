@@ -413,7 +413,7 @@ exports.handleWebshopCheckoutSuccess = async (session) => {
         totalAmount,
         currency: (session.currency || 'dkk').toUpperCase(),
         paymentStatus: 'PAID',
-        orderStatus: 'PENDING',
+        orderStatus: 'PAID',
         webshopCustomerId: customer.id,
       },
     });
@@ -774,6 +774,57 @@ exports.adminGetCustomers = async (req, res) => {
   } catch (error) {
     console.error('Admin get webshop customers error:', error);
     return res.status(500).json({ success: false, message: 'Failed to fetch webshop customers', error: error.message });
+  }
+};
+
+// Admin: Delete Webshop Order
+exports.adminDeleteOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.webshopOrder.delete({
+      where: { id: parseInt(id) },
+    });
+    return res.status(200).json({ success: true, message: 'Order deleted successfully' });
+  } catch (error) {
+    console.error('Admin delete webshop order error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to delete order', error: error.message });
+  }
+};
+
+// Admin: Update Webshop Customer
+exports.adminUpdateCustomer = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, email, phone, notes } = req.body;
+
+    const updated = await prisma.webshopCustomer.update({
+      where: { id: parseInt(id) },
+      data: {
+        ...(name !== undefined && { name }),
+        ...(email !== undefined && { email }),
+        ...(phone !== undefined && { phone }),
+        ...(notes !== undefined && { notes }),
+      },
+    });
+
+    return res.status(200).json({ success: true, data: formatCustomer(updated), message: 'Customer updated successfully' });
+  } catch (error) {
+    console.error('Admin update webshop customer error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to update customer', error: error.message });
+  }
+};
+
+// Admin: Delete Webshop Customer
+exports.adminDeleteCustomer = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.webshopCustomer.delete({
+      where: { id: parseInt(id) },
+    });
+    return res.status(200).json({ success: true, message: 'Customer deleted successfully' });
+  } catch (error) {
+    console.error('Admin delete webshop customer error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to delete customer', error: error.message });
   }
 };
 

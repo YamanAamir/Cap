@@ -17,8 +17,11 @@ router.delete('/admin/products/:id', webshopController.adminDeleteProduct);
 
 router.get('/admin/orders', webshopController.adminGetOrders);
 router.put('/admin/orders/:id/status', webshopController.adminUpdateOrderStatus);
+router.delete('/admin/orders/:id', webshopController.adminDeleteOrder);
 
 router.get('/admin/customers', webshopController.adminGetCustomers);
+router.put('/admin/customers/:id', webshopController.adminUpdateCustomer);
+router.delete('/admin/customers/:id', webshopController.adminDeleteCustomer);
 
 router.get('/admin/email-template', webshopController.adminGetEmailTemplate);
 router.put('/admin/email-template', webshopController.adminUpdateEmailTemplate);

@@ -1,9 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ShoppingBag, Eye, X, CheckCircle2, Clock, Truck, AlertCircle, RefreshCw, Tag, Filter } from 'lucide-react';
+import { Search, ShoppingBag, Eye, ArrowLeft, Trash2, X, CheckCircle2, Clock, Truck, AlertCircle, RefreshCw, Tag, Filter } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../../components/common/ConfirmModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+const getImageUrl = (img) => {
+  if (!img) return null;
+  if (img.startsWith('http://') || img.startsWith('https://') || img.startsWith('data:')) {
+    return img;
+  }
+  const SERVER_URL = API_URL.replace(/\/api\/?$/, '');
+  return `${SERVER_URL}${img.startsWith('/') ? '' : '/'}${img}`;
+};
 
 const WebshopOrdersPage = () => {
   const [orders, setOrders] = useState([]);
@@ -102,6 +111,43 @@ const WebshopOrdersPage = () => {
     }
   };
 
+  const handleRequestDeleteOrder = (order) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Order',
+      message: `Are you sure you want to delete order #${order.orderNumber}? This action cannot be undone.`,
+      type: 'danger',
+      confirmText: 'Delete Order',
+      loading: false,
+      onConfirm: () => executeDeleteOrder(order.id),
+    });
+  };
+
+  const executeDeleteOrder = async (orderId) => {
+    try {
+      setConfirmModal((prev) => ({ ...prev, loading: true }));
+      const res = await fetch(`${API_URL}/webshop/admin/orders/${orderId}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Order deleted successfully');
+        setConfirmModal((prev) => ({ ...prev, isOpen: false, loading: false }));
+        if (selectedOrder && selectedOrder.id === orderId) {
+          setSelectedOrder(null);
+        }
+        fetchData();
+      } else {
+        toast.error(data.message || 'Failed to delete order');
+        setConfirmModal((prev) => ({ ...prev, loading: false }));
+      }
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      toast.error('Failed to delete order');
+      setConfirmModal((prev) => ({ ...prev, loading: false }));
+    }
+  };
+
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
 
@@ -146,20 +192,202 @@ const WebshopOrdersPage = () => {
     );
   };
 
+  // RENDER FULL PAGE ORDER DETAILS VIEW IF AN ORDER IS SELECTED
+  if (selectedOrder) {
+    return (
+      <div className="animate-in fade-in duration-300 max-w-[1400px] mx-auto pb-12 space-y-6">
+        {/* Top Navigation & Action Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setSelectedOrder(null)}
+              className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2 text-sm font-semibold"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span>Back to Orders</span>
+            </button>
+            <div className="h-6 w-px bg-slate-200" />
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-3">
+                Order #{selectedOrder.orderNumber}
+                {getStatusBadge(selectedOrder.orderStatus)}
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Placed on {new Date(selectedOrder.createdAt).toLocaleString()}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => handleRequestDeleteOrder(selectedOrder)}
+              className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-bold transition-colors flex items-center gap-2 border border-red-200"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span>Delete Order</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Change Status Card */}
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Order Status</h3>
+            <p className="text-xs text-slate-500 mt-1">Update current order processing stage & send automated emails</p>
+          </div>
+          <div className="flex items-center gap-3">
+            {updatingOrderId === selectedOrder.id && (
+              <RefreshCw className="w-4 h-4 animate-spin text-[#1e3a8a]" />
+            )}
+            <select
+              value={selectedOrder.orderStatus}
+              disabled={updatingOrderId === selectedOrder.id}
+              onChange={(e) =>
+                handleRequestUpdateStatus(selectedOrder.id, selectedOrder.orderNumber, e.target.value)
+              }
+              className="px-4 py-2.5 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#1e3a8a] bg-slate-50"
+            >
+              {statuses.length > 0 ? (
+                statuses.map((st) => (
+                  <option key={st.id} value={st.slug || st.name}>
+                    {st.name} {st.emailTemplate ? '📧' : ''}
+                  </option>
+                ))
+              ) : (
+                <>
+                  <option value="PENDING">PENDING</option>
+                  <option value="PROCESSING">PROCESSING</option>
+                  <option value="SHIPPED">SHIPPED</option>
+                  <option value="DELIVERED">DELIVERED</option>
+                  <option value="CANCELLED">CANCELLED</option>
+                </>
+              )}
+            </select>
+          </div>
+        </div>
+
+        {/* Details Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Customer Card */}
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Customer Information</h3>
+            <div className="space-y-2 text-sm">
+              <div className="font-bold text-slate-900 text-base">{selectedOrder.customerDetails?.name || 'N/A'}</div>
+              <div className="text-slate-600 flex items-center gap-2">
+                <span className="font-medium">Email:</span> {selectedOrder.customerEmail}
+              </div>
+              <div className="text-slate-600 flex items-center gap-2">
+                <span className="font-medium">Phone:</span> {selectedOrder.customerDetails?.phone || 'No phone provided'}
+              </div>
+            </div>
+          </div>
+
+          {/* Shipping Address Card */}
+          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Shipping Address</h3>
+            {selectedOrder.shippingAddress ? (
+              <div className="space-y-1 text-sm text-slate-700">
+                <div className="font-semibold text-slate-900">{selectedOrder.shippingAddress.address}</div>
+                {selectedOrder.shippingAddress.apartment && <div>{selectedOrder.shippingAddress.apartment}</div>}
+                <div>
+                  {selectedOrder.shippingAddress.zip} {selectedOrder.shippingAddress.city}
+                </div>
+                <div>{selectedOrder.shippingAddress.country || 'Denmark'}</div>
+              </div>
+            ) : (
+              <div className="text-slate-400 italic text-sm">No shipping address provided</div>
+            )}
+          </div>
+        </div>
+
+        {/* Order Items Table with Product Images */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-slate-100">
+            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Order Items</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-slate-500 text-xs font-bold uppercase border-b border-slate-200">
+                <tr>
+                  <th className="p-4 w-20">Image</th>
+                  <th className="p-4">Product</th>
+                  <th className="p-4 text-center">Qty</th>
+                  <th className="p-4 text-right">Unit Price</th>
+                  <th className="p-4 text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {(Array.isArray(selectedOrder.items) ? selectedOrder.items : []).map((item, idx) => {
+                  const itemTotal = (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 1);
+                  let rawImg = item.image;
+                  if (!rawImg && Array.isArray(item.images) && item.images.length > 0) {
+                    rawImg = item.images[0];
+                  }
+                  const displayImg = getImageUrl(rawImg);
+
+                  return (
+                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="p-4">
+                        {displayImg ? (
+                          <img
+                            src={displayImg}
+                            alt={item.title || 'Product'}
+                            className="w-14 h-14 object-cover rounded-lg border border-slate-200 bg-slate-50"
+                          />
+                        ) : (
+                          <div className="w-14 h-14 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] text-slate-400 border border-slate-200 font-medium text-center">
+                            No Image
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        <div className="font-bold text-slate-900">{item.title || 'Product'}</div>
+                        {item.shortDescription && (
+                          <div className="text-xs text-slate-500 line-clamp-1 mt-0.5">{item.shortDescription}</div>
+                        )}
+                      </td>
+                      <td className="p-4 text-center font-bold text-slate-800">{item.quantity}</td>
+                      <td className="p-4 text-right text-slate-600">{parseFloat(item.price || 0).toFixed(2)} DKK</td>
+                      <td className="p-4 text-right font-bold text-slate-900">{itemTotal.toFixed(2)} DKK</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="p-6 bg-slate-50 border-t border-slate-200 flex items-center justify-between font-bold text-lg text-slate-900">
+            <span>Total Amount Paid</span>
+            <span className="text-[#1e3a8a]">
+              {selectedOrder.totalAmount} {selectedOrder.currency || 'DKK'}
+            </span>
+          </div>
+        </div>
+
+        {/* Stripe Metadata */}
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 font-mono text-xs text-slate-500 flex justify-between items-center">
+          <span>Stripe Session ID: {selectedOrder.stripeSessionId || 'N/A'}</span>
+          <span>Payment Status: <strong className="text-emerald-600">{selectedOrder.paymentStatus || 'PAID'}</strong></span>
+        </div>
+
+        {/* Confirmation Modal */}
+        <ConfirmModal
+          isOpen={confirmModal.isOpen}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          type={confirmModal.type}
+          confirmText={confirmModal.confirmText}
+          loading={confirmModal.loading}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+        />
+      </div>
+    );
+  }
+
+  // ORDERS TABLE LIST VIEW
   return (
     <div className="animate-in fade-in duration-500 max-w-[1400px] mx-auto pb-12">
-      {/* Confirm Status Change Modal */}
-      <ConfirmModal
-        isOpen={confirmModal.isOpen}
-        onClose={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
-        onConfirm={confirmModal.onConfirm}
-        title={confirmModal.title}
-        message={confirmModal.message}
-        type={confirmModal.type}
-        confirmText={confirmModal.confirmText}
-        loading={confirmModal.loading}
-      />
-
       {/* Top Controls */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
@@ -167,48 +395,41 @@ const WebshopOrdersPage = () => {
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Search orders..."
+              placeholder="Search orders or customer..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-500" />
-            <select
-              value={selectedStatusFilter}
-              onChange={(e) => setSelectedStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-slate-200 rounded text-sm font-semibold text-slate-700 bg-white focus:outline-none focus:border-blue-500 cursor-pointer"
-            >
-              <option value="all">All Statuses ({orders.length})</option>
-              {statuses.map((st) => {
-                const count = orders.filter(
-                  (o) => o.orderStatus && o.orderStatus.toLowerCase() === st.slug.toLowerCase()
-                ).length;
-                return (
-                  <option key={st.id} value={st.slug}>
-                    {st.name} ({count})
-                  </option>
-                );
-              })}
-            </select>
-          </div>
+          <select
+            value={selectedStatusFilter}
+            onChange={(e) => setSelectedStatusFilter(e.target.value)}
+            className="px-3 py-2 border border-slate-200 rounded text-sm bg-white focus:outline-none focus:border-blue-500 font-medium text-slate-700"
+          >
+            <option value="all">All Statuses</option>
+            {statuses.map((s) => (
+              <option key={s.id} value={s.slug || s.name}>
+                {s.name}
+              </option>
+            ))}
+          </select>
         </div>
 
-        <button 
+        <button
           onClick={fetchData}
           className="flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 h-9 w-9 rounded border border-slate-200 transition-colors"
+          title="Refresh orders"
         >
           <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
 
-      {/* Table Section */}
+      {/* Orders Table */}
       <div className="bg-white rounded border border-slate-200 overflow-x-auto relative">
         {loading && (
           <div className="absolute top-0 left-0 right-0 h-1 bg-blue-100 overflow-hidden z-20">
-            <div className="h-full bg-blue-500 animate-pulse w-1/3 rounded-r-full"></div>
+            <div className="h-full bg-blue-500 animate-pulse w-1/3 rounded-r-full" />
           </div>
         )}
 
@@ -217,26 +438,37 @@ const WebshopOrdersPage = () => {
             <tr>
               <th className="px-6 py-4 font-bold text-slate-500">Order #</th>
               <th className="px-6 py-4 font-bold text-slate-500">Date</th>
-              <th className="px-6 py-4 font-bold text-slate-500">Customer Details</th>
-              <th className="px-6 py-4 font-bold text-slate-500">Current Status</th>
-              <th className="px-6 py-4 font-bold text-slate-500 text-right">Total Amount</th>
-              <th className="px-6 py-4 font-bold text-slate-500 text-center w-16">Actions</th>
+              <th className="px-6 py-4 font-bold text-slate-500">Customer</th>
+              <th className="px-6 py-4 font-bold text-slate-500">Status</th>
+              <th className="px-6 py-4 font-bold text-slate-500 text-right">Total</th>
+              <th className="px-6 py-4 font-bold text-slate-500 text-center">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filteredOrders.length === 0 && !loading ? (
               <tr>
-                <td colSpan="6" className="px-6 py-8 text-center text-slate-500 font-medium">No webshop orders found.</td>
+                <td colSpan="6" className="px-6 py-8 text-center text-slate-500 font-medium">
+                  No webshop orders found.
+                </td>
               </tr>
             ) : (
               paginatedOrders.map((order) => {
-                const customerName = order.customerDetails?.name || 'Guest Checkout';
                 const isUpdatingThis = updatingOrderId === order.id;
+                const customerName = order.customerDetails?.name || 'Guest Customer';
+
                 return (
                   <tr key={order.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 font-bold text-slate-700">{order.orderNumber}</td>
-                    <td className="px-6 py-4 text-slate-600">
-                      {new Date(order.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    <td className="px-6 py-4 font-bold text-slate-900">
+                      {order.orderNumber}
+                    </td>
+                    <td className="px-6 py-4 text-slate-500 text-xs">
+                      {new Date(order.createdAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-0.5">
@@ -270,13 +502,22 @@ const WebshopOrdersPage = () => {
                       {order.totalAmount} {order.currency}
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <button
-                        onClick={() => setSelectedOrder(order)}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                        title="View Order Details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => setSelectedOrder(order)}
+                          className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          title="View Order Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleRequestDeleteOrder(order)}
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Delete Order"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -360,135 +601,6 @@ const WebshopOrdersPage = () => {
           </div>
         )}
       </div>
-
-      {/* Order Details Modal */}
-      {selectedOrder && (
-        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden my-8">
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">
-                  Order Details: {selectedOrder.orderNumber}
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Confirmed via Stripe on {new Date(selectedOrder.createdAt).toLocaleString()}
-                </p>
-              </div>
-              <button
-                onClick={() => setSelectedOrder(null)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="p-6 overflow-y-auto flex-1 space-y-6 text-sm">
-              {/* Status Selector */}
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200">
-                <div>
-                  <div className="text-xs font-semibold text-slate-500 uppercase">Change Order Status</div>
-                  <div className="mt-1">{getStatusBadge(selectedOrder.orderStatus)}</div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {updatingOrderId === selectedOrder.id && (
-                    <RefreshCw className="w-4 h-4 animate-spin text-[#1e3a8a]" />
-                  )}
-                  <select
-                    value={selectedOrder.orderStatus}
-                    disabled={updatingOrderId === selectedOrder.id}
-                    onChange={(e) =>
-                      handleRequestUpdateStatus(selectedOrder.id, selectedOrder.orderNumber, e.target.value)
-                    }
-                    className="px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#1e3a8a] disabled:opacity-50"
-                  >
-                    {statuses.length > 0 ? (
-                      statuses.map((st) => (
-                        <option key={st.id} value={st.slug || st.name}>
-                          {st.name} {st.emailTemplate ? '📧' : ''}
-                        </option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="PENDING">PENDING</option>
-                        <option value="PROCESSING">PROCESSING</option>
-                        <option value="SHIPPED">SHIPPED</option>
-                        <option value="DELIVERED">DELIVERED</option>
-                        <option value="CANCELLED">CANCELLED</option>
-                      </>
-                    )}
-                  </select>
-                </div>
-              </div>
-
-              {/* Customer Details */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border border-slate-200 p-4 rounded-xl">
-                <div>
-                  <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Customer Information</h4>
-                  <div className="font-semibold text-slate-900">{selectedOrder.customerDetails?.name || 'N/A'}</div>
-                  <div className="text-slate-600">{selectedOrder.customerEmail}</div>
-                  <div className="text-slate-600">{selectedOrder.customerDetails?.phone || 'No phone provided'}</div>
-                </div>
-
-                <div>
-                  <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Shipping Address</h4>
-                  {selectedOrder.shippingAddress ? (
-                    <div className="text-slate-700">
-                      <div>{selectedOrder.shippingAddress.address}</div>
-                      <div>
-                        {selectedOrder.shippingAddress.zip} {selectedOrder.shippingAddress.city}
-                      </div>
-                      <div>{selectedOrder.shippingAddress.country || 'Denmark'}</div>
-                    </div>
-                  ) : (
-                    <div className="text-slate-400 italic">No shipping address provided</div>
-                  )}
-                </div>
-              </div>
-
-              {/* Order Items Table */}
-              <div>
-                <h4 className="text-xs font-bold text-slate-500 uppercase mb-3">Order Items</h4>
-                <div className="border border-slate-200 rounded-xl overflow-hidden">
-                  <table className="w-full text-left">
-                    <thead className="bg-slate-50 text-slate-600 text-xs font-semibold uppercase">
-                      <tr>
-                        <th className="p-3">Product</th>
-                        <th className="p-3 text-center">Qty</th>
-                        <th className="p-3 text-right">Price</th>
-                        <th className="p-3 text-right">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {(Array.isArray(selectedOrder.items) ? selectedOrder.items : []).map((item, idx) => {
-                        const itemTotal = (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 1);
-                        return (
-                          <tr key={idx}>
-                            <td className="p-3 font-semibold text-slate-900">{item.title || 'Product'}</td>
-                            <td className="p-3 text-center font-bold">{item.quantity}</td>
-                            <td className="p-3 text-right">{item.price} DKK</td>
-                            <td className="p-3 text-right font-bold text-slate-900">{itemTotal.toFixed(2)} DKK</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                  <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between font-bold text-base text-slate-900">
-                    <span>Total Amount Paid</span>
-                    <span className="text-[#1e3a8a]">
-                      {selectedOrder.totalAmount} {selectedOrder.currency}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Stripe Session Info */}
-              <div className="text-xs text-slate-400 font-mono bg-slate-50 p-3 rounded-lg border border-slate-200">
-                Stripe Session ID: {selectedOrder.stripeSessionId || 'N/A'}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Confirmation Modal */}
       <ConfirmModal
