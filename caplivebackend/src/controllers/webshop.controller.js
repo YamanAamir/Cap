@@ -182,6 +182,36 @@ exports.getPublicProductBySlugOrId = async (req, res) => {
   }
 };
 
+// Helper to format image URLs cleanly for Stripe API (Stripe requires absolute http/https URLs)
+function formatStripeImageUrls(imgSource, origin) {
+  let rawImg = null;
+  if (Array.isArray(imgSource) && imgSource.length > 0) {
+    rawImg = imgSource[0];
+  } else if (typeof imgSource === 'string' && imgSource.trim() !== '') {
+    try {
+      const parsed = JSON.parse(imgSource);
+      if (Array.isArray(parsed) && parsed.length > 0) rawImg = parsed[0];
+      else rawImg = imgSource;
+    } catch (e) {
+      rawImg = imgSource;
+    }
+  }
+
+  if (!rawImg || typeof rawImg !== 'string') return [];
+  rawImg = rawImg.trim();
+
+  if (rawImg.startsWith('http://') || rawImg.startsWith('https://')) {
+    return [rawImg];
+  }
+
+  if (rawImg.startsWith('/')) {
+    const base = (origin || process.env.BACKEND_URL || 'https://capdevapi.studentlife.dk').replace(/\/$/, '');
+    return [`${base}${rawImg}`];
+  }
+
+  return [];
+}
+
 // Create Stripe Checkout Session for Webshop
 exports.createCheckoutSession = async (req, res) => {
   try {
@@ -194,6 +224,8 @@ exports.createCheckoutSession = async (req, res) => {
     if (!customerDetails || !customerDetails.email) {
       return res.status(400).json({ success: false, message: 'Customer email is required' });
     }
+
+    const clientOrigin = origin || req.headers.origin || 'https://studentlife.dk';
 
     // Verify each item against backend database for anti-tampering
     const line_items = [];
@@ -235,7 +267,7 @@ exports.createCheckoutSession = async (req, res) => {
       }
 
       const unitAmount = Math.round(dbPrice * 100);
-      const imgArray = parseJsonSafely(dbProduct.images, []);
+      const stripeImages = formatStripeImageUrls(dbProduct.images, clientOrigin);
 
       line_items.push({
         price_data: {
@@ -243,7 +275,7 @@ exports.createCheckoutSession = async (req, res) => {
           product_data: {
             name: dbProduct.title,
             description: dbProduct.shortDescription || undefined,
-            images: Array.isArray(imgArray) && imgArray.length > 0 ? [imgArray[0]] : [],
+            images: stripeImages,
           },
           unit_amount: unitAmount,
         },
@@ -255,12 +287,10 @@ exports.createCheckoutSession = async (req, res) => {
         title: dbProduct.title,
         price: dbProduct.price,
         quantity: parseInt(item.quantity) || 1,
-        image: Array.isArray(imgArray) && imgArray.length > 0 ? imgArray[0] : null
+        image: stripeImages.length > 0 ? stripeImages[0] : null
       });
     }
 
-    const clientOrigin = origin || req.headers.origin || 'http://localhost:5173';
-    
     // Store cart & customer details in session metadata
     const metadata = {
       isWebshop: 'true',
@@ -270,7 +300,7 @@ exports.createCheckoutSession = async (req, res) => {
       customerAddress: JSON.stringify({
         address: customerDetails.address || '',
         city: customerDetails.city || '',
-        zip: customerDetails.zip || '',
+        zip: customerDetails.postalCode || customerDetails.zip || '',
         country: customerDetails.country || 'Denmark',
       }),
       cartItems: JSON.stringify(verifiedCartItems),
@@ -283,7 +313,7 @@ exports.createCheckoutSession = async (req, res) => {
       customer_email: customerDetails.email,
       metadata,
       success_url: `${clientOrigin}/webshop.html?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${clientOrigin}/checkout.html?payment=cancelled`,
+      cancel_url: `${clientOrigin}/checkoutnew.html?payment=cancelled`,
     });
 
     return res.status(200).json({ success: true, url: session.url, sessionId: session.id });
