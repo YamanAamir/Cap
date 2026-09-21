@@ -568,11 +568,11 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
     const buttonMaterialSolvTypes = ['Sølv hagerem med Sølv knuder'];
     const buttonMaterialSolveSortTypes = ['Sølv hagerem med sorte knuder'];
     let buttonMaterialGuldTypes = ['Guld hagerem med guld knuder'];
-    let year = ['2025', '2026', '2027'];
+    let year = ['2026', '2027'];
     
     if (pakke === 'basichue') {
         chinStrapColorOptions = chinStrapColorOptions.filter(opt => ['Mat', 'Shiny'].includes(opt.name));
-        year = ['Ingen', '2025', '2026'];
+        year = ['Ingen', '2026', '2027'];
     }
     function getMaterialOptions() {
         if (pakke === 'basichue') return ['BOMULD'];

@@ -13,7 +13,7 @@ const Sosuhjælper = {
     Huebånd: "Sosuhjælper",
     "Knap farve": "Guld",
     Materiale: "BOMULD",
-    år: "2025"
+    år: "2026"
   },
   BRODERI: {
     Broderifarve: "Guld",
