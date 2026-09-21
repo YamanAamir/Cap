@@ -559,24 +559,30 @@ const EXACT_TRANSLATIONS = {
   'Top broderi 4': 'Top Embroidery Design 4',
 
   // ==================== STARS ====================
-  '1': '1 Star',
-  '1 Stjerne': '1 Star',
-  'One Star': '1 Star',
-  '2': '2 Stars',
-  '2 Stjerner': '2 Stars',
-  'Two Stars': '2 Stars',
-  '3': '3 Stars',
-  '3 Stjerner': '3 Stars',
-  'Three Stars': '3 Stars',
-  '4': '4 Stars',
-  '4 Stjerner': '4 Stars',
-  'Four Stars': '4 Stars',
-  '5': '5 Stars',
-  '5 Stjerner': '5 Stars',
-  'Five Stars': '5 Stars',
-  '6': '6 Stars',
-  '6 Stjerner': '6 Stars',
-  'Six Stars': '6 Stars',
+  '1': '1',
+  '1 Stjerne': '1',
+  'One Star': '1',
+  '1 Star': '1',
+  '2': '2',
+  '2 Stjerner': '2',
+  'Two Stars': '2',
+  '2 Stars': '2',
+  '3': '3',
+  '3 Stjerner': '3',
+  'Three Stars': '3',
+  '3 Stars': '3',
+  '4': '4',
+  '4 Stjerner': '4',
+  'Four Stars': '4',
+  '4 Stars': '4',
+  '5': '5',
+  '5 Stjerner': '5',
+  'Five Stars': '5',
+  '5 Stars': '5',
+  '6': '6',
+  '6 Stjerner': '6',
+  'Six Stars': '6',
+  '6 Stars': '6',
 
   // ==================== GENERAL / BOOLEANS ====================
   'Ja': 'Yes',
@@ -740,6 +746,9 @@ const translateFactoryValue = (val) => {
   let replacedAny = false;
   const translatedWords = words.map(chunk => {
     const trimmed = chunk.trim().toLowerCase();
+    if (!trimmed || /^\d+$/.test(trimmed)) {
+      return chunk;
+    }
     if (WORD_TRANSLATIONS[trimmed]) {
       replacedAny = true;
       return WORD_TRANSLATIONS[trimmed];
