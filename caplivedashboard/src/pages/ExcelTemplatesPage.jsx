@@ -153,6 +153,7 @@ const STATIC_FIELD_GROUPS = [
       { label: 'Topkant (Extra Cover Top Cord)', value: 'options.EKSTRABETRÆK.Topkant', defaultHeader: 'Ekstrabetræk Topkant' },
       { label: 'Kantbånd (Extra Cover Edge Ribbon)', value: 'options.EKSTRABETRÆK.Kantbånd', defaultHeader: 'Ekstrabetræk Kantbånd' },
       { label: 'Stjerner (Extra Cover Stars Count)', value: 'options.EKSTRABETRÆK.Stjerner', defaultHeader: 'Ekstrabetræk Stjerner' },
+      { label: 'Stjerner farve (Extra Cover Stars Color)', value: 'options.EKSTRABETRÆK.Stjerner farve', defaultHeader: 'Ekstrabetræk Stjerner Farve' },
       { label: 'Flagbånd (Extra Cover Flag Ribbon)', value: 'options.EKSTRABETRÆK.Flagbånd', defaultHeader: 'Ekstrabetræk Flagbånd' },
       { label: 'Kokarde (Extra Cover Cockade Style)', value: 'options.EKSTRABETRÆK.Kokarde', defaultHeader: 'Ekstrabetræk Kokarde' },
       { label: 'Roset farve (Extra Cover Rosette Color)', value: 'options.EKSTRABETRÆK.Roset farve', defaultHeader: 'Ekstrabetræk Roset Farve' },
@@ -160,6 +161,8 @@ const STATIC_FIELD_GROUPS = [
       { label: 'Type (Extra Cover Emblem Design)', value: 'options.EKSTRABETRÆK.Type', defaultHeader: 'Ekstrabetræk Emblem Type' },
       { label: 'Flag (Extra Cover Flag)', value: 'options.EKSTRABETRÆK.Flag', defaultHeader: 'Ekstrabetræk Flag' },
       { label: 'Extra Top broderi (Top Embroidery on Extra Cover)', value: 'options.EKSTRABETRÆK.Extra Top broderi', defaultHeader: 'Ekstrabetræk Top Broderi' },
+      { label: 'Skolebroderi (Extra Cover School Embroidery Text)', value: 'options.EKSTRABETRÆK.Skolebroderi', defaultHeader: 'Ekstrabetræk Skolebroderi' },
+      { label: 'Skolebroderi farve (Extra Cover School Embroidery Color)', value: 'options.EKSTRABETRÆK.Skolebroderi farve', defaultHeader: 'Ekstrabetræk Skolebroderi Farve' },
     ]
   },
   {

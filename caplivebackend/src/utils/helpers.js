@@ -110,7 +110,98 @@ const extractOrderField = (order, fieldKey) => {
     return translateFactoryValue(emblemVal);
   }
 
+  if (fieldKey === 'options.EKSTRABETRÆK.Stjerner farve' || fieldKey === 'Ekstrabetræk Stjerner farve') {
+    const ekstra = selectedOptions.EKSTRABETRÆK || selectedOptions.ekstrabetraek || {};
+    const tilvaelg = String(ekstra.Tilvælg ?? ekstra.tilvaelg ?? '').trim().toLowerCase();
+    if (tilvaelg !== 'yes' && tilvaelg !== 'ja') {
+      return 'x';
+    }
+    let stjernerVal = ekstra.Stjerner ?? ekstra.stjerner;
+    if (typeof stjernerVal === 'object' && stjernerVal !== null) {
+      stjernerVal = stjernerVal.name || stjernerVal.value || stjernerVal.label || '';
+    }
+    const starStr = String(stjernerVal || '').trim().toUpperCase();
+    const noStars = !starStr || starStr === 'NONE' || starStr === 'INGEN' || starStr === '0' || starStr === 'X' || starStr === 'NO' || starStr === 'UDEN STJERNER';
+
+    if (noStars) {
+      return 'x';
+    }
+
+    let emblemVal = ekstra.Emblem ?? ekstra.emblem;
+    if (!emblemVal) {
+      const kokarde = selectedOptions.KOKARDE || selectedOptions.kokarde || {};
+      emblemVal = kokarde.Emblem ?? kokarde.emblem ?? selectedOptions.Emblem ?? selectedOptions.emblem;
+    }
+    if (typeof emblemVal === 'object' && emblemVal !== null) {
+      emblemVal = emblemVal.name || emblemVal.value || emblemVal.label || '';
+    }
+    if (!emblemVal || emblemVal === 'x' || emblemVal === 'NONE') {
+      return 'x';
+    }
+    return translateFactoryValue(emblemVal);
+  }
+
+  if (fieldKey === 'options.BRODERI.Skolebroderi farve' || fieldKey === 'Skolebroderi farve') {
+    const broderi = selectedOptions.BRODERI || selectedOptions.broderi || {};
+    const text = String(broderi.Skolebroderi ?? broderi.skolebroderi ?? selectedOptions.Skolebroderi ?? '').trim();
+    if (!text || text === 'x' || text === 'Ingen') {
+      return 'x';
+    }
+    let colorVal = broderi['Skolebroderi farve'] ?? broderi.skolebroderifarve ?? selectedOptions['Skolebroderi farve'] ?? '';
+    if (typeof colorVal === 'object' && colorVal !== null) {
+      colorVal = colorVal.name || colorVal.value || colorVal.label || '';
+    }
+    colorVal = String(colorVal || '').trim();
+    if (!colorVal || colorVal === 'x' || colorVal === 'NONE') {
+      return 'x';
+    }
+    return translateFactoryValue(colorVal);
+  }
+
+  if (fieldKey === 'options.EKSTRABETRÆK.Skolebroderi' || fieldKey === 'Ekstrabetræk Skolebroderi') {
+    const ekstra = selectedOptions.EKSTRABETRÆK || selectedOptions.ekstrabetraek || {};
+    const tilvaelg = String(ekstra.Tilvælg ?? ekstra.tilvaelg ?? '').trim().toLowerCase();
+    if (tilvaelg !== 'yes' && tilvaelg !== 'ja') {
+      return 'x';
+    }
+    const broderi = selectedOptions.BRODERI || selectedOptions.broderi || {};
+    const text = String(ekstra.Skolebroderi ?? ekstra.skolebroderi ?? broderi.Skolebroderi ?? broderi.skolebroderi ?? selectedOptions.Skolebroderi ?? '').trim();
+    if (!text || text === 'x' || text === 'Ingen') {
+      return 'x';
+    }
+    return text;
+  }
+
+  if (fieldKey === 'options.EKSTRABETRÆK.Skolebroderi farve' || fieldKey === 'Ekstrabetræk Skolebroderi farve') {
+    const ekstra = selectedOptions.EKSTRABETRÆK || selectedOptions.ekstrabetraek || {};
+    const tilvaelg = String(ekstra.Tilvælg ?? ekstra.tilvaelg ?? '').trim().toLowerCase();
+    if (tilvaelg !== 'yes' && tilvaelg !== 'ja') {
+      return 'x';
+    }
+    const broderi = selectedOptions.BRODERI || selectedOptions.broderi || {};
+    const text = String(ekstra.Skolebroderi ?? ekstra.skolebroderi ?? broderi.Skolebroderi ?? broderi.skolebroderi ?? selectedOptions.Skolebroderi ?? '').trim();
+    if (!text || text === 'x' || text === 'Ingen') {
+      return 'x';
+    }
+    let colorVal = ekstra['Skolebroderi farve'] ?? ekstra.skolebroderifarve ?? broderi['Skolebroderi farve'] ?? broderi.skolebroderifarve ?? selectedOptions['Skolebroderi farve'] ?? '';
+    if (typeof colorVal === 'object' && colorVal !== null) {
+      colorVal = colorVal.name || colorVal.value || colorVal.label || '';
+    }
+    colorVal = String(colorVal || '').trim();
+    if (!colorVal || colorVal === 'x' || colorVal === 'NONE') {
+      return 'x';
+    }
+    return translateFactoryValue(colorVal);
+  }
+
   if (fieldKey.startsWith('options.')) {
+    if (fieldKey.startsWith('options.EKSTRABETRÆK.') && fieldKey !== 'options.EKSTRABETRÆK.Tilvælg') {
+      const ekstra = selectedOptions.EKSTRABETRÆK || selectedOptions.ekstrabetraek || {};
+      const tilvaelg = String(ekstra.Tilvælg ?? ekstra.tilvaelg ?? '').trim().toLowerCase();
+      if (tilvaelg !== 'yes' && tilvaelg !== 'ja') {
+        return 'x';
+      }
+    }
     const path = fieldKey.replace('options.', '').split('.');
     let current = selectedOptions;
     for (const part of path) {
