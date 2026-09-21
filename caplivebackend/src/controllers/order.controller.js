@@ -612,7 +612,7 @@ const resendOrderEmails = async (req, res) => {
     if (sendToFactory) {
       try {
         const manufacturerSetting = await prisma.systemSetting.findUnique({ where: { key: 'manufacturer_email' } });
-        const targetFactoryEmail = customFactoryEmail || manufacturerSetting?.value?.email || 'salg@studentlife.dk';
+        const targetFactoryEmail = 'salg@studentlife.dk';
         const emailContentFactory = factoryOrderEmail(orderPayload);
         await transporter.sendMail({
           from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
