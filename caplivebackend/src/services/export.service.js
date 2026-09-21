@@ -64,6 +64,25 @@ const generateExcelFile = async (orders, columns, batchId) => {
         val = translateFactoryValue(val);
       }
       
+      const upperVal = String(val ?? '').trim().toUpperCase();
+      const isNullOrEmpty =
+        val === null ||
+        val === undefined ||
+        upperVal === '' ||
+        upperVal === 'NONE' ||
+        upperVal === 'INGEN' ||
+        upperVal === 'NOT CHOOSEN' ||
+        upperVal === 'NOT CHOSEN' ||
+        upperVal === 'NOT SELECTED' ||
+        upperVal === 'NO' ||
+        upperVal === 'NEJ' ||
+        upperVal === 'UDEN' ||
+        upperVal === 'X';
+
+      if (isNullOrEmpty) {
+        val = 'x';
+      }
+
       row[col.fieldKey] = val;
     }
     sheet.addRow(row);

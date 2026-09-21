@@ -1,5 +1,31 @@
 // Comprehensive translation dictionary mapping Danish configuration values to English for Factory Exports and Portals
 const EXACT_TRANSLATIONS = {
+  // ==================== UNSELECTED / NONE VALUES ====================
+  'Not Choosen': 'x',
+  'Not choosen': 'x',
+  'not choosen': 'x',
+  'NOT CHOOSEN': 'x',
+  'Not Chosen': 'x',
+  'Not chosen': 'x',
+  'not chosen': 'x',
+  'NOT CHOSEN': 'x',
+  'Not Selected': 'x',
+  'Not selected': 'x',
+  'not selected': 'x',
+  'NOT SELECTED': 'x',
+  'Ingen': 'x',
+  'ingen': 'x',
+  'INGEN': 'x',
+  'None': 'x',
+  'none': 'x',
+  'NONE': 'x',
+  'Nej': 'x',
+  'nej': 'x',
+  'NEJ': 'x',
+  'No': 'x',
+  'no': 'x',
+  'NO': 'x',
+
   // ==================== MATERIALS ====================
   'BOMULD': 'Cotton',
   'Bomuld': 'Cotton',

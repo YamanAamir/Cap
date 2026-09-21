@@ -261,7 +261,7 @@ const extractOrderField = (order, fieldKey) => {
     return val;
   }
 
-  return '';
+  return 'x';
 };
 
 module.exports = {
