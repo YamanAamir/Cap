@@ -3620,8 +3620,16 @@ const stripePayment = async (req, res) => {
     if (discountCode) {
       const result = await applyDiscountCode(discountCode, customerDetails?.phone, finalPrice);
       discountRecord = result.discount;
-      discountAmount = result.discountAmount;
-      // finalPrice = result.finalPrice; // Do not subtract again, frontend already subtracted it from totalPrice
+      if (discountRecord) {
+        if (discountRecord.type === 'FIXED') {
+          discountAmount = discountRecord.value;
+        } else if (discountRecord.type === 'PERCENTAGE' && discountRecord.value) {
+          const originalPrice = finalPrice / (1 - (discountRecord.value / 100));
+          discountAmount = Math.round((originalPrice - finalPrice) * 100) / 100;
+        } else {
+          discountAmount = result.discountAmount;
+        }
+      }
     }
 
     let stripeChargeAmount = finalPrice;
