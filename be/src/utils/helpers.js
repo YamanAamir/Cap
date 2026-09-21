@@ -138,6 +138,19 @@ const extractOrderField = (order, fieldKey) => {
 
     if (current === '' || current == null) return 'x';
 
+    const RAW_CUSTOM_TEXT_FIELDS = new Set([
+      'options.BRODERI.Navne broderi', 'Navne broderi',
+      'options.UDDANNELSESBÅND.Broderi foran', 'Broderi foran',
+      'options.BRODERI.Skolebroderi', 'Skolebroderi',
+      'options.SKYGGE.Skyggegravering Line 1', 'Skyggegravering Line 1', 'Line 1',
+      'options.SKYGGE.Skyggegravering Line 2', 'Skyggegravering Line 2', 'Line 2',
+      'options.SKYGGE.Skyggegravering Line 3', 'Skyggegravering Line 3', 'Line 3'
+    ]);
+
+    if (RAW_CUSTOM_TEXT_FIELDS.has(fieldKey)) {
+      return current;
+    }
+
     // Translate Danish terms to English for factory export
     return translateFactoryValue(current);
   }

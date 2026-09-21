@@ -200,9 +200,23 @@ const applyDiscountCode = async (code, phone, orderTotal) => {
   if (new Date() > discount.expiresAt) {
     throw new Error('Discount code has expired');
   }
-  if (discount.usedAt) {
+
+  // Count existing non-cancelled orders using this discount code
+  const orderCount = await prisma.order.count({
+    where: {
+      discountCodeId: discount.id,
+      status: { not: 'CANCELLED' }
+    }
+  });
+
+  if (discount.maxUses !== null && discount.maxUses !== undefined && discount.maxUses > 0) {
+    if (orderCount >= discount.maxUses) {
+      throw new Error('Discount code has reached its usage limit');
+    }
+  } else if (discount.usedAt) {
     throw new Error('Discount code already used');
   }
+
   const cleanPhone = (p) => p ? p.replace(/[^\d]/g, '') : '';
   const dPhone = cleanPhone(discount.phoneNumber);
   const cPhone = cleanPhone(phone);
@@ -210,7 +224,7 @@ const applyDiscountCode = async (code, phone, orderTotal) => {
     throw new Error('Discount code not valid for this phone number');
   }
 
-  // Strict check: Prevent customers who have already completed an order with a discount from applying it again
+  // Check: Prevent the same phone number from applying THIS SPECIFIC discount code multiple times
   if (cPhone) {
     const customersWithPhone = await prisma.customer.findMany({
       where: { phone: { not: null } }
@@ -223,12 +237,12 @@ const applyDiscountCode = async (code, phone, orderTotal) => {
       const existingOrderWithDiscount = await prisma.order.findFirst({
         where: {
           customerId: { in: matchingCustomerIds },
-          discountCodeId: { not: null },
+          discountCodeId: discount.id,
           status: { not: 'CANCELLED' }
         }
       });
       if (existingOrderWithDiscount) {
-        throw new Error('A discount has already been used for this phone number');
+        throw new Error('This discount code has already been used for this phone number');
       }
     }
   }
@@ -491,7 +505,38 @@ const sendOrderEmail = async (to, subject, htmlBody) => {
   }
 };
 
-const getDashboardStats = async () => {
+const getDashboardStats = async (query = {}) => {
+  const { filter, startDate, endDate } = query;
+
+  let dateWhere = undefined;
+
+  if (filter === 'today') {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date();
+    end.setHours(23, 59, 59, 999);
+    dateWhere = { createdAt: { gte: start, lte: end } };
+  } else if (filter === 'month') {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    dateWhere = { createdAt: { gte: start, lte: end } };
+  } else if (filter === 'custom' && (startDate || endDate)) {
+    dateWhere = { createdAt: {} };
+    if (startDate) {
+      dateWhere.createdAt.gte = new Date(startDate);
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      dateWhere.createdAt.lte = end;
+    }
+  }
+
+  const orderWhere = dateWhere ? { ...dateWhere } : {};
+  const customerWhere = dateWhere ? { createdAt: dateWhere.createdAt } : {};
+  const discountCodeWhere = dateWhere ? { usedAt: dateWhere.createdAt } : { usedAt: { not: null } };
+
   const triggerStatuses = await prisma.orderStatus.findMany({
     where: { triggersProduction: true, isActive: true }
   });
@@ -508,6 +553,7 @@ const getDashboardStats = async () => {
   const [
     readyForProduction,
     totalOrders,
+    installmentOrdersCount,
     activeCampaigns,
     smsConsentCount,
     totalDiscountCodes,
@@ -519,16 +565,26 @@ const getDashboardStats = async () => {
     statusCountsRaw
   ] = await Promise.all([
     triggerStatusIds.length > 0
-      ? prisma.order.count({ where: { statusId: { in: triggerStatusIds }, productionBatchId: null } })
+      ? prisma.order.count({ where: { ...orderWhere, statusId: { in: triggerStatusIds }, productionBatchId: null } })
       : 0,
-    prisma.order.count(),
+    prisma.order.count({ where: orderWhere }),
+    prisma.order.count({
+      where: {
+        ...orderWhere,
+        OR: [
+          { installmentPlanId: { not: null } },
+          { installmentDetails: { not: null } }
+        ]
+      }
+    }),
     prisma.smsCampaign.count({ where: { isActive: true } }),
-    prisma.customer.count({ where: { smsMarketingConsent: true, smsOptOut: false } }),
+    prisma.customer.count({ where: { ...customerWhere, smsMarketingConsent: true, smsOptOut: false } }),
     prisma.discountCode.count(),
-    prisma.discountCode.count({ where: { usedAt: { not: null } } }),
+    prisma.discountCode.count({ where: discountCodeWhere }),
     prisma.productionDispatchLog.findFirst({ orderBy: { sentAt: 'desc' }, include: { batch: true } }),
-    prisma.order.aggregate({ _sum: { totalPrice: true } }),
+    prisma.order.aggregate({ _sum: { totalPrice: true }, where: orderWhere }),
     prisma.order.findMany({
+      where: orderWhere,
       take: 5,
       orderBy: { createdAt: 'desc' },
       include: { customer: true, orderStatus: true }
@@ -536,6 +592,7 @@ const getDashboardStats = async () => {
     prisma.orderStatus.findMany({ orderBy: { sortOrder: 'asc' } }),
     prisma.order.groupBy({
       by: ['statusId'],
+      where: orderWhere,
       _count: { id: true }
     })
   ]);
@@ -556,6 +613,7 @@ const getDashboardStats = async () => {
   return {
     readyForProduction,
     totalOrders,
+    installmentOrdersCount,
     activeCampaigns,
     smsConsentCount,
     totalDiscountCodes,

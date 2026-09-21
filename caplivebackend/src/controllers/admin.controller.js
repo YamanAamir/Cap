@@ -10,7 +10,8 @@ const { slugify } = require('../utils/helpers');
 // Dashboard
 exports.getStats = async (req, res) => {
   try {
-    const stats = await getDashboardStats();
+    const { filter, startDate, endDate } = req.query;
+    const stats = await getDashboardStats({ filter, startDate, endDate });
     res.json(stats);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -202,7 +203,16 @@ exports.deleteOrderStatus = async (req, res) => {
 // Discount Codes
 exports.getDiscountCodes = async (req, res) => {
   try {
-    const codes = await prisma.discountCode.findMany({ orderBy: { createdAt: 'desc' }, include: { customer: true } });
+    const codes = await prisma.discountCode.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        customer: true,
+        orders: {
+          where: { status: { not: 'CANCELLED' } },
+          select: { id: true }
+        }
+      }
+    });
     res.json(codes);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -211,7 +221,7 @@ exports.getDiscountCodes = async (req, res) => {
 
 exports.createDiscountCode = async (req, res) => {
   try {
-    const { code, type, value, expiresAt, phoneNumber } = req.body;
+    const { code, type, value, expiresAt, phoneNumber, maxUses } = req.body;
     const discount = await prisma.discountCode.create({
       data: {
         code: code.toUpperCase(),
@@ -219,6 +229,7 @@ exports.createDiscountCode = async (req, res) => {
         value: parseFloat(value),
         expiresAt: new Date(expiresAt),
         phoneNumber: phoneNumber || null,
+        maxUses: maxUses !== undefined && maxUses !== '' && maxUses !== null ? parseInt(maxUses) : null,
         source: 'ADMIN',
       },
     });
@@ -231,7 +242,7 @@ exports.createDiscountCode = async (req, res) => {
 exports.updateDiscountCode = async (req, res) => {
   const id = parseInt(req.params.id);
   try {
-    const { code, type, value, expiresAt, phoneNumber, isActive } = req.body;
+    const { code, type, value, expiresAt, phoneNumber, isActive, maxUses } = req.body;
     const data = {};
     if (code !== undefined) data.code = code.toUpperCase();
     if (type !== undefined) data.type = type;
@@ -239,6 +250,7 @@ exports.updateDiscountCode = async (req, res) => {
     if (expiresAt !== undefined) data.expiresAt = new Date(expiresAt);
     if (phoneNumber !== undefined) data.phoneNumber = phoneNumber || null;
     if (isActive !== undefined) data.isActive = !!isActive;
+    if (maxUses !== undefined) data.maxUses = maxUses !== '' && maxUses !== null ? parseInt(maxUses) : null;
 
     const updated = await prisma.discountCode.update({
       where: { id },

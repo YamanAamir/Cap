@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getOrders, deleteOrder, updateOrder } from '../services/auth.service';
+import { getOrders, deleteOrder, updateOrder, bulkUpdateOrderStatus, bulkDeleteOrders } from '../services/auth.service';
 import { getOrderStatuses } from '../services/admin.service';
 import { Search, Loader2, Filter, MoreHorizontal, RefreshCw, Trash2, Edit2, Eye, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -18,14 +18,24 @@ const OrdersPage = () => {
   const [debounceSearch, setDebounceSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [installmentFilter, setInstallmentFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all'); // 'all' | 'today' | 'month' | 'custom'
+  const [customDates, setCustomDates] = useState({ startDate: '', endDate: '' });
   const [statuses, setStatuses] = useState([]);
   const navigate = useNavigate();
 
-  // Modals state
+  // Single order modals state
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, orderId: null });
   const [editModal, setEditModal] = useState({ isOpen: false, order: null });
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+
+  // Bulk actions state
+  const [selectedOrderIds, setSelectedOrderIds] = useState([]);
+  const [bulkStatusModalOpen, setBulkStatusModalOpen] = useState(false);
+  const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
+  const [selectedBulkStatusId, setSelectedBulkStatusId] = useState('');
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   useEffect(() => {
     getOrderStatuses().then(setStatuses).catch(console.error);
@@ -47,6 +57,9 @@ const OrdersPage = () => {
         limit,
         statusId: statusFilter,
         installment: installmentFilter,
+        dateFilter,
+        startDate: customDates.startDate,
+        endDate: customDates.endDate,
       });
       setData(response);
     } catch (error) {
@@ -59,11 +72,11 @@ const OrdersPage = () => {
 
   useEffect(() => {
     setPage(1);
-  }, [debounceSearch, statusFilter, installmentFilter, limit]);
+  }, [debounceSearch, statusFilter, installmentFilter, limit, dateFilter, customDates.startDate, customDates.endDate]);
 
   useEffect(() => {
     fetchOrders();
-  }, [page, debounceSearch, sortBy, order, statusFilter, installmentFilter, limit]);
+  }, [page, debounceSearch, sortBy, order, statusFilter, installmentFilter, limit, dateFilter, customDates.startDate, customDates.endDate]);
 
   const handleSort = (field) => {
     if (sortBy === field) {
@@ -79,6 +92,7 @@ const OrdersPage = () => {
     try {
       await deleteOrder(deleteModal.orderId);
       toast.success('Order deleted successfully');
+      setSelectedOrderIds(prev => prev.filter(id => id !== deleteModal.orderId));
       fetchOrders();
     } catch (error) {
       toast.error('Failed to delete order');
@@ -107,9 +121,60 @@ const OrdersPage = () => {
     }
   };
 
+  // Bulk Selection Helpers
+  const isAllPageSelected = data.orders.length > 0 && data.orders.every(o => selectedOrderIds.includes(o.id));
+  const isSomePageSelected = data.orders.some(o => selectedOrderIds.includes(o.id)) && !isAllPageSelected;
 
+  const handleSelectAllPage = () => {
+    if (isAllPageSelected) {
+      const pageIds = data.orders.map(o => o.id);
+      setSelectedOrderIds(prev => prev.filter(id => !pageIds.includes(id)));
+    } else {
+      const pageIds = data.orders.map(o => o.id);
+      setSelectedOrderIds(prev => Array.from(new Set([...prev, ...pageIds])));
+    }
+  };
 
+  const handleSelectOrder = (orderId) => {
+    setSelectedOrderIds(prev => 
+      prev.includes(orderId) ? prev.filter(id => id !== orderId) : [...prev, orderId]
+    );
+  };
 
+  const handleBulkStatusChange = async () => {
+    if (!selectedBulkStatusId || selectedOrderIds.length === 0) return;
+    setIsBulkUpdating(true);
+    try {
+      const res = await bulkUpdateOrderStatus(selectedOrderIds, selectedBulkStatusId);
+      toast.success(res.message || `Successfully updated ${selectedOrderIds.length} orders`);
+      setSelectedOrderIds([]);
+      setSelectedBulkStatusId('');
+      setBulkStatusModalOpen(false);
+      fetchOrders();
+    } catch (error) {
+      console.error('Bulk status update error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to update order status');
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedOrderIds.length === 0) return;
+    setIsBulkDeleting(true);
+    try {
+      const res = await bulkDeleteOrders(selectedOrderIds);
+      toast.success(res.message || `Successfully deleted ${selectedOrderIds.length} orders`);
+      setSelectedOrderIds([]);
+      setBulkDeleteModalOpen(false);
+      fetchOrders();
+    } catch (error) {
+      console.error('Bulk delete error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to delete orders');
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
 
   if (loading && !data.orders.length) {
     return (
@@ -119,57 +184,175 @@ const OrdersPage = () => {
     );
   }
 
+  const selectedStatusName = statuses.find(s => String(s.id) === String(selectedBulkStatusId))?.name || '';
+
   return (
     <div className="animate-in fade-in duration-500 max-w-[1400px] mx-auto pb-12">
       
       {/* Top Controls */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-        <div className="relative w-full md:w-[300px]">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search orders..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-          />
-        </div>
-        
-        <div className="flex items-center gap-3 w-full md:w-auto">
-           <div className="relative w-full sm:w-auto">
-              <Filter className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
-              <select
-                value={statusFilter}
-                onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-                className="w-full sm:w-48 pl-9 pr-4 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 bg-white"
+      <div className="flex flex-col gap-4 mb-6">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="relative w-full md:w-[280px]">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search orders..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            />
+          </div>
+          
+          <div className="flex items-center gap-2.5 w-full md:w-auto flex-wrap">
+              {/* Date Filter Tabs */}
+              <div className="flex items-center bg-slate-100 border border-slate-200 rounded p-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => { setDateFilter('all'); setPage(1); }}
+                  className={`px-2.5 py-1 rounded font-semibold transition-all ${
+                    dateFilter === 'all'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setDateFilter('today'); setPage(1); }}
+                  className={`px-2.5 py-1 rounded font-semibold transition-all ${
+                    dateFilter === 'today'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setDateFilter('month'); setPage(1); }}
+                  className={`px-2.5 py-1 rounded font-semibold transition-all ${
+                    dateFilter === 'month'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Month
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setDateFilter('custom'); setPage(1); }}
+                  className={`px-2.5 py-1 rounded font-semibold transition-all ${
+                    dateFilter === 'custom'
+                      ? 'bg-white text-slate-900 shadow-sm'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Custom
+                </button>
+              </div>
+
+              {dateFilter === 'custom' && (
+                <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded px-2 py-1 text-xs shadow-sm">
+                  <input
+                    type="date"
+                    value={customDates.startDate}
+                    onChange={(e) => { setCustomDates(prev => ({ ...prev, startDate: e.target.value })); setPage(1); }}
+                    className="border border-slate-200 rounded px-1.5 py-0.5 text-slate-700 outline-none focus:border-blue-500"
+                  />
+                  <span className="text-slate-400 font-medium">to</span>
+                  <input
+                    type="date"
+                    value={customDates.endDate}
+                    onChange={(e) => { setCustomDates(prev => ({ ...prev, endDate: e.target.value })); setPage(1); }}
+                    className="border border-slate-200 rounded px-1.5 py-0.5 text-slate-700 outline-none focus:border-blue-500"
+                  />
+                </div>
+              )}
+
+              <div className="relative w-full sm:w-auto">
+                <Filter className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+                  className="w-full sm:w-40 pl-9 pr-4 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 bg-white"
+                >
+                  <option value="all">All Statuses</option>
+                  {statuses.filter(s => s.isActive).map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="relative w-full sm:w-auto">
+                <Filter className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
+                <select
+                  value={installmentFilter}
+                  onChange={(e) => { setInstallmentFilter(e.target.value); setPage(1); }}
+                  className="w-full sm:w-40 pl-9 pr-4 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 bg-white"
+                >
+                  <option value="all">All Payment Types</option>
+                  <option value="yes">Installments</option>
+                  <option value="no">Full Payment</option>
+                </select>
+              </div>
+
+              <button 
+                onClick={fetchOrders}
+                className={cn("flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 h-9 w-9 rounded border border-slate-200 transition-colors shrink-0", loading && "opacity-50")}
+                title="Refresh orders"
               >
-                <option value="all">All Statuses</option>
-                {statuses.filter(s => s.isActive).map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div className="relative w-full sm:w-auto">
-              <Filter className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
-              <select
-                value={installmentFilter}
-                onChange={(e) => { setInstallmentFilter(e.target.value); setPage(1); }}
-                className="w-full sm:w-48 pl-9 pr-4 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 bg-white"
-              >
-                <option value="all">All Payment Types</option>
-                <option value="yes">Installments</option>
-                <option value="no">Full Payment</option>
-              </select>
-            </div>
-            <button 
-              onClick={fetchOrders}
-              className={cn("flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 h-9 w-9 rounded border border-slate-200 transition-colors", loading && "opacity-50")}
-            >
-              <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
-            </button>
+                <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+              </button>
+          </div>
         </div>
       </div>
+
+      {/* Bulk Action Toolbar */}
+      {selectedOrderIds.length > 0 && (
+        <div className="mb-4 p-3 bg-slate-900 text-white rounded-lg flex flex-wrap items-center justify-between gap-3 shadow-md animate-in slide-in-from-top-2">
+          <div className="flex items-center gap-2">
+            <span className="bg-blue-600 text-xs px-2.5 py-1 rounded-full font-bold">
+              {selectedOrderIds.length} Selected
+            </span>
+            <span className="text-xs text-slate-300 font-medium">orders chosen for bulk actions</span>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={selectedBulkStatusId}
+              onChange={(e) => setSelectedBulkStatusId(e.target.value)}
+              className="bg-slate-800 text-white text-xs border border-slate-700 rounded px-3 py-1.5 focus:outline-none focus:border-blue-500 cursor-pointer"
+            >
+              <option value="">-- Change Status To --</option>
+              {statuses.filter(s => s.isActive).map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              disabled={!selectedBulkStatusId}
+              onClick={() => setBulkStatusModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold px-3 py-1.5 rounded transition-colors"
+            >
+              Apply Status
+            </button>
+            <button
+              type="button"
+              onClick={() => setBulkDeleteModalOpen(true)}
+              className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-3 py-1.5 rounded transition-colors"
+            >
+              Delete Selected
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedOrderIds([])}
+              className="text-slate-400 hover:text-white text-xs font-medium px-2 py-1 transition-colors"
+            >
+              Deselect All
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Table Section */}
       <div className="bg-white rounded border border-slate-200 overflow-x-auto relative">
@@ -181,6 +364,15 @@ const OrdersPage = () => {
         <table className="w-full text-left text-sm whitespace-nowrap">
           <thead className="bg-[#fafafa] border-b border-slate-200">
             <tr>
+              <th className="px-4 py-4 w-10 text-center">
+                <input
+                  type="checkbox"
+                  checked={isAllPageSelected}
+                  ref={el => { if (el) el.indeterminate = isSomePageSelected; }}
+                  onChange={handleSelectAllPage}
+                  className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                />
+              </th>
               <th className="px-6 py-4 font-bold text-slate-500 cursor-pointer hover:text-blue-600" onClick={() => handleSort('orderNumber')}>
                 Order # {sortBy === 'orderNumber' && (order === 'asc' ? '↑' : '↓')}
               </th>
@@ -196,11 +388,19 @@ const OrdersPage = () => {
           <tbody className="divide-y divide-slate-100">
             {data.orders.length === 0 && !loading ? (
               <tr>
-                <td colSpan="6" className="px-6 py-8 text-center text-slate-500 font-medium">No orders found.</td>
+                <td colSpan="7" className="px-6 py-8 text-center text-slate-500 font-medium">No orders found.</td>
               </tr>
             ) : (
               data.orders.map((order) => (
-                <tr key={order.id} className="hover:bg-slate-50/50 transition-colors">
+                <tr key={order.id} className={cn("hover:bg-slate-50/50 transition-colors", selectedOrderIds.includes(order.id) && "bg-blue-50/40")}>
+                  <td className="px-4 py-4 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedOrderIds.includes(order.id)}
+                      onChange={() => handleSelectOrder(order.id)}
+                      className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                    />
+                  </td>
                   <td className="px-6 py-4 font-bold text-slate-700">
                     <div className="flex items-center gap-2">
                       <span>{order.orderNumber}</span>
@@ -362,6 +562,30 @@ const OrdersPage = () => {
         isLoading={isDeleting}
         onConfirm={handleDelete}
         onCancel={() => setDeleteModal({ isOpen: false, orderId: null })}
+      />
+
+      <ConfirmModal
+        isOpen={bulkStatusModalOpen}
+        title="Bulk Change Order Status"
+        message={`Are you sure you want to change the status of ${selectedOrderIds.length} order(s) to "${selectedStatusName}"? Customer status emails and installment notification emails will be sent automatically for each order.`}
+        confirmText={`Update ${selectedOrderIds.length} Order(s)`}
+        cancelText="Cancel"
+        type="primary"
+        loading={isBulkUpdating}
+        onConfirm={handleBulkStatusChange}
+        onCancel={() => setBulkStatusModalOpen(false)}
+      />
+
+      <ConfirmModal
+        isOpen={bulkDeleteModalOpen}
+        title="Bulk Delete Orders"
+        message={`Are you sure you want to permanently delete ${selectedOrderIds.length} selected order(s)? This action cannot be undone.`}
+        confirmText={`Delete ${selectedOrderIds.length} Order(s)`}
+        cancelText="Cancel"
+        type="danger"
+        loading={isBulkDeleting}
+        onConfirm={handleBulkDelete}
+        onCancel={() => setBulkDeleteModalOpen(false)}
       />
 
       {editModal.isOpen && (

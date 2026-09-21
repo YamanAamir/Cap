@@ -12,12 +12,12 @@ const DiscountCodesPage = () => {
   const [search, setSearch] = useState('');
   
   // Create / Edit Form State
-  const [form, setForm] = useState({ code: '', type: 'PERCENTAGE', value: 10, expiresAt: '', phoneNumber: '' });
+  const [form, setForm] = useState({ code: '', type: 'PERCENTAGE', value: 10, expiresAt: '', phoneNumber: '', maxUses: '' });
   const [saving, setSaving] = useState(false);
   
   // Edit Modal State
   const [editingCode, setEditingCode] = useState(null);
-  const [editForm, setEditForm] = useState({ code: '', type: 'PERCENTAGE', value: 10, expiresAt: '', phoneNumber: '' });
+  const [editForm, setEditForm] = useState({ code: '', type: 'PERCENTAGE', value: 10, expiresAt: '', phoneNumber: '', maxUses: '' });
   
   // Delete Modal State
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, code: null });
@@ -66,7 +66,7 @@ const DiscountCodesPage = () => {
       await createDiscountCode(form);
       toast.success('Discount code created successfully');
       setShowForm(false);
-      setForm({ code: '', type: 'PERCENTAGE', value: 10, expiresAt: '', phoneNumber: '' });
+      setForm({ code: '', type: 'PERCENTAGE', value: 10, expiresAt: '', phoneNumber: '', maxUses: '' });
       load();
     } catch (e) {
       toast.error(e.response?.data?.message || 'Failed to create discount code.');
@@ -84,7 +84,8 @@ const DiscountCodesPage = () => {
       type: c.type || 'PERCENTAGE',
       value: c.value,
       expiresAt: expDate,
-      phoneNumber: c.phoneNumber || ''
+      phoneNumber: c.phoneNumber || '',
+      maxUses: c.maxUses !== null && c.maxUses !== undefined ? c.maxUses : ''
     });
   };
 
@@ -174,7 +175,7 @@ const DiscountCodesPage = () => {
       {showForm && (
         <div className="bg-[#f0f4f8] p-6 rounded border border-slate-200 mb-6 animate-in slide-in-from-top-4 duration-300">
           <h3 className="text-sm font-bold text-slate-800 mb-4">Create New Coupon</h3>
-          <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+          <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
             <div>
               <label className="block text-xs font-bold text-slate-600 mb-1">Coupon Code</label>
               <input 
@@ -203,6 +204,17 @@ const DiscountCodesPage = () => {
                 value={form.value} 
                 onChange={e => setForm({ ...form, value: e.target.value })} 
                 required 
+                min="1"
+                className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-600 mb-1">Max Uses (Limit)</label>
+              <input 
+                type="number" 
+                placeholder="Unlimited"
+                value={form.maxUses} 
+                onChange={e => setForm({ ...form, maxUses: e.target.value })} 
                 min="1"
                 className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 bg-white"
               />
@@ -277,15 +289,28 @@ const DiscountCodesPage = () => {
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-600 mb-1">Expiry Date</label>
-                <input 
-                  type="date" 
-                  value={editForm.expiresAt} 
-                  onChange={e => setEditForm({ ...editForm, expiresAt: e.target.value })} 
-                  required 
-                  className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">Max Uses (Limit)</label>
+                  <input 
+                    type="number" 
+                    placeholder="Unlimited"
+                    value={editForm.maxUses} 
+                    onChange={e => setEditForm({ ...editForm, maxUses: e.target.value })} 
+                    min="1"
+                    className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">Expiry Date</label>
+                  <input 
+                    type="date" 
+                    value={editForm.expiresAt} 
+                    onChange={e => setEditForm({ ...editForm, expiresAt: e.target.value })} 
+                    required 
+                    className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
               </div>
 
               <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
@@ -330,7 +355,8 @@ const DiscountCodesPage = () => {
               </tr>
             ) : (
               paginatedCodes.map((c) => {
-                const used = !!c.usedAt;
+                const usedCount = c.orders ? c.orders.length : (c.usedAt ? 1 : 0);
+                const limitDisplay = c.maxUses !== null && c.maxUses !== undefined ? c.maxUses : (c.phoneNumber ? '1' : '∞');
                 const isMenuOpen = activeMenuId === c.id;
                 
                 return (
@@ -342,9 +368,9 @@ const DiscountCodesPage = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-slate-800 font-bold">
-                       {used ? '1' : '0'} <span className="text-slate-400 font-normal ml-1">/ 1</span>
+                       {usedCount} <span className="text-slate-400 font-normal ml-1">/ {limitDisplay}</span>
                     </td>
-                    <td className="px-6 py-4 text-slate-700">{used ? '1' : '0'}</td>
+                    <td className="px-6 py-4 text-slate-700">{usedCount}</td>
                     <td className="px-6 py-4 text-slate-700">advance</td>
                     <td className="px-6 py-4">
                        <div className="flex flex-col">

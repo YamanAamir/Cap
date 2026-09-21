@@ -83,6 +83,9 @@ const getOrders = async (req, res) => {
       statusId = 'all',
       installment = 'all',
       isVisibleToProduction = null,
+      dateFilter = 'all',
+      startDate,
+      endDate,
     } = req.query;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -108,6 +111,29 @@ const getOrders = async (req, res) => {
       where.installmentDetails = { not: Prisma.AnyNull };
     } else if (installment === 'no') {
       where.installmentDetails = { equals: Prisma.AnyNull };
+    }
+
+    if (dateFilter === 'today') {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const end = new Date();
+      end.setHours(23, 59, 59, 999);
+      where.createdAt = { gte: start, lte: end };
+    } else if (dateFilter === 'month') {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      where.createdAt = { gte: start, lte: end };
+    } else if (dateFilter === 'custom' && (startDate || endDate)) {
+      where.createdAt = {};
+      if (startDate) {
+        where.createdAt.gte = new Date(startDate);
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        where.createdAt.lte = end;
+      }
     }
 
     const orderBy = {};
@@ -174,152 +200,211 @@ const getOrderById = async (req, res) => {
   }
 };
 
-const updateOrderStatus = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status, statusId } = req.body;
+const processSingleOrderStatusUpdate = async (id, statusOrId, reqUser, reqHeaders = {}) => {
+  const orderId = parseInt(id);
+  if (isNaN(orderId)) {
+    throw new Error('Invalid order ID');
+  }
 
-    const orderId = parseInt(id);
-    if (isNaN(orderId)) {
-      return res.status(400).json({ message: 'Invalid order ID' });
-    }
+  const existingOrder = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { orderStatus: true },
+  });
 
-    const existingOrder = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: { orderStatus: true },
-    });
+  if (!existingOrder) {
+    throw new Error(`Order ${id} not found`);
+  }
 
-    if (!existingOrder) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
+  const data = {};
+  let newOrderStatus = null;
 
-    const data = {};
-    let newOrderStatus = null;
-    
-    if (statusId !== undefined && statusId !== null && statusId !== '') {
-      const numericStatusId = parseInt(statusId);
-      if (!isNaN(numericStatusId)) {
-        const orderStatus = await prisma.orderStatus.findUnique({ where: { id: numericStatusId } });
-        if (orderStatus) {
-          data.statusId = orderStatus.id;
-          data.status = orderStatus.name.toUpperCase().replace(/\s+/g, '_');
-          newOrderStatus = orderStatus;
-        } else {
-          return res.status(400).json({ message: `Order status with ID ${statusId} not found` });
-        }
+  if (statusOrId !== undefined && statusOrId !== null && statusOrId !== '') {
+    const numericStatusId = parseInt(statusOrId);
+    if (!isNaN(numericStatusId)) {
+      const orderStatus = await prisma.orderStatus.findUnique({ where: { id: numericStatusId } });
+      if (orderStatus) {
+        data.statusId = orderStatus.id;
+        data.status = orderStatus.name.toUpperCase().replace(/\s+/g, '_');
+        newOrderStatus = orderStatus;
+      } else {
+        throw new Error(`Order status with ID ${statusOrId} not found`);
       }
-    } else if (status) {
-      data.status = status;
+    } else {
+      data.status = String(statusOrId);
       const orderStatus = await prisma.orderStatus.findFirst({
-        where: { name: { equals: status.replace(/_/g, ' ') } },
+        where: { name: { equals: String(statusOrId).replace(/_/g, ' ') } },
       });
       if (orderStatus) {
         data.statusId = orderStatus.id;
         newOrderStatus = orderStatus;
       }
     }
+  }
 
-    // Append to audit history
-    if (newOrderStatus) {
-      let custDetails = existingOrder.customerDetails;
-      if (typeof custDetails === 'string') {
-        try { custDetails = JSON.parse(custDetails); } catch { custDetails = {}; }
-      } else if (!custDetails || typeof custDetails !== 'object') {
-        custDetails = {};
-      } else {
-        custDetails = { ...custDetails };
-      }
-      if (!Array.isArray(custDetails._history)) {
-        custDetails._history = custDetails._history ? [custDetails._history] : [];
-      } else {
-        custDetails._history = [...custDetails._history];
-      }
-
-      const prevStatusName = existingOrder.orderStatus?.name || existingOrder.status || 'Pending';
-      const prevStatusColor = existingOrder.orderStatus?.color || '#6366f1';
-
-      custDetails._history.unshift({
-        id: `hist_${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        type: 'STATUS_CHANGE',
-        badge: `${prevStatusName} ➔ ${newOrderStatus.name}`,
-        title: `Status opdateret til "${newOrderStatus.name}"`,
-        description: `Status blev ændret fra "${prevStatusName}" til "${newOrderStatus.name}". ${newOrderStatus.customerEmailTemplateId ? 'Kunde-email blev automatisk afsendt.' : ''}`,
-        oldStatus: prevStatusName,
-        newStatus: newOrderStatus.name,
-        oldStatusColor: prevStatusColor,
-        newStatusColor: newOrderStatus.color,
-        performedBy: req.user?.name || req.user?.email || 'Admin',
-      });
-
-      data.customerDetails = typeof custDetails === 'string' ? custDetails : JSON.stringify(custDetails);
+  // Append to audit history
+  if (newOrderStatus) {
+    let custDetails = existingOrder.customerDetails;
+    if (typeof custDetails === 'string') {
+      try { custDetails = JSON.parse(custDetails); } catch { custDetails = {}; }
+    } else if (!custDetails || typeof custDetails !== 'object') {
+      custDetails = {};
+    } else {
+      custDetails = { ...custDetails };
+    }
+    if (!Array.isArray(custDetails._history)) {
+      custDetails._history = custDetails._history ? [custDetails._history] : [];
+    } else {
+      custDetails._history = [...custDetails._history];
     }
 
-    const updatedOrder = await prisma.order.update({
-      where: { id: orderId },
-      data,
-      include: {
-        orderStatus: true,
-        customer: true,
-        discountCode: true,
-        installmentPlan: true,
-      },
+    const prevStatusName = existingOrder.orderStatus?.name || existingOrder.status || 'Pending';
+    const prevStatusColor = existingOrder.orderStatus?.color || '#6366f1';
+
+    custDetails._history.unshift({
+      id: `hist_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: new Date().toISOString(),
+      type: 'STATUS_CHANGE',
+      badge: `${prevStatusName} ➔ ${newOrderStatus.name}`,
+      title: `Status opdateret til "${newOrderStatus.name}"`,
+      description: `Status blev ændret fra "${prevStatusName}" til "${newOrderStatus.name}". ${newOrderStatus.customerEmailTemplateId ? 'Kunde-email blev automatisk afsendt.' : ''}`,
+      oldStatus: prevStatusName,
+      newStatus: newOrderStatus.name,
+      oldStatusColor: prevStatusColor,
+      newStatusColor: newOrderStatus.color,
+      performedBy: reqUser?.name || reqUser?.email || 'Admin',
     });
 
-    if (newOrderStatus && newOrderStatus.customerEmailTemplateId) {
-      // Send email asynchronously without blocking the response
-      sendCustomerStatusEmail(updatedOrder.id, newOrderStatus.customerEmailTemplateId).catch(err => {
-        console.error('Failed to send customer status email in background:', err);
-      });
-    }
+    data.customerDetails = typeof custDetails === 'string' ? custDetails : JSON.stringify(custDetails);
+  }
 
-    if (newOrderStatus && newOrderStatus.isInstallmentTrigger && newOrderStatus.installmentTriggerIndex !== null && newOrderStatus.installmentTriggerIndex !== undefined) {
-      const idx = newOrderStatus.installmentTriggerIndex;
-      let instDetails = updatedOrder.installmentDetails;
-      if (typeof instDetails === 'string') {
-        try { instDetails = JSON.parse(instDetails); } catch { instDetails = null; }
-      }
-      if (instDetails && instDetails.installments && instDetails.installments[idx]) {
-        const installment = instDetails.installments[idx];
-        if (installment.status !== 'Paid') {
-          // Use API_BASE_URL from env, or dynamically generate it from the incoming request headers
-          const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-          const host = req.headers['x-forwarded-host'] || (req.get ? req.get('host') : 'localhost');
-          const rawUrl = process.env.API_BASE_URL || process.env.VITE_API_BASE_URL || `${protocol}://${host}`;
-          
-          const apiRoot = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl.replace(/\/$/, '')}/api`;
-          const paymentLink = `${apiRoot}/sendEmail/pay-installment?orderId=${updatedOrder.id}&installmentIndex=${idx}`;
-          
-          let custDetailsObj = updatedOrder.customerDetails;
-          if (typeof custDetailsObj === 'string') {
-            try { custDetailsObj = JSON.parse(custDetailsObj); } catch { custDetailsObj = {}; }
-          }
-          const subject = `Din næste rate for ordre ${updatedOrder.orderNumber} er klar til betaling`;
-          const body = `
-            <h2>Hej ${custDetailsObj?.firstName || ''},</h2>
-            <p>Din næste rate (<strong>${installment.label}</strong>) på <strong>${installment.amount} DKK</strong> er nu klar til at blive betalt.</p>
-            <p>Klik på linket nedenfor for at fuldføre betalingen sikkert via Stripe:</p>
-            <p><a href="${paymentLink}" style="display:inline-block; padding:10px 20px; background-color:#16a34a; color:#fff; text-decoration:none; border-radius:5px; font-weight:bold;">Betal nu</a></p>
-            <p>Tak fordi du handler hos os!</p>
-          `;
-          
-          try {
-            const { sendOrderEmail } = require('../services/core.service');
-            sendOrderEmail(updatedOrder.customerEmail, subject, body).catch(err => {
-              console.error('Failed to send installment payment email:', err);
-            });
-          } catch (mailErr) {
-            console.error('Failed to load email service:', mailErr);
-          }
+  const updatedOrder = await prisma.order.update({
+    where: { id: orderId },
+    data,
+    include: {
+      orderStatus: true,
+      customer: true,
+      discountCode: true,
+      installmentPlan: true,
+    },
+  });
+
+  if (newOrderStatus && newOrderStatus.customerEmailTemplateId) {
+    // Send email asynchronously without blocking the response
+    sendCustomerStatusEmail(updatedOrder.id, newOrderStatus.customerEmailTemplateId).catch(err => {
+      console.error('Failed to send customer status email in background:', err);
+    });
+  }
+
+  if (newOrderStatus && newOrderStatus.isInstallmentTrigger && newOrderStatus.installmentTriggerIndex !== null && newOrderStatus.installmentTriggerIndex !== undefined) {
+    const idx = newOrderStatus.installmentTriggerIndex;
+    let instDetails = updatedOrder.installmentDetails;
+    if (typeof instDetails === 'string') {
+      try { instDetails = JSON.parse(instDetails); } catch { instDetails = null; }
+    }
+    if (instDetails && instDetails.installments && instDetails.installments[idx]) {
+      const installment = instDetails.installments[idx];
+      if (installment.status !== 'Paid') {
+        const protocol = reqHeaders['x-forwarded-proto'] || 'http';
+        const host = reqHeaders['x-forwarded-host'] || (reqHeaders.get ? reqHeaders.get('host') : 'localhost');
+        const rawUrl = process.env.API_BASE_URL || process.env.VITE_API_BASE_URL || `${protocol}://${host}`;
+        
+        const apiRoot = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl.replace(/\/$/, '')}/api`;
+        const paymentLink = `${apiRoot}/sendEmail/pay-installment?orderId=${updatedOrder.id}&installmentIndex=${idx}`;
+        
+        let custDetailsObj = updatedOrder.customerDetails;
+        if (typeof custDetailsObj === 'string') {
+          try { custDetailsObj = JSON.parse(custDetailsObj); } catch { custDetailsObj = {}; }
+        }
+        const subject = `Din næste rate for ordre ${updatedOrder.orderNumber} er klar til betaling`;
+        const body = `
+          <h2>Hej ${custDetailsObj?.firstName || ''},</h2>
+          <p>Din næste rate (<strong>${installment.label}</strong>) på <strong>${installment.amount} DKK</strong> er nu klar til at blive betalt.</p>
+          <p>Klik på linket nedenfor for at fuldføre betalingen sikkert via Stripe:</p>
+          <p><a href="${paymentLink}" style="display:inline-block; padding:10px 20px; background-color:#16a34a; color:#fff; text-decoration:none; border-radius:5px; font-weight:bold;">Betal nu</a></p>
+          <p>Tak fordi du handler hos os!</p>
+        `;
+        
+        try {
+          const { sendOrderEmail } = require('../services/core.service');
+          sendOrderEmail(updatedOrder.customerEmail, subject, body).catch(err => {
+            console.error('Failed to send installment payment email:', err);
+          });
+        } catch (mailErr) {
+          console.error('Failed to load email service:', mailErr);
         }
       }
     }
+  }
 
-    const fixedOrder = await fixCorruptedInstallments(updatedOrder);
-    res.status(200).json(fixedOrder || updatedOrder);
+  return await fixCorruptedInstallments(updatedOrder);
+};
+
+const updateOrderStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, statusId } = req.body;
+    const result = await processSingleOrderStatusUpdate(id, statusId || status, req.user, req.headers);
+    res.status(200).json(result);
   } catch (error) {
     console.error('Error updating order status:', error);
     res.status(500).json({ message: 'Error updating order status', error: error.message });
+  }
+};
+
+const bulkUpdateOrderStatus = async (req, res) => {
+  try {
+    const { orderIds, statusId } = req.body;
+    if (!Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({ message: 'No orders provided' });
+    }
+    if (!statusId) {
+      return res.status(400).json({ message: 'Status ID is required' });
+    }
+
+    const updatedOrders = [];
+    const errors = [];
+
+    for (const orderId of orderIds) {
+      try {
+        const orderResult = await processSingleOrderStatusUpdate(orderId, statusId, req.user, req.headers);
+        updatedOrders.push(orderResult);
+      } catch (err) {
+        errors.push({ orderId, error: err.message });
+      }
+    }
+
+    res.status(200).json({
+      message: `Successfully updated ${updatedOrders.length} order(s)`,
+      updatedCount: updatedOrders.length,
+      orders: updatedOrders,
+      errors,
+    });
+  } catch (error) {
+    console.error('Error in bulkUpdateOrderStatus:', error);
+    res.status(500).json({ message: 'Error updating bulk order status', error: error.message });
+  }
+};
+
+const bulkDeleteOrders = async (req, res) => {
+  try {
+    const { orderIds } = req.body;
+    if (!Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({ message: 'No orders provided' });
+    }
+
+    const numericIds = orderIds.map(id => parseInt(id)).filter(id => !isNaN(id));
+
+    const result = await prisma.order.deleteMany({
+      where: { id: { in: numericIds } },
+    });
+
+    res.status(200).json({
+      message: `${result.count} order(s) deleted successfully`,
+      deletedCount: result.count,
+    });
+  } catch (error) {
+    console.error('Error in bulkDeleteOrders:', error);
+    res.status(500).json({ message: 'Error deleting bulk orders', error: error.message });
   }
 };
 
@@ -584,6 +669,8 @@ module.exports = {
   getOrders,
   getOrderById,
   updateOrderStatus,
+  bulkUpdateOrderStatus,
+  bulkDeleteOrders,
   updateOrder,
   deleteOrder,
   resendOrderEmails,

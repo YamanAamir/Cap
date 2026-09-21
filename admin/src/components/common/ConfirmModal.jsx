@@ -8,13 +8,16 @@ const ConfirmModal = ({
   confirmText = 'Confirm',
   cancelText = 'Cancel',
   type = 'primary', // 'danger' | 'primary' | 'warning'
+  isDestructive = false,
   loading = false,
+  isLoading = false,
   onConfirm,
   onCancel,
 }) => {
   if (!isOpen) return null;
 
-  const isDanger = type === 'danger';
+  const isDanger = type === 'danger' || isDestructive;
+  const showSpinner = loading || isLoading;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
@@ -35,7 +38,7 @@ const ConfirmModal = ({
           </div>
           <button
             onClick={onCancel}
-            disabled={loading}
+            disabled={showSpinner}
             className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors disabled:opacity-50"
           >
             <X className="w-5 h-5" />
@@ -48,7 +51,7 @@ const ConfirmModal = ({
           <button
             type="button"
             onClick={onCancel}
-            disabled={loading}
+            disabled={showSpinner}
             className="px-4 py-2 text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors disabled:opacity-50"
           >
             {cancelText}
@@ -56,14 +59,14 @@ const ConfirmModal = ({
           <button
             type="button"
             onClick={onConfirm}
-            disabled={loading}
+            disabled={showSpinner}
             className={`inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white rounded-lg transition-colors shadow-sm disabled:opacity-50 ${
               isDanger
                 ? 'bg-red-600 hover:bg-red-700 focus:ring-2 focus:ring-red-500'
                 : 'bg-[#1e3a8a] hover:bg-blue-900 focus:ring-2 focus:ring-blue-500'
             }`}
           >
-            {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
+            {showSpinner && <RefreshCw className="w-4 h-4 animate-spin" />}
             {confirmText}
           </button>
         </div>

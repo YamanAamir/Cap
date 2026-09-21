@@ -1,21 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { getDashboardStats } from '../services/admin.service';
-import { Loader2, Package, CalendarCheck, ShoppingCart, Activity } from 'lucide-react';
+import { Loader2, Package, CalendarCheck, ShoppingCart, Activity, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
 
 const DashboardPage = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'today' | 'month' | 'custom'
+  const [customDates, setCustomDates] = useState({ startDate: '', endDate: '' });
 
-  useEffect(() => {
-    getDashboardStats()
+  const fetchStats = (filter = activeFilter, dates = customDates) => {
+    setLoading(true);
+    const params = { filter };
+    if (filter === 'custom') {
+      if (dates.startDate) params.startDate = dates.startDate;
+      if (dates.endDate) params.endDate = dates.endDate;
+    }
+    getDashboardStats(params)
       .then(setStats)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  };
 
-  if (loading) {
+  useEffect(() => {
+    fetchStats(activeFilter, customDates);
+  }, [activeFilter, customDates.startDate, customDates.endDate]);
+
+  if (loading && !stats) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
@@ -35,10 +47,80 @@ const DashboardPage = () => {
           
           {/* Sales Reports Section */}
           <section>
-            <h2 className="text-lg font-bold text-slate-800 mb-4">Dashboard Overview</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <h2 className="text-lg font-bold text-slate-800">Dashboard Overview</h2>
+              
+              {/* Date Filter Controls */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 shadow-sm text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setActiveFilter('all')}
+                    className={`px-3 py-1.5 rounded-md font-semibold transition-all ${
+                      activeFilter === 'all'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
+                  >
+                    All Time
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveFilter('today')}
+                    className={`px-3 py-1.5 rounded-md font-semibold transition-all ${
+                      activeFilter === 'today'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
+                  >
+                    Today
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveFilter('month')}
+                    className={`px-3 py-1.5 rounded-md font-semibold transition-all ${
+                      activeFilter === 'month'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
+                  >
+                    This Month
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveFilter('custom')}
+                    className={`px-3 py-1.5 rounded-md font-semibold transition-all ${
+                      activeFilter === 'custom'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
+                  >
+                    Custom Date
+                  </button>
+                </div>
+
+                {activeFilter === 'custom' && (
+                  <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-2.5 py-1 shadow-sm text-xs animate-in fade-in duration-300">
+                    <input
+                      type="date"
+                      value={customDates.startDate}
+                      onChange={(e) => setCustomDates(prev => ({ ...prev, startDate: e.target.value }))}
+                      className="border border-slate-200 rounded px-2 py-1 text-slate-700 outline-none focus:border-blue-500"
+                    />
+                    <span className="text-slate-400 font-medium">to</span>
+                    <input
+                      type="date"
+                      value={customDates.endDate}
+                      onChange={(e) => setCustomDates(prev => ({ ...prev, endDate: e.target.value }))}
+                      className="border border-slate-200 rounded px-2 py-1 text-slate-700 outline-none focus:border-blue-500"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
             
             <div className="bg-[#f0f4f8] rounded-xl p-6 border border-slate-200">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 
                 {/* Total Orders Card */}
                 <div className="bg-[#eef2f6] rounded-xl p-5 flex items-center border border-blue-100">
@@ -52,9 +134,21 @@ const DashboardPage = () => {
                         <p className="text-2xl font-black text-[#1e3a8a] leading-none">{stats?.totalOrders || 0}</p>
                         <p className="text-[10px] text-slate-500 font-semibold mt-1">Orders</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-[#4a90e2]">{stats?.readyForProduction || 0}</p>
-                        <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Ready for Prod</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Installments Card */}
+                <div className="bg-[#f5f3ff] rounded-xl p-5 flex items-center border border-purple-100">
+                  <div className="w-12 h-12 rounded-full bg-[#8b5cf6] flex items-center justify-center text-white shrink-0 mr-4 shadow-sm">
+                    <CreditCard className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs font-bold text-[#5b21b6] mb-1 uppercase tracking-wide">Installments</p>
+                    <div className="flex justify-between items-end">
+                      <div>
+                        <p className="text-2xl font-black text-[#5b21b6] leading-none">{stats?.installmentOrdersCount || 0}</p>
+                        <p className="text-[10px] text-slate-500 font-semibold mt-1">Installment Orders</p>
                       </div>
                     </div>
                   </div>
@@ -70,14 +164,14 @@ const DashboardPage = () => {
                     <div className="flex justify-between items-end">
                       <div>
                         <p className="text-xl font-black text-[#78350f] leading-none">{formatCurrency(stats?.totalRevenue)}</p>
-                        <p className="text-[10px] text-slate-500 font-semibold mt-1">Lifetime</p>
+                        <p className="text-[10px] text-slate-500 font-semibold mt-1">{activeFilter === 'all' ? 'Lifetime' : 'Filtered'}</p>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Marketing Card */}
-                <div className="bg-[#f1f8f5] rounded-xl p-5 flex items-center border border-green-100 lg:col-span-1 md:col-span-2">
+                <div className="bg-[#f1f8f5] rounded-xl p-5 flex items-center border border-green-100">
                   <div className="w-12 h-12 rounded-full bg-[#5cb85c] flex items-center justify-center text-white shrink-0 mr-4 shadow-sm">
                     <CalendarCheck className="h-6 w-6" />
                   </div>
