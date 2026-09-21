@@ -80,11 +80,11 @@ const STATIC_FIELD_GROUPS = [
     fields: [
       { label: 'Svederem (Sweatband Material: Læder, Ruskin, etc.)', value: 'options.FOER.Svederem', defaultHeader: 'Svederem' },
       { label: 'Farve (Sweatband Color: Hvid, Sort, Cognac)', value: 'options.FOER.Farve', defaultHeader: 'Svederem Farve' },
-      { label: 'Sløjfe (Inner Bow Color: Hvid, Sort, Guld, Sølv)', value: 'options.FOER.Sløjfe', defaultHeader: 'Sløjfe Farve' },
+      { label: 'Sløjfe (Inner Bow Color: Hvid, Sort, Guld, Sølv)', value: 'options.FOER.Slojfe', defaultHeader: 'Sløjfe Farve' },
       { label: 'Foer (Lining Fabric: Viskose, Polyester, Satin, Silke)', value: 'options.FOER.Foer', defaultHeader: 'Foer Materiale' },
       { label: 'Satin Type (Satin Lining Color)', value: 'options.FOER.Satin Type', defaultHeader: 'Satin Farve' },
       { label: 'Silk Type (Silk Lining Color)', value: 'options.FOER.Silk Type', defaultHeader: 'Silke Farve' },
-      { label: 'Indvendigt foer billede (Custom Lining Photo URL)', value: 'options.FOER.Indvendigt foer billede', defaultHeader: 'Foer Billede' },
+      { label: 'Indvendigt foer billede (Has Custom Lining Photo: Yes / x)', value: 'options.FOER.Indvendigt foer billede', defaultHeader: 'Foer Billede' },
     ]
   },
   {
@@ -131,6 +131,9 @@ const STATIC_FIELD_GROUPS = [
       { label: 'Trompet (Graduation Trumpet)', value: 'options.TILBEHØR.Trompet', defaultHeader: 'Trompet' },
       { label: 'Bucketpins (Bucket Pins)', value: 'options.TILBEHØR.Bucketpins', defaultHeader: 'Bucketpins' },
       { label: 'Selected Flags (Country Flag Badges List)', value: 'options.TILBEHØR.selectedFlags', defaultHeader: 'Selected Flags' },
+      { label: 'Flag 1 (1st Selected Flag Name)', value: 'options.TILBEHØR.Flag 1', defaultHeader: 'Flag 1' },
+      { label: 'Flag 2 (2nd Selected Flag Name)', value: 'options.TILBEHØR.Flag 2', defaultHeader: 'Flag 2' },
+      { label: 'Flag 3 (3rd Selected Flag Name)', value: 'options.TILBEHØR.Flag 3', defaultHeader: 'Flag 3' },
     ]
   },
   {
@@ -156,6 +159,7 @@ const STATIC_FIELD_GROUPS = [
       { label: 'Emblem (Extra Cover Emblem Color)', value: 'options.EKSTRABETRÆK.Emblem', defaultHeader: 'Ekstrabetræk Emblem' },
       { label: 'Type (Extra Cover Emblem Design)', value: 'options.EKSTRABETRÆK.Type', defaultHeader: 'Ekstrabetræk Emblem Type' },
       { label: 'Flag (Extra Cover Flag)', value: 'options.EKSTRABETRÆK.Flag', defaultHeader: 'Ekstrabetræk Flag' },
+      { label: 'Extra Top broderi (Top Embroidery on Extra Cover)', value: 'options.EKSTRABETRÆK.Extra Top broderi', defaultHeader: 'Ekstrabetræk Top Broderi' },
     ]
   },
   {

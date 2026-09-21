@@ -43,6 +43,17 @@ import pau from "../Default/pau";
 import ernæringsassisten from "../Default/ernæringsassisten";
 import { getTilbehorForTier, syncTilbehorToIframes } from "../utils/tilbehorDefaults";
 
+const getInnerImagePostMessage = (options) => {
+  const foer = options?.FOER;
+  if (!foer) return "inner image no";
+  const layout = foer['Indvendigt foer billede layout'];
+  const img = foer['Indvendigt foer billede'];
+  const hasImage = (Array.isArray(layout) && layout.length > 0) ||
+                   (Array.isArray(img) && img.length > 0) ||
+                   (typeof img === 'string' && img.trim().length > 0 && img !== 'Ingen');
+  return hasImage ? "inner image yes" : "inner image no";
+};
+
 const StudentDashboard = () => {
   const [activeMenu, setActiveMenu] = useState("KOKARDE");
   {/* jjjjjjjjjjjj */ }
@@ -491,6 +502,18 @@ const StudentDashboard = () => {
     }
   }, [program, isIframeLoaded, isAppReady, packageName]);
 
+  useEffect(() => {
+    if (isIframeLoaded) {
+      const innerMsg = getInnerImagePostMessage(selectedOptions);
+      ["preview-iframe", "preview-iframe2"].forEach((id) => {
+        const iframe = document.getElementById(id);
+        if (iframe?.contentWindow) {
+          iframe.contentWindow.postMessage(innerMsg, "*");
+        }
+      });
+    }
+  }, [selectedOptions?.FOER, isIframeLoaded]);
+
   const sendProgramToIframe = () => {
     // Get iframe by ID
     const iframe = document.getElementById("preview-iframe");
@@ -507,6 +530,11 @@ const StudentDashboard = () => {
         iframe.contentWindow.postMessage(penMsg, "*");
         if (iframe2) iframe2.contentWindow.postMessage(penMsg, "*");
       }
+
+      const innerMsg = getInnerImagePostMessage(selectedOptions);
+      console.log("Sending inner image message to iframe:", innerMsg);
+      iframe.contentWindow.postMessage(innerMsg, "*");
+      if (iframe2) iframe2.contentWindow.postMessage(innerMsg, "*");
     } else {
       console.log("Iframe not ready or program not available");
     }
@@ -882,6 +910,7 @@ const StudentDashboard = () => {
                         console.log("Sending menu selection message to iframe:", item.name);
                         iframe.contentWindow.postMessage(item.name, "*");
                         iframe.contentWindow.postMessage(`${item.name} camera`, "*");
+                        iframe.contentWindow.postMessage(getInnerImagePostMessage(selectedOptions), "*");
                       } else {
                         console.log(
                           "Iframe not ready or program not available"
@@ -1318,6 +1347,7 @@ const StudentDashboard = () => {
                               iframe.contentWindow.postMessage(`Page : ${index + 1}`, "*");
                               iframe.contentWindow.postMessage("Tilvælg:no", "*");
                               iframe.contentWindow.postMessage(`${item.name} camera`, "*");
+                              iframe.contentWindow.postMessage(getInnerImagePostMessage(selectedOptions), "*");
                             }
                           });
                           setActiveMenu(item.name);

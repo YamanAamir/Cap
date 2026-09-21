@@ -80,6 +80,12 @@ const extractOrderField = (order, fieldKey) => {
     return 'x';
   }
 
+  if (fieldKey === 'options.FOER.Indvendigt foer billede' || fieldKey === 'Foer Billede') {
+    const foer = selectedOptions.FOER || selectedOptions.foer || {};
+    const img = foer['Indvendigt foer billede'] || foer['indvendigt foer billede'] || '';
+    return img && img.length > 10 ? 'Yes' : 'x';
+  }
+
   if (fieldKey === 'options.BETRÆK.Stjerner farve' || fieldKey === 'Stjerner farve') {
     const betraek = selectedOptions.BETRÆK || selectedOptions.betraek || {};
     let stjernerVal = betraek.Stjerner ?? betraek.stjerner ?? selectedOptions.Stjerner ?? selectedOptions.stjerner;

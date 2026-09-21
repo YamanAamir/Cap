@@ -46,6 +46,17 @@ import { sendToActiveIframe, getActiveIframeId, isDesktopDevice } from "../utils
 import { useProgressTracking } from "../hooks/useProgressTracking";
 import { pushEvent } from "../lib/tracking";
 
+const getInnerImagePostMessage = (options) => {
+  const foer = options?.FOER;
+  if (!foer) return "inner image no";
+  const layout = foer['Indvendigt foer billede layout'];
+  const img = foer['Indvendigt foer billede'];
+  const hasImage = (Array.isArray(layout) && layout.length > 0) ||
+                   (Array.isArray(img) && img.length > 0) ||
+                   (typeof img === 'string' && img.trim().length > 0 && img !== 'Ingen');
+  return hasImage ? "inner image yes" : "inner image no";
+};
+
 const StudentDashboard = () => {
   const [activeMenu, setActiveMenu] = useState("KOKARDE");
   const [isDesktop, setIsDesktop] = useState(
@@ -521,6 +532,13 @@ const StudentDashboard = () => {
     }
   }, [program, isIframeLoaded, isAppReady, packageName]);
 
+  useEffect(() => {
+    if (isIframeLoaded) {
+      const innerMsg = getInnerImagePostMessage(selectedOptions);
+      sendToActiveIframe(innerMsg);
+    }
+  }, [selectedOptions?.FOER, isIframeLoaded]);
+
   const sendProgramToIframe = () => {
     const message = "UDDANNELSESBÅNDMateriale:" + program.toLowerCase() + ":bomuld";
     console.log("Sending message to active iframe:", message);
@@ -531,6 +549,10 @@ const StudentDashboard = () => {
       console.log("Sending pen message to active iframe:", penMsg);
       sendToActiveIframe(penMsg);
     }
+
+    const innerMsg = getInnerImagePostMessage(selectedOptions);
+    console.log("Sending inner image message to active iframe:", innerMsg);
+    sendToActiveIframe(innerMsg);
   };
 
   const hasReportedCrashRef = useRef(false);
@@ -982,6 +1004,7 @@ const StudentDashboard = () => {
                       console.log("Sending menu selection message to iframe:", item.name);
                       sendToActiveIframe(item.name);
                       sendToActiveIframe(`${item.name} camera`);
+                      sendToActiveIframe(getInnerImagePostMessage(selectedOptions));
 
                       if (errors && Object.keys(errors).length > 0) {
                         return;
@@ -1400,6 +1423,7 @@ const StudentDashboard = () => {
                           sendToActiveIframe("Tilvælg:no");
                           sendToActiveIframe(item.name);
                           sendToActiveIframe(`${item.name} camera`);
+                          sendToActiveIframe(getInnerImagePostMessage(selectedOptions));
                           setActiveMenu(item.name);
                         }}
                         className="flex-shrink-0 flex flex-col items-center relative pb-3"
