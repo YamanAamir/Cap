@@ -150,6 +150,10 @@ const DashboardPage = () => {
                         <p className="text-2xl font-black text-[#5b21b6] leading-none">{stats?.installmentOrdersCount || 0}</p>
                         <p className="text-[10px] text-slate-500 font-semibold mt-1">Installment Orders</p>
                       </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-[#8b5cf6]">{formatCurrency(stats?.installmentOrdersAmount)}</p>
+                        <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Total Amount</p>
+                      </div>
                     </div>
                   </div>
                 </div>

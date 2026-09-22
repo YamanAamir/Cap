@@ -554,6 +554,7 @@ const getDashboardStats = async (query = {}) => {
     readyForProduction,
     totalOrders,
     installmentOrdersCount,
+    installmentOrdersAgg,
     activeCampaigns,
     smsConsentCount,
     totalDiscountCodes,
@@ -569,6 +570,16 @@ const getDashboardStats = async (query = {}) => {
       : 0,
     prisma.order.count({ where: orderWhere }),
     prisma.order.count({
+      where: {
+        ...orderWhere,
+        OR: [
+          { installmentPlanId: { not: null } },
+          { installmentDetails: { not: null } }
+        ]
+      }
+    }),
+    prisma.order.aggregate({
+      _sum: { totalPrice: true },
       where: {
         ...orderWhere,
         OR: [
@@ -614,6 +625,7 @@ const getDashboardStats = async (query = {}) => {
     readyForProduction,
     totalOrders,
     installmentOrdersCount,
+    installmentOrdersAmount: installmentOrdersAgg._sum.totalPrice || 0,
     activeCampaigns,
     smsConsentCount,
     totalDiscountCodes,
