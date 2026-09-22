@@ -152,35 +152,38 @@ const getOrders = async (req, res) => {
 
     if (activeDateFilter === 'today') {
       const now = new Date();
-      dateStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-      dateEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      // Cover timezone offsets (e.g. UTC vs UTC+2/UTC+5) by starting 6 hours before midnight UTC
+      dateStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 18, 0, 0, 0);
+      dateEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 6, 0, 0, 0);
     } else if (activeDateFilter === 'month' || activeDateFilter === 'this_month') {
       const now = new Date();
       dateStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      dateStart.setHours(dateStart.getHours() - 12);
       dateEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      dateEnd.setHours(dateEnd.getHours() + 12);
     } else if (activeDateFilter === 'custom' || startDate || endDate) {
       if (startDate) {
         if (typeof startDate === 'string' && startDate.includes('-')) {
           const parts = startDate.split('T')[0].split('-').map(Number);
           if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
-            dateStart = new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0);
+            dateStart = new Date(parts[0], parts[1] - 1, parts[2] - 1, 18, 0, 0, 0);
           }
         }
         if (!dateStart) {
           dateStart = new Date(startDate);
-          dateStart.setHours(0, 0, 0, 0);
+          dateStart.setHours(dateStart.getHours() - 12);
         }
       }
       if (endDate) {
         if (typeof endDate === 'string' && endDate.includes('-')) {
           const parts = endDate.split('T')[0].split('-').map(Number);
           if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
-            dateEnd = new Date(parts[0], parts[1] - 1, parts[2], 23, 59, 59, 999);
+            dateEnd = new Date(parts[0], parts[1] - 1, parts[2] + 1, 6, 0, 0, 0);
           }
         }
         if (!dateEnd) {
           dateEnd = new Date(endDate);
-          dateEnd.setHours(23, 59, 59, 999);
+          dateEnd.setHours(dateEnd.getHours() + 12);
         }
       }
     }

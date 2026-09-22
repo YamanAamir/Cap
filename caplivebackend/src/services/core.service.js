@@ -510,15 +510,17 @@ const getDateFilterBounds = (filterParam, startDateStr, endDateStr) => {
 
   if (activeFilter === 'today') {
     const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 18, 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 6, 0, 0, 0);
     return { start, end };
   }
 
   if (activeFilter === 'month' || activeFilter === 'this_month') {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    start.setHours(start.getHours() - 12);
     const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    end.setHours(end.getHours() + 12);
     return { start, end };
   }
 
@@ -530,12 +532,12 @@ const getDateFilterBounds = (filterParam, startDateStr, endDateStr) => {
       if (typeof startDateStr === 'string' && startDateStr.includes('-')) {
         const parts = startDateStr.split('T')[0].split('-').map(Number);
         if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
-          start = new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0);
+          start = new Date(parts[0], parts[1] - 1, parts[2] - 1, 18, 0, 0, 0);
         }
       }
       if (!start) {
         start = new Date(startDateStr);
-        start.setHours(0, 0, 0, 0);
+        start.setHours(start.getHours() - 12);
       }
     }
 
@@ -543,12 +545,12 @@ const getDateFilterBounds = (filterParam, startDateStr, endDateStr) => {
       if (typeof endDateStr === 'string' && endDateStr.includes('-')) {
         const parts = endDateStr.split('T')[0].split('-').map(Number);
         if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
-          end = new Date(parts[0], parts[1] - 1, parts[2], 23, 59, 59, 999);
+          end = new Date(parts[0], parts[1] - 1, parts[2] + 1, 6, 0, 0, 0);
         }
       }
       if (!end) {
         end = new Date(endDateStr);
-        end.setHours(23, 59, 59, 999);
+        end.setHours(end.getHours() + 12);
       }
     }
 
