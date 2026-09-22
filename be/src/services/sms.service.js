@@ -425,6 +425,7 @@ const registerSmsSignup = async ({ name, phone, email, school, gdprConsent, camp
         expiresAt,
         phoneNumber: normalizedPhone,
         customerId: customer.id,
+        maxUses: 1,
         source: 'QR',
       },
     });

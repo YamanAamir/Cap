@@ -80,6 +80,12 @@ const extractOrderField = (order, fieldKey) => {
     return 'x';
   }
 
+  if (fieldKey === 'options.FOER.Indvendigt foer billede' || fieldKey === 'Foer Billede') {
+    const foer = selectedOptions.FOER || selectedOptions.foer || {};
+    const img = foer['Indvendigt foer billede'] || foer['indvendigt foer billede'] || '';
+    return img && img.length > 10 ? 'Yes' : 'x';
+  }
+
   if (fieldKey === 'options.BETRÆK.Stjerner farve' || fieldKey === 'Stjerner farve') {
     const betraek = selectedOptions.BETRÆK || selectedOptions.betraek || {};
     let stjernerVal = betraek.Stjerner ?? betraek.stjerner ?? selectedOptions.Stjerner ?? selectedOptions.stjerner;
@@ -104,7 +110,98 @@ const extractOrderField = (order, fieldKey) => {
     return translateFactoryValue(emblemVal);
   }
 
+  if (fieldKey === 'options.EKSTRABETRÆK.Stjerner farve' || fieldKey === 'Ekstrabetræk Stjerner farve') {
+    const ekstra = selectedOptions.EKSTRABETRÆK || selectedOptions.ekstrabetraek || {};
+    const tilvaelg = String(ekstra.Tilvælg ?? ekstra.tilvaelg ?? '').trim().toLowerCase();
+    if (tilvaelg !== 'yes' && tilvaelg !== 'ja') {
+      return 'x';
+    }
+    let stjernerVal = ekstra.Stjerner ?? ekstra.stjerner;
+    if (typeof stjernerVal === 'object' && stjernerVal !== null) {
+      stjernerVal = stjernerVal.name || stjernerVal.value || stjernerVal.label || '';
+    }
+    const starStr = String(stjernerVal || '').trim().toUpperCase();
+    const noStars = !starStr || starStr === 'NONE' || starStr === 'INGEN' || starStr === '0' || starStr === 'X' || starStr === 'NO' || starStr === 'UDEN STJERNER';
+
+    if (noStars) {
+      return 'x';
+    }
+
+    let emblemVal = ekstra.Emblem ?? ekstra.emblem;
+    if (!emblemVal) {
+      const kokarde = selectedOptions.KOKARDE || selectedOptions.kokarde || {};
+      emblemVal = kokarde.Emblem ?? kokarde.emblem ?? selectedOptions.Emblem ?? selectedOptions.emblem;
+    }
+    if (typeof emblemVal === 'object' && emblemVal !== null) {
+      emblemVal = emblemVal.name || emblemVal.value || emblemVal.label || '';
+    }
+    if (!emblemVal || emblemVal === 'x' || emblemVal === 'NONE') {
+      return 'x';
+    }
+    return translateFactoryValue(emblemVal);
+  }
+
+  if (fieldKey === 'options.BRODERI.Skolebroderi farve' || fieldKey === 'Skolebroderi farve') {
+    const broderi = selectedOptions.BRODERI || selectedOptions.broderi || {};
+    const text = String(broderi.Skolebroderi ?? broderi.skolebroderi ?? selectedOptions.Skolebroderi ?? '').trim();
+    if (!text || text === 'x' || text === 'Ingen') {
+      return 'x';
+    }
+    let colorVal = broderi['Skolebroderi farve'] ?? broderi.skolebroderifarve ?? selectedOptions['Skolebroderi farve'] ?? '';
+    if (typeof colorVal === 'object' && colorVal !== null) {
+      colorVal = colorVal.name || colorVal.value || colorVal.label || '';
+    }
+    colorVal = String(colorVal || '').trim();
+    if (!colorVal || colorVal === 'x' || colorVal === 'NONE') {
+      return 'x';
+    }
+    return translateFactoryValue(colorVal);
+  }
+
+  if (fieldKey === 'options.EKSTRABETRÆK.Skolebroderi' || fieldKey === 'Ekstrabetræk Skolebroderi') {
+    const ekstra = selectedOptions.EKSTRABETRÆK || selectedOptions.ekstrabetraek || {};
+    const tilvaelg = String(ekstra.Tilvælg ?? ekstra.tilvaelg ?? '').trim().toLowerCase();
+    if (tilvaelg !== 'yes' && tilvaelg !== 'ja') {
+      return 'x';
+    }
+    const broderi = selectedOptions.BRODERI || selectedOptions.broderi || {};
+    const text = String(ekstra.Skolebroderi ?? ekstra.skolebroderi ?? broderi.Skolebroderi ?? broderi.skolebroderi ?? selectedOptions.Skolebroderi ?? '').trim();
+    if (!text || text === 'x' || text === 'Ingen') {
+      return 'x';
+    }
+    return text;
+  }
+
+  if (fieldKey === 'options.EKSTRABETRÆK.Skolebroderi farve' || fieldKey === 'Ekstrabetræk Skolebroderi farve') {
+    const ekstra = selectedOptions.EKSTRABETRÆK || selectedOptions.ekstrabetraek || {};
+    const tilvaelg = String(ekstra.Tilvælg ?? ekstra.tilvaelg ?? '').trim().toLowerCase();
+    if (tilvaelg !== 'yes' && tilvaelg !== 'ja') {
+      return 'x';
+    }
+    const broderi = selectedOptions.BRODERI || selectedOptions.broderi || {};
+    const text = String(ekstra.Skolebroderi ?? ekstra.skolebroderi ?? broderi.Skolebroderi ?? broderi.skolebroderi ?? selectedOptions.Skolebroderi ?? '').trim();
+    if (!text || text === 'x' || text === 'Ingen') {
+      return 'x';
+    }
+    let colorVal = ekstra['Skolebroderi farve'] ?? ekstra.skolebroderifarve ?? broderi['Skolebroderi farve'] ?? broderi.skolebroderifarve ?? selectedOptions['Skolebroderi farve'] ?? '';
+    if (typeof colorVal === 'object' && colorVal !== null) {
+      colorVal = colorVal.name || colorVal.value || colorVal.label || '';
+    }
+    colorVal = String(colorVal || '').trim();
+    if (!colorVal || colorVal === 'x' || colorVal === 'NONE') {
+      return 'x';
+    }
+    return translateFactoryValue(colorVal);
+  }
+
   if (fieldKey.startsWith('options.')) {
+    if (fieldKey.startsWith('options.EKSTRABETRÆK.') && fieldKey !== 'options.EKSTRABETRÆK.Tilvælg') {
+      const ekstra = selectedOptions.EKSTRABETRÆK || selectedOptions.ekstrabetraek || {};
+      const tilvaelg = String(ekstra.Tilvælg ?? ekstra.tilvaelg ?? '').trim().toLowerCase();
+      if (tilvaelg !== 'yes' && tilvaelg !== 'ja') {
+        return 'x';
+      }
+    }
     const path = fieldKey.replace('options.', '').split('.');
     let current = selectedOptions;
     for (const part of path) {
@@ -138,6 +235,19 @@ const extractOrderField = (order, fieldKey) => {
 
     if (current === '' || current == null) return 'x';
 
+    const RAW_CUSTOM_TEXT_FIELDS = new Set([
+      'options.BRODERI.Navne broderi', 'Navne broderi',
+      'options.UDDANNELSESBÅND.Broderi foran', 'Broderi foran',
+      'options.BRODERI.Skolebroderi', 'Skolebroderi',
+      'options.SKYGGE.Skyggegravering Line 1', 'Skyggegravering Line 1', 'Line 1',
+      'options.SKYGGE.Skyggegravering Line 2', 'Skyggegravering Line 2', 'Line 2',
+      'options.SKYGGE.Skyggegravering Line 3', 'Skyggegravering Line 3', 'Line 3'
+    ]);
+
+    if (RAW_CUSTOM_TEXT_FIELDS.has(fieldKey)) {
+      return current;
+    }
+
     // Translate Danish terms to English for factory export
     return translateFactoryValue(current);
   }
@@ -151,7 +261,7 @@ const extractOrderField = (order, fieldKey) => {
     return val;
   }
 
-  return '';
+  return 'x';
 };
 
 module.exports = {

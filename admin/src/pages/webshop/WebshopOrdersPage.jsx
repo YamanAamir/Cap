@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ShoppingBag, Eye, ArrowLeft, Trash2, X, CheckCircle2, Clock, Truck, AlertCircle, RefreshCw, Tag, Filter } from 'lucide-react';
+import {
+  Search, ShoppingBag, Eye, ArrowLeft, Trash2, X, CheckCircle2, Clock, Truck,
+  AlertCircle, RefreshCw, Tag, Filter, History, Calendar, CreditCard, Package, User
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../../components/common/ConfirmModal';
 
@@ -12,6 +15,116 @@ const getImageUrl = (img) => {
   }
   const SERVER_URL = API_URL.replace(/\/api\/?$/, '');
   return `${SERVER_URL}${img.startsWith('/') ? '' : '/'}${img}`;
+};
+
+const formatDenmarkDateTime = (dateInput, options = {}) => {
+  if (!dateInput) return '—';
+  try {
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) return '—';
+
+    const locale = options.locale || 'da-DK';
+    const timeZone = 'Europe/Copenhagen';
+
+    const formatter = new Intl.DateTimeFormat(locale, {
+      timeZone,
+      year: 'numeric',
+      month: options.monthFormat || 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: options.includeSeconds ? '2-digit' : undefined,
+      hour12: false,
+    });
+
+    return formatter.format(date);
+  } catch (error) {
+    console.error('Date formatting error:', error);
+    return String(dateInput);
+  }
+};
+
+const generateOrderTimeline = (order) => {
+  if (!order) return [];
+  const timeline = [];
+
+  const createdDate = order.orderDate || order.createdAt;
+
+  // 1. Initial Order Creation Event
+  timeline.push({
+    id: `event-created-${order.id}`,
+    timestamp: createdDate,
+    type: 'CREATED',
+    icon: Package,
+    badge: 'Oprettet',
+    badgeColor: '#3b82f6',
+    title: 'Ordre Modtaget og Oprettet',
+    description: `Ordre #${order.orderNumber} blev registreret med en samlet pris på ${order.totalAmount} ${order.currency || 'DKK'}.`,
+    details: [
+      { label: 'Kunde', value: order.customerDetails?.name || order.customerEmail },
+      { label: 'Email', value: order.customerEmail },
+      { label: 'Telefon', value: order.customerDetails?.phone || 'N/A' },
+      { label: 'Skole', value: order.customerDetails?.school || 'N/A' },
+    ],
+    performedBy: 'Kunde (Webshop Checkout)',
+  });
+
+  // 2. Stripe Payment Confirmed Event
+  if (order.paymentStatus === 'PAID') {
+    timeline.push({
+      id: `event-payment-${order.id}`,
+      timestamp: createdDate,
+      type: 'PAYMENT',
+      icon: CreditCard,
+      badge: 'Stripe Betalt',
+      badgeColor: '#10b981',
+      title: 'Stripe Online Betaling Bekræftet',
+      description: `Betaling på ${order.totalAmount} ${order.currency || 'DKK'} er bekræftet og modtaget via Stripe.`,
+      details: [
+        { label: 'Stripe Session ID', value: order.stripeSessionId || 'N/A' },
+        { label: 'Status', value: 'Betalt (PAID)' },
+      ],
+      performedBy: 'Stripe Gateway',
+    });
+  }
+
+  // 3. Status History Log (from customerDetails._history)
+  const custDetails = order.customerDetails || {};
+  if (Array.isArray(custDetails._history)) {
+    custDetails._history.forEach((h, idx) => {
+      timeline.push({
+        id: h.id || `event-hist-${idx}`,
+        timestamp: h.timestamp || order.updatedAt,
+        type: 'STATUS_CHANGE',
+        icon: RefreshCw,
+        badge: h.newStatus || 'Statusændring',
+        badgeColor: '#8b5cf6',
+        title: h.title || `Status ændret til "${h.newStatus}"`,
+        description: h.description || `Ordrestatus blev opdateret fra "${h.oldStatus}" til "${h.newStatus}".`,
+        performedBy: h.performedBy || 'Admin Webshop Dashboard',
+      });
+    });
+  }
+
+  // 4. Current Status Milestone if not logged in history
+  if (order.orderStatus && (!custDetails._history || !custDetails._history.some(h => h.newStatus === order.orderStatus))) {
+    timeline.push({
+      id: `event-current-${order.id}`,
+      timestamp: order.updatedAt || order.createdAt,
+      type: 'STATUS_CURRENT',
+      icon: CheckCircle2,
+      badge: order.orderStatus,
+      badgeColor: '#6366f1',
+      title: `Nuværende Status: ${order.orderStatus}`,
+      description: `Ordrens aktuelle behandlingstatus er sat til "${order.orderStatus}".`,
+      performedBy: 'System / Admin',
+    });
+  }
+
+  // Sort chronological (latest first)
+  timeline.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  return timeline;
 };
 
 const WebshopOrdersPage = () => {
@@ -63,7 +176,7 @@ const WebshopOrdersPage = () => {
 
   const handleRequestUpdateStatus = (orderId, orderNumber, newStatus) => {
     const statusObj = statuses.find(
-      (s) => s.slug === newStatus || s.name.toUpperCase() === newStatus.toUpperCase()
+      (s) => (s.slug || s.name || '').toUpperCase() === newStatus.toUpperCase()
     );
     const hasEmail = statusObj && statusObj.emailTemplate && statusObj.emailTemplate.isActive;
     const emailNotice = hasEmail
@@ -96,7 +209,7 @@ const WebshopOrdersPage = () => {
         setConfirmModal((prev) => ({ ...prev, isOpen: false, loading: false }));
         fetchData();
         if (selectedOrder && selectedOrder.id === orderId) {
-          setSelectedOrder({ ...selectedOrder, orderStatus: newStatus });
+          setSelectedOrder(data.data);
         }
       } else {
         toast.error(data.message || 'Failed to update status');
@@ -173,7 +286,7 @@ const WebshopOrdersPage = () => {
 
   const getStatusBadge = (statusName) => {
     const matched = statuses.find(
-      (s) => s.slug === statusName || s.name.toLowerCase() === (statusName || '').toLowerCase()
+      (s) => (s.slug || s.name || '').toUpperCase() === (statusName || '').toUpperCase()
     );
     const color = matched?.color || '#6366f1';
 
@@ -194,6 +307,15 @@ const WebshopOrdersPage = () => {
 
   // RENDER FULL PAGE ORDER DETAILS VIEW IF AN ORDER IS SELECTED
   if (selectedOrder) {
+    const timelineEvents = generateOrderTimeline(selectedOrder);
+    const hasCurrentMatch = statuses.some(
+      (s) => (s.slug || s.name || '').toUpperCase() === (selectedOrder.orderStatus || '').toUpperCase()
+    );
+    const matchedStatus = statuses.find(
+      (s) => (s.slug || s.name || '').toUpperCase() === (selectedOrder.orderStatus || '').toUpperCase()
+    );
+    const selectValue = matchedStatus ? (matchedStatus.slug || matchedStatus.name) : selectedOrder.orderStatus;
+
     return (
       <div className="animate-in fade-in duration-300 max-w-[1400px] mx-auto pb-12 space-y-6">
         {/* Top Navigation & Action Header */}
@@ -212,8 +334,9 @@ const WebshopOrdersPage = () => {
                 Order #{selectedOrder.orderNumber}
                 {getStatusBadge(selectedOrder.orderStatus)}
               </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Placed on {new Date(selectedOrder.createdAt).toLocaleString()}
+              <p className="text-xs text-slate-500 mt-1 flex items-center gap-1 font-medium">
+                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                <span>Dansk Tid: {formatDenmarkDateTime(selectedOrder.createdAt, { includeSeconds: true, monthFormat: 'long' })}</span>
               </p>
             </div>
           </div>
@@ -240,28 +363,23 @@ const WebshopOrdersPage = () => {
               <RefreshCw className="w-4 h-4 animate-spin text-[#1e3a8a]" />
             )}
             <select
-              value={selectedOrder.orderStatus}
+              value={selectValue}
               disabled={updatingOrderId === selectedOrder.id}
               onChange={(e) =>
                 handleRequestUpdateStatus(selectedOrder.id, selectedOrder.orderNumber, e.target.value)
               }
-              className="px-4 py-2.5 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#1e3a8a] bg-slate-50"
+              className="px-4 py-2.5 border border-slate-300 rounded-lg text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#1e3a8a] bg-slate-50 cursor-pointer"
             >
-              {statuses.length > 0 ? (
-                statuses.map((st) => (
-                  <option key={st.id} value={st.slug || st.name}>
-                    {st.name} {st.emailTemplate ? '📧' : ''}
-                  </option>
-                ))
-              ) : (
-                <>
-                  <option value="PENDING">PENDING</option>
-                  <option value="PROCESSING">PROCESSING</option>
-                  <option value="SHIPPED">SHIPPED</option>
-                  <option value="DELIVERED">DELIVERED</option>
-                  <option value="CANCELLED">CANCELLED</option>
-                </>
+              {!hasCurrentMatch && (
+                <option value={selectedOrder.orderStatus} disabled>
+                  Current Status: {selectedOrder.orderStatus}
+                </option>
               )}
+              {statuses.map((st) => (
+                <option key={st.id || st.slug} value={st.slug || st.name}>
+                  {st.name} {st.emailTemplate ? '📧' : ''}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -364,6 +482,75 @@ const WebshopOrdersPage = () => {
           </div>
         </div>
 
+        {/* Order History Timeline Card */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
+            <div className="flex items-center gap-3">
+              <History className="w-5 h-5 text-[#1e3a8a]" />
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Order History & Timeline</h3>
+                <p className="text-xs text-slate-500">Chronological audit log with Danish time zone tracking</p>
+              </div>
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold">
+              <Clock className="w-3.5 h-3.5" />
+              <span>Dansk Tid (Europe/Copenhagen)</span>
+            </div>
+          </div>
+
+          {/* Timeline List */}
+          <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-slate-200">
+            {timelineEvents.map((event) => {
+              const EventIcon = event.icon || Clock;
+              return (
+                <div key={event.id} className="relative flex items-start gap-4 group">
+                  {/* Icon Dot */}
+                  <div
+                    className="absolute -left-6 top-1 w-5 h-5 rounded-full flex items-center justify-center text-white ring-4 ring-white shadow-sm"
+                    style={{ backgroundColor: event.badgeColor || '#3b82f6' }}
+                  >
+                    <EventIcon className="w-3 h-3" />
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex-1 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-900 text-sm">{event.title}</span>
+                        <span
+                          className="px-2 py-0.5 rounded text-[10px] font-bold text-white uppercase tracking-wider"
+                          style={{ backgroundColor: event.badgeColor || '#3b82f6' }}
+                        >
+                          {event.badge}
+                        </span>
+                      </div>
+                      <div className="text-xs font-bold text-slate-600 flex items-center gap-1.5 bg-white px-2.5 py-1 rounded border border-slate-200 shadow-2xs">
+                        <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Dansk Tid: {formatDenmarkDateTime(event.timestamp, { includeSeconds: true, monthFormat: 'short' })}</span>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-slate-600 leading-relaxed">{event.description}</p>
+
+                    {event.details && event.details.length > 0 && (
+                      <div className="flex flex-wrap gap-x-6 gap-y-1 pt-1 text-xs text-slate-500 border-t border-slate-200/60">
+                        {event.details.map((d, i) => (
+                          <span key={i}>
+                            <strong className="text-slate-700 font-semibold">{d.label}:</strong> {d.value}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="text-[11px] text-slate-400 italic pt-1">
+                      Udført af: {event.performedBy}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Stripe Metadata */}
         <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 font-mono text-xs text-slate-500 flex justify-between items-center">
           <span>Stripe Session ID: {selectedOrder.stripeSessionId || 'N/A'}</span>
@@ -409,7 +596,7 @@ const WebshopOrdersPage = () => {
           >
             <option value="all">All Statuses</option>
             {statuses.map((s) => (
-              <option key={s.id} value={s.slug || s.name}>
+              <option key={s.id || s.slug} value={s.slug || s.name}>
                 {s.name}
               </option>
             ))}
@@ -437,7 +624,7 @@ const WebshopOrdersPage = () => {
           <thead className="bg-[#fafafa] border-b border-slate-200">
             <tr>
               <th className="px-6 py-4 font-bold text-slate-500">Order #</th>
-              <th className="px-6 py-4 font-bold text-slate-500">Date</th>
+              <th className="px-6 py-4 font-bold text-slate-500">Dansk Tid</th>
               <th className="px-6 py-4 font-bold text-slate-500">Customer</th>
               <th className="px-6 py-4 font-bold text-slate-500">Status</th>
               <th className="px-6 py-4 font-bold text-slate-500 text-right">Total</th>
@@ -456,19 +643,21 @@ const WebshopOrdersPage = () => {
                 const isUpdatingThis = updatingOrderId === order.id;
                 const customerName = order.customerDetails?.name || 'Guest Customer';
 
+                const hasCurrentMatch = statuses.some(
+                  (s) => (s.slug || s.name || '').toUpperCase() === (order.orderStatus || '').toUpperCase()
+                );
+                const matchedStatus = statuses.find(
+                  (s) => (s.slug || s.name || '').toUpperCase() === (order.orderStatus || '').toUpperCase()
+                );
+                const selectValue = matchedStatus ? (matchedStatus.slug || matchedStatus.name) : order.orderStatus;
+
                 return (
                   <tr key={order.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4 font-bold text-slate-900">
                       {order.orderNumber}
                     </td>
-                    <td className="px-6 py-4 text-slate-500 text-xs">
-                      {new Date(order.createdAt).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                    <td className="px-6 py-4 text-slate-600 text-xs font-semibold">
+                      {formatDenmarkDateTime(order.createdAt, { includeSeconds: false })}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-0.5">
@@ -485,13 +674,18 @@ const WebshopOrdersPage = () => {
                         <div className="flex items-center gap-2">
                           {getStatusBadge(order.orderStatus)}
                           <select
-                            value={order.orderStatus}
+                            value={selectValue}
                             onChange={(e) => handleRequestUpdateStatus(order.id, order.orderNumber, e.target.value)}
                             className="text-xs font-bold py-1 px-2 rounded border border-slate-200 bg-white focus:outline-none cursor-pointer"
                           >
+                            {!hasCurrentMatch && (
+                              <option value={order.orderStatus} disabled>
+                                Current: {order.orderStatus}
+                              </option>
+                            )}
                             {statuses.map((st) => (
-                              <option key={st.id} value={st.slug}>
-                                Change to: {st.name}
+                              <option key={st.id || st.slug} value={st.slug || st.name}>
+                                Change to: {st.name} {st.emailTemplate ? '📧' : ''}
                               </option>
                             ))}
                           </select>
@@ -506,7 +700,7 @@ const WebshopOrdersPage = () => {
                         <button
                           onClick={() => setSelectedOrder(order)}
                           className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                          title="View Order Details"
+                          title="View Order Details & History"
                         >
                           <Eye className="w-4 h-4" />
                         </button>

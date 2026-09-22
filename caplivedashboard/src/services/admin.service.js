@@ -1,7 +1,7 @@
 import api from './api';
 
 // Dashboard
-export const getDashboardStats = () => api.get('/admin/dashboard/stats').then(r => r.data);
+export const getDashboardStats = (params) => api.get('/admin/dashboard/stats', { params }).then(r => r.data);
 export const seedSystem = () => api.post('/admin/seed').then(r => r.data);
 
 // Customers

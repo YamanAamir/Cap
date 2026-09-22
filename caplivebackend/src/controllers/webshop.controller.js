@@ -205,7 +205,7 @@ function formatStripeImageUrls(imgSource, origin) {
   }
 
   if (rawImg.startsWith('/')) {
-    const base = (origin || process.env.BACKEND_URL || 'https://capdevapi.studentlife.dk').replace(/\/$/, '');
+    const base = (origin).replace(/\/$/, '');
     return [`${base}${rawImg}`];
   }
 
@@ -226,6 +226,8 @@ exports.createCheckoutSession = async (req, res) => {
     }
 
     const clientOrigin = origin || req.headers.origin || 'https://studentlife.dk';
+
+    const backendOrigin = process.env.VITE_API_BASE_URL;
 
     // Verify each item against backend database for anti-tampering
     const line_items = [];
@@ -267,7 +269,7 @@ exports.createCheckoutSession = async (req, res) => {
       }
 
       const unitAmount = Math.round(dbPrice * 100);
-      const stripeImages = formatStripeImageUrls(dbProduct.images, clientOrigin);
+      const stripeImages = formatStripeImageUrls(dbProduct.images, backendOrigin);
 
       line_items.push({
         price_data: {
@@ -413,7 +415,7 @@ exports.handleWebshopCheckoutSuccess = async (session) => {
         totalAmount,
         currency: (session.currency || 'dkk').toUpperCase(),
         paymentStatus: 'PAID',
-        orderStatus: 'PENDING',
+        orderStatus: 'PAID',
         webshopCustomerId: customer.id,
       },
     });
@@ -735,18 +737,42 @@ exports.adminUpdateOrderStatus = async (req, res) => {
     const { id } = req.params;
     const { orderStatus, paymentStatus } = req.body;
 
+    const existingOrder = await prisma.webshopOrder.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!existingOrder) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    let customerDetails = parseJsonSafely(existingOrder.customerDetails, {});
+    if (orderStatus && existingOrder.orderStatus !== orderStatus) {
+      const history = Array.isArray(customerDetails._history) ? customerDetails._history : [];
+      history.push({
+        id: `hist-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        oldStatus: existingOrder.orderStatus,
+        newStatus: orderStatus,
+        title: `Status ændret til "${orderStatus}"`,
+        description: `Ordrestatus blev opdateret fra "${existingOrder.orderStatus}" til "${orderStatus}".`,
+        performedBy: 'Admin Webshop Dashboard',
+      });
+      customerDetails._history = history;
+    }
+
     const updatedOrder = await prisma.webshopOrder.update({
       where: { id: parseInt(id) },
       data: {
         ...(orderStatus && { orderStatus }),
         ...(paymentStatus && { paymentStatus }),
+        customerDetails: stringifyJsonSafely(customerDetails),
       },
       include: {
         webshopCustomer: true,
       },
     });
 
-    if (orderStatus) {
+    if (orderStatus && existingOrder.orderStatus !== orderStatus) {
       const formatted = formatOrder(updatedOrder);
       const custEmail = formatted.customerEmail || formatted.webshopCustomer?.email;
       if (custEmail) {

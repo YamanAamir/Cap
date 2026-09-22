@@ -1,5 +1,31 @@
 // Comprehensive translation dictionary mapping Danish configuration values to English for Factory Exports and Portals
 const EXACT_TRANSLATIONS = {
+  // ==================== UNSELECTED / NONE VALUES ====================
+  'Not Choosen': 'x',
+  'Not choosen': 'x',
+  'not choosen': 'x',
+  'NOT CHOOSEN': 'x',
+  'Not Chosen': 'x',
+  'Not chosen': 'x',
+  'not chosen': 'x',
+  'NOT CHOSEN': 'x',
+  'Not Selected': 'x',
+  'Not selected': 'x',
+  'not selected': 'x',
+  'NOT SELECTED': 'x',
+  'Ingen': 'x',
+  'ingen': 'x',
+  'INGEN': 'x',
+  'None': 'x',
+  'none': 'x',
+  'NONE': 'x',
+  'Nej': 'x',
+  'nej': 'x',
+  'NEJ': 'x',
+  'No': 'x',
+  'no': 'x',
+  'NO': 'x',
+
   // ==================== MATERIALS ====================
   'BOMULD': 'Cotton',
   'Bomuld': 'Cotton',
@@ -161,32 +187,88 @@ const EXACT_TRANSLATIONS = {
   'Hvid guld': 'White Gold',
 
   // ==================== EDUCATION PROGRAMS / BANDS ====================
-  'STX': 'STX (Bordeaux)',
-  'HHX': 'HHX (Royal Blue)',
-  'HTX': 'HTX (Navy Blue)',
-  'HF': 'HF (Light Blue)',
-  'EUX': 'EUX (Grey)',
-  'EUD': 'EUD (Purple)',
-  'Sosuassistent': 'Social & Health Assistant (Purple)',
-  'sosuassistent': 'Social & Health Assistant (Purple)',
-  'Sosuhjælper': 'Social & Health Helper (Light Purple)',
-  'sosuhjælper': 'Social & Health Helper (Light Purple)',
-  'Frisør': 'Hairdresser (Light Pink)',
-  'frisør': 'Hairdresser (Light Pink)',
-  'Kosmetolog': 'Cosmetologist (Pink)',
-  'kosmetolog': 'Cosmetologist (Pink)',
-  'Pædagog': 'Educator (Dark Purple)',
-  'pædagog': 'Educator (Dark Purple)',
-  'PAU': 'PAU (Orange)',
-  'pau': 'PAU (Orange)',
-  'Ernæringsassisten': 'Nutrition Assistant (Yellow)',
-  'Ernæringsassistent': 'Nutrition Assistant (Yellow)',
-  'ernæringsassisten': 'Nutrition Assistant (Yellow)',
-  'ernæringsassistent': 'Nutrition Assistant (Yellow)',
-  'STU': 'STU',
-  'stu': 'STU',
-  'Landmand': 'Farmer (Green)',
-  'landmand': 'Farmer (Green)',
+  'STX': 'Bordeaux',
+  'stx': 'Bordeaux',
+  'STX (Bordeaux)': 'Bordeaux',
+  'STX (Bordeaux) (Bordeaux)': 'Bordeaux',
+
+  'HHX': 'Royal Blue',
+  'hhx': 'Royal Blue',
+  'HHX (Royal Blue)': 'Royal Blue',
+  'HHX (Royal Blue) (Royal Blue)': 'Royal Blue',
+
+  'HTX': 'Navy Blue',
+  'htx': 'Navy Blue',
+  'HTX (Navy Blue)': 'Navy Blue',
+  'HTX (Navy Blue) (Navy Blue)': 'Navy Blue',
+
+  'HF': 'Light Blue',
+  'hf': 'Light Blue',
+  'HF (Light Blue)': 'Light Blue',
+  'HF (Light Blue) (Light Blue)': 'Light Blue',
+
+  'EUX': 'Grey',
+  'eux': 'Grey',
+  'EUX (Grey)': 'Grey',
+  'EUX (Grey) (Grey)': 'Grey',
+
+  'EUD': 'Dark Purple',
+  'eud': 'Dark Purple',
+  'Eud': 'Dark Purple',
+  'EUD (Purple)': 'Dark Purple',
+  'EUD (Purple) (Purple)': 'Dark Purple',
+  'EUD (Dark Purple)': 'Dark Purple',
+
+  'Sosuassistent': 'Dark Purple',
+  'sosuassistent': 'Dark Purple',
+  'Sosu assistent': 'Dark Purple',
+  'sosu assistent': 'Dark Purple',
+  'Social & Health Assistant': 'Dark Purple',
+  'Social & Health Assistant (Purple)': 'Dark Purple',
+  'Social & Health Assistant (Dark Purple)': 'Dark Purple',
+
+  'Sosuhjælper': 'Light Purple',
+  'sosuhjælper': 'Light Purple',
+  'Sosu hjælper': 'Light Purple',
+  'sosu hjælper': 'Light Purple',
+  'Social & Health Helper': 'Light Purple',
+  'Social & Health Helper (Light Purple)': 'Light Purple',
+
+  'Frisør': 'Light Pink',
+  'frisør': 'Light Pink',
+  'Hairdresser': 'Light Pink',
+  'Hairdresser (Light Pink)': 'Light Pink',
+
+  'Kosmetolog': 'Pink',
+  'kosmetolog': 'Pink',
+  'Cosmetologist': 'Pink',
+  'Cosmetologist (Pink)': 'Pink',
+
+  'Pædagog': 'Dark Purple',
+  'pædagog': 'Dark Purple',
+  'Educator': 'Dark Purple',
+  'Educator (Dark Purple)': 'Dark Purple',
+
+  'PAU': 'Orange',
+  'pau': 'Orange',
+  'PAU (Orange)': 'Orange',
+  'PAU (Orange) (Orange)': 'Orange',
+
+  'Ernæringsassisten': 'Yellow',
+  'Ernæringsassistent': 'Yellow',
+  'ernæringsassisten': 'Yellow',
+  'ernæringsassistent': 'Yellow',
+  'Nutrition Assistant': 'Yellow',
+  'Nutrition Assistant (Yellow)': 'Yellow',
+
+  'STU': 'Colored Band',
+  'stu': 'Colored Band',
+  'STU (Colored Band)': 'Colored Band',
+
+  'Landmand': 'Green',
+  'landmand': 'Green',
+  'Farmer': 'Green',
+  'Farmer (Green)': 'Green',
 
   // ==================== COCKADE CATEGORIES & EMBLEMS ====================
   'Signature': 'Signature',
@@ -477,24 +559,30 @@ const EXACT_TRANSLATIONS = {
   'Top broderi 4': 'Top Embroidery Design 4',
 
   // ==================== STARS ====================
-  '1': '1 Star',
-  '1 Stjerne': '1 Star',
-  'One Star': '1 Star',
-  '2': '2 Stars',
-  '2 Stjerner': '2 Stars',
-  'Two Stars': '2 Stars',
-  '3': '3 Stars',
-  '3 Stjerner': '3 Stars',
-  'Three Stars': '3 Stars',
-  '4': '4 Stars',
-  '4 Stjerner': '4 Stars',
-  'Four Stars': '4 Stars',
-  '5': '5 Stars',
-  '5 Stjerner': '5 Stars',
-  'Five Stars': '5 Stars',
-  '6': '6 Stars',
-  '6 Stjerner': '6 Stars',
-  'Six Stars': '6 Stars',
+  '1': '1',
+  '1 Stjerne': '1',
+  'One Star': '1',
+  '1 Star': '1',
+  '2': '2',
+  '2 Stjerner': '2',
+  'Two Stars': '2',
+  '2 Stars': '2',
+  '3': '3',
+  '3 Stjerner': '3',
+  'Three Stars': '3',
+  '3 Stars': '3',
+  '4': '4',
+  '4 Stjerner': '4',
+  'Four Stars': '4',
+  '4 Stars': '4',
+  '5': '5',
+  '5 Stjerner': '5',
+  'Five Stars': '5',
+  '5 Stars': '5',
+  '6': '6',
+  '6 Stjerner': '6',
+  'Six Stars': '6',
+  '6 Stars': '6',
 
   // ==================== GENERAL / BOOLEANS ====================
   'Ja': 'Yes',
@@ -634,7 +722,20 @@ const translateFactoryValue = (val) => {
     return EXACT_TRANSLATIONS[exactKey];
   }
 
-  // 3. Check for pure numeric / size strings (e.g. "56", "57.5", "2026")
+  // 3. Stripped parentheticals lookup (handles repeated/legacy strings like "STX (Bordeaux) (Bordeaux)" or "Nutrition Assistant (Yellow)")
+  const cleanBase = str.replace(/\s*\([^)]*\)/g, '').trim();
+  if (cleanBase && cleanBase !== str) {
+    if (EXACT_TRANSLATIONS[cleanBase] !== undefined) {
+      return EXACT_TRANSLATIONS[cleanBase];
+    }
+    const cleanLower = cleanBase.toLowerCase();
+    const cleanKey = Object.keys(EXACT_TRANSLATIONS).find(k => k.toLowerCase() === cleanLower);
+    if (cleanKey) {
+      return EXACT_TRANSLATIONS[cleanKey];
+    }
+  }
+
+  // 4. Check for pure numeric / size strings (e.g. "56", "57.5", "2026")
   if (/^\d+(\.\d+)?$/.test(str)) {
     return str;
   }
@@ -645,6 +746,9 @@ const translateFactoryValue = (val) => {
   let replacedAny = false;
   const translatedWords = words.map(chunk => {
     const trimmed = chunk.trim().toLowerCase();
+    if (!trimmed || /^\d+$/.test(trimmed)) {
+      return chunk;
+    }
     if (WORD_TRANSLATIONS[trimmed]) {
       replacedAny = true;
       return WORD_TRANSLATIONS[trimmed];

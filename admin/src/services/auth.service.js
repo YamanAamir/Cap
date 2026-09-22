@@ -34,6 +34,16 @@ export const updateOrderStatus = async (id, data) => {
   return response.data;
 };
 
+export const bulkUpdateOrderStatus = async (orderIds, statusId) => {
+  const response = await api.post('/orders/bulk-status', { orderIds, statusId });
+  return response.data;
+};
+
+export const bulkDeleteOrders = async (orderIds) => {
+  const response = await api.post('/orders/bulk-delete', { orderIds });
+  return response.data;
+};
+
 export const updateOrder = async (id, data) => {
   const response = await api.put(`/orders/${id}`, data);
   return response.data;

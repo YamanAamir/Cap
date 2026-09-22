@@ -115,6 +115,7 @@ model DiscountCode {
   usedAt        DateTime?
   usedByOrderId Int?
   source        String?
+  maxUses       Int?
   createdAt     DateTime                @default(now())
   customer      Customer?               @relation(fields: [customerId], references: [id])
   orders        Order[]

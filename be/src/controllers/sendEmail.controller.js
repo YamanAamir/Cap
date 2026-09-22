@@ -115,7 +115,14 @@ const translateValue = (value) => {
     // Extra
     'Ja': 'Yes',
     'Nej': 'No',
-    'Standard': 'Standard'
+    'Standard': 'Standard',
+
+    // Top Embroidery
+    'Top broderi 1': 'Top Embroidery 1',
+    'Top broderi 2': 'Top Embroidery 2',
+    'Top broderi 3': 'Top Embroidery 3',
+    'Top broderi 4': 'Top Embroidery 4',
+    'Top broderi': 'Top Embroidery',
   };
 
   return map[value] || value;
@@ -133,7 +140,7 @@ const factoryOrderEmail = (orderData) => {
   let storrelseSection = '';
   const {
     customerDetails,
-    selectedOptions,
+    selectedOptions = {},
     totalPrice,
     currency,
     orderNumber,
@@ -142,6 +149,14 @@ const factoryOrderEmail = (orderData) => {
     program,
     email
   } = orderData;
+
+  const topEmbroideryVal = 
+    selectedOptions.BRODERI?.['Top broderi'] ||
+    selectedOptions['Top broderi'] ||
+    selectedOptions.BRODERI?.topBroderi ||
+    selectedOptions.topBroderi ||
+    selectedOptions.BRODERI?.['Topbroderi'] ||
+    selectedOptions['Topbroderi'];
 
 
   const hideSelectorsPrograms = [
@@ -556,6 +571,13 @@ const factoryOrderEmail = (orderData) => {
                                 <div style="font-size:16px;">${t(selectedOptions.BRODERI?.['Skolebroderi farve']) || 'Not Chosen'}</div>
                               </td>
                             </tr>`}
+                            ${!topEmbroideryVal || topEmbroideryVal === 'Ingen' || topEmbroideryVal === 'INGEN' || topEmbroideryVal === 'Nej' || topEmbroideryVal === 'NONE' ? '' : `
+                            <tr>
+                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
+                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Top Embroidery</div>
+                                <div style="font-size:16px;">${t(topEmbroideryVal)}</div>
+                              </td>
+                            </tr>`}
                             <tr>
                               <td style="padding-top:10px;">
                                 <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Year</div>
@@ -568,6 +590,30 @@ const factoryOrderEmail = (orderData) => {
                     </table>
                   </td>
                 </tr>
+
+                <!-- Top Embroidery -->
+                ${!topEmbroideryVal || topEmbroideryVal === 'Ingen' || topEmbroideryVal === 'INGEN' || topEmbroideryVal === 'Nej' || topEmbroideryVal === 'NONE' ? '' : `
+                <tr>
+                  <td style="padding-bottom:25px;">
+                    <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="font-size:18px; font-weight:bold; color:#333333; padding-bottom:15px;">Top Embroidery</td>
+                      </tr>
+                      <tr>
+                        <td style="background-color:#f7f8f7; padding:20px;">
+                          <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                            <tr>
+                              <td style="padding:5px 0;">
+                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Top Embroidery Design</div>
+                                <div style="font-size:16px; font-weight:bold;">${t(topEmbroideryVal)}</div>
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>`}
 
                 <!-- Brim -->
                 <tr>
@@ -3558,8 +3604,16 @@ const stripePayment = async (req, res) => {
     if (discountCode) {
       const result = await applyDiscountCode(discountCode, customerDetails?.phone, finalPrice);
       discountRecord = result.discount;
-      discountAmount = result.discountAmount;
-      // finalPrice = result.finalPrice; // Do not subtract again, frontend already subtracted it from totalPrice
+      if (discountRecord) {
+        if (discountRecord.type === 'FIXED') {
+          discountAmount = discountRecord.value;
+        } else if (discountRecord.type === 'PERCENTAGE' && discountRecord.value) {
+          const originalPrice = finalPrice / (1 - (discountRecord.value / 100));
+          discountAmount = Math.round((originalPrice - finalPrice) * 100) / 100;
+        } else {
+          discountAmount = result.discountAmount;
+        }
+      }
     }
 
     let stripeChargeAmount = finalPrice;

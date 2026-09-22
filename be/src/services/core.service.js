@@ -200,9 +200,23 @@ const applyDiscountCode = async (code, phone, orderTotal) => {
   if (new Date() > discount.expiresAt) {
     throw new Error('Discount code has expired');
   }
-  if (discount.usedAt) {
+
+  // Count existing non-cancelled orders using this discount code
+  const orderCount = await prisma.order.count({
+    where: {
+      discountCodeId: discount.id,
+      status: { not: 'CANCELLED' }
+    }
+  });
+
+  if (discount.maxUses !== null && discount.maxUses !== undefined && discount.maxUses > 0) {
+    if (orderCount >= discount.maxUses) {
+      throw new Error('Discount code has reached its usage limit');
+    }
+  } else if (discount.usedAt) {
     throw new Error('Discount code already used');
   }
+
   const cleanPhone = (p) => p ? p.replace(/[^\d]/g, '') : '';
   const dPhone = cleanPhone(discount.phoneNumber);
   const cPhone = cleanPhone(phone);
@@ -210,7 +224,7 @@ const applyDiscountCode = async (code, phone, orderTotal) => {
     throw new Error('Discount code not valid for this phone number');
   }
 
-  // Strict check: Prevent customers who have already completed an order with a discount from applying it again
+  // Check: Prevent the same phone number from applying THIS SPECIFIC discount code multiple times
   if (cPhone) {
     const customersWithPhone = await prisma.customer.findMany({
       where: { phone: { not: null } }
@@ -223,12 +237,12 @@ const applyDiscountCode = async (code, phone, orderTotal) => {
       const existingOrderWithDiscount = await prisma.order.findFirst({
         where: {
           customerId: { in: matchingCustomerIds },
-          discountCodeId: { not: null },
+          discountCodeId: discount.id,
           status: { not: 'CANCELLED' }
         }
       });
       if (existingOrderWithDiscount) {
-        throw new Error('A discount has already been used for this phone number');
+        throw new Error('This discount code has already been used for this phone number');
       }
     }
   }
@@ -491,7 +505,79 @@ const sendOrderEmail = async (to, subject, htmlBody) => {
   }
 };
 
-const getDashboardStats = async () => {
+const getDateFilterBounds = (filterParam, startDateStr, endDateStr) => {
+  const activeFilter = filterParam || 'all';
+
+  if (activeFilter === 'today') {
+    const now = new Date();
+    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1, 19, 0, 0, 0));
+    const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
+    return { start, end };
+  }
+
+  if (activeFilter === 'month' || activeFilter === 'this_month') {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    start.setHours(start.getHours() - 12);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    end.setHours(end.getHours() + 12);
+    return { start, end };
+  }
+
+  if (activeFilter === 'custom' || startDateStr || endDateStr) {
+    let start = null;
+    let end = null;
+
+    if (startDateStr) {
+      if (typeof startDateStr === 'string' && startDateStr.includes('-')) {
+        const parts = startDateStr.split('T')[0].split('-').map(Number);
+        if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+          start = new Date(parts[0], parts[1] - 1, parts[2] - 1, 18, 0, 0, 0);
+        }
+      }
+      if (!start) {
+        start = new Date(startDateStr);
+        start.setHours(start.getHours() - 12);
+      }
+    }
+
+    if (endDateStr) {
+      if (typeof endDateStr === 'string' && endDateStr.includes('-')) {
+        const parts = endDateStr.split('T')[0].split('-').map(Number);
+        if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+          end = new Date(parts[0], parts[1] - 1, parts[2] + 1, 6, 0, 0, 0);
+        }
+      }
+      if (!end) {
+        end = new Date(endDateStr);
+        end.setHours(end.getHours() + 12);
+      }
+    }
+
+    if (start || end) {
+      return { start, end };
+    }
+  }
+
+  return null;
+};
+
+const getDashboardStats = async (query = {}) => {
+  const { filter, startDate, endDate } = query;
+
+  let dateWhere = undefined;
+  const bounds = getDateFilterBounds(filter, startDate, endDate);
+  if (bounds) {
+    const dateObj = {};
+    if (bounds.start) dateObj.gte = bounds.start;
+    if (bounds.end) dateObj.lte = bounds.end;
+    dateWhere = { createdAt: dateObj };
+  }
+
+  const orderWhere = dateWhere ? { ...dateWhere } : {};
+  const customerWhere = dateWhere ? { createdAt: dateWhere.createdAt } : {};
+  const discountCodeWhere = dateWhere ? { usedAt: dateWhere.createdAt } : { usedAt: { not: null } };
+
   const triggerStatuses = await prisma.orderStatus.findMany({
     where: { triggersProduction: true, isActive: true }
   });
@@ -508,6 +594,7 @@ const getDashboardStats = async () => {
   const [
     readyForProduction,
     totalOrders,
+    installmentOrders,
     activeCampaigns,
     smsConsentCount,
     totalDiscountCodes,
@@ -519,16 +606,27 @@ const getDashboardStats = async () => {
     statusCountsRaw
   ] = await Promise.all([
     triggerStatusIds.length > 0
-      ? prisma.order.count({ where: { statusId: { in: triggerStatusIds }, productionBatchId: null } })
+      ? prisma.order.count({ where: { ...orderWhere, statusId: { in: triggerStatusIds }, productionBatchId: null } })
       : 0,
-    prisma.order.count(),
-    prisma.smsCampaign.count({ where: { isActive: true } }),
-    prisma.customer.count({ where: { smsMarketingConsent: true, smsOptOut: false } }),
-    prisma.discountCode.count(),
-    prisma.discountCode.count({ where: { usedAt: { not: null } } }),
-    prisma.productionDispatchLog.findFirst({ orderBy: { sentAt: 'desc' }, include: { batch: true } }),
-    prisma.order.aggregate({ _sum: { totalPrice: true } }),
+    prisma.order.count({ where: orderWhere }),
     prisma.order.findMany({
+      where: {
+        ...orderWhere,
+        OR: [
+          { installmentPlanId: { not: null } },
+          { installmentDetails: { not: null } }
+        ]
+      },
+      include: { installmentPlan: true }
+    }),
+    prisma.smsCampaign.count({ where: { isActive: true } }),
+    prisma.customer.count({ where: { ...customerWhere, smsMarketingConsent: true, smsOptOut: false } }),
+    prisma.discountCode.count(),
+    prisma.discountCode.count({ where: discountCodeWhere }),
+    prisma.productionDispatchLog.findFirst({ orderBy: { sentAt: 'desc' }, include: { batch: true } }),
+    prisma.order.aggregate({ _sum: { totalPrice: true }, where: orderWhere }),
+    prisma.order.findMany({
+      where: orderWhere,
       take: 5,
       orderBy: { createdAt: 'desc' },
       include: { customer: true, orderStatus: true }
@@ -536,9 +634,59 @@ const getDashboardStats = async () => {
     prisma.orderStatus.findMany({ orderBy: { sortOrder: 'asc' } }),
     prisma.order.groupBy({
       by: ['statusId'],
+      where: orderWhere,
       _count: { id: true }
     })
   ]);
+
+  let installmentOrdersCount = installmentOrders.length;
+  let installmentTotalValue = 0;
+  let installmentDownPaymentPaid = 0;
+  let installmentRatesTotal = 0;
+  let installmentRatesPaid = 0;
+  let installmentRemainingAmount = 0;
+  let installmentTotalCollected = 0;
+
+  installmentOrders.forEach(o => {
+    let details = o.installmentDetails;
+    if (typeof details === 'string') {
+      try { details = JSON.parse(details); } catch(e) {}
+    }
+    details = details || {};
+
+    const dp = Number(details.downPayment || details.downPaymentAmount || o.installmentPlan?.downPaymentAmount || 0);
+
+    let rates = Array.isArray(details.installments) ? details.installments : [];
+    rates = rates.filter(r => !r.label?.toLowerCase().includes('1. betaling') && !r.label?.toLowerCase().includes('down payment'));
+
+    let rateTotal = 0;
+    let ratePaid = 0;
+    let rateRemaining = 0;
+
+    rates.forEach(r => {
+      const amt = Number(r.amount) || 0;
+      rateTotal += amt;
+      if (r.status === 'Paid') {
+        ratePaid += amt;
+      } else {
+        rateRemaining += amt;
+      }
+    });
+
+    if (rates.length === 0 && o.totalPrice > dp) {
+      rateTotal = o.totalPrice - dp;
+      rateRemaining = rateTotal;
+    }
+
+    const orderTotalPaid = dp + ratePaid;
+
+    installmentTotalValue += o.totalPrice;
+    installmentDownPaymentPaid += dp;
+    installmentRatesTotal += rateTotal;
+    installmentRatesPaid += ratePaid;
+    installmentRemainingAmount += rateRemaining;
+    installmentTotalCollected += orderTotalPaid;
+  });
 
   const statusCounts = allStatuses.map(status => {
     const countMatch = statusCountsRaw.find(s => s.statusId === status.id);
@@ -556,6 +704,14 @@ const getDashboardStats = async () => {
   return {
     readyForProduction,
     totalOrders,
+    installmentOrdersCount,
+    installmentTotalValue,
+    installmentDownPaymentPaid,
+    installmentRatesTotal,
+    installmentRatesPaid,
+    installmentRemainingAmount,
+    installmentTotalCollected,
+    installmentOrdersAmount: installmentTotalValue,
     activeCampaigns,
     smsConsentCount,
     totalDiscountCodes,

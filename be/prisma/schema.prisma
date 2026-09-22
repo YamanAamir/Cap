@@ -111,6 +111,7 @@ model DiscountCode {
   usedAt        DateTime?
   usedByOrderId Int?
   source        String?
+  maxUses       Int?
   createdAt     DateTime  @default(now())
   orders        Order[]
   enrollments   SmsCampaignEnrollment[]

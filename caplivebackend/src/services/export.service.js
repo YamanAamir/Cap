@@ -15,7 +15,13 @@ const RAW_PASSTHROUGH_FIELDS = new Set([
   'customerDeliveryCountry', 'schoolName',
   'totalPrice', 'currency', 'packageName',
   'status', 'paymentStatus', 'paymentIntentId', 'discountCode', 'discountAmount',
-  'options.SKYGGE.Laserengravering', 'options.BETRÆK.Stjerner farve'
+  'options.SKYGGE.Laserengravering', 'options.BETRÆK.Stjerner farve',
+  'options.BRODERI.Navne broderi', 'Navne broderi',
+  'options.UDDANNELSESBÅND.Broderi foran', 'Broderi foran',
+  'options.BRODERI.Skolebroderi', 'Skolebroderi',
+  'options.SKYGGE.Skyggegravering Line 1', 'Skyggegravering Line 1', 'Line 1',
+  'options.SKYGGE.Skyggegravering Line 2', 'Skyggegravering Line 2', 'Line 2',
+  'options.SKYGGE.Skyggegravering Line 3', 'Skyggegravering Line 3', 'Line 3'
 ]);
 
 const translateText = (text) => translateFactoryValue(text);
@@ -58,6 +64,25 @@ const generateExcelFile = async (orders, columns, batchId) => {
         val = translateFactoryValue(val);
       }
       
+      const upperVal = String(val ?? '').trim().toUpperCase();
+      const isNullOrEmpty =
+        val === null ||
+        val === undefined ||
+        upperVal === '' ||
+        upperVal === 'NONE' ||
+        upperVal === 'INGEN' ||
+        upperVal === 'NOT CHOOSEN' ||
+        upperVal === 'NOT CHOSEN' ||
+        upperVal === 'NOT SELECTED' ||
+        upperVal === 'NO' ||
+        upperVal === 'NEJ' ||
+        upperVal === 'UDEN' ||
+        upperVal === 'X';
+
+      if (isNullOrEmpty) {
+        val = 'x';
+      }
+
       row[col.fieldKey] = val;
     }
     sheet.addRow(row);

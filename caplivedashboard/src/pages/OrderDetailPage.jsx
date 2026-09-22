@@ -304,17 +304,28 @@ const OrderDetailPage = () => {
             </p>
             
             <div className="mt-6 space-y-3">
-              {order.discountCode && (
-                <div className="bg-white rounded p-3 border border-slate-200">
-                  <span className="text-[10px] font-bold uppercase text-slate-500 tracking-widest block mb-1 flex items-center gap-1">
-                    <Tag className="h-3 w-3" /> Applied Discount
-                  </span>
-                  <p className="font-bold text-sm text-slate-800">{order.discountCode.code}</p>
-                  {order.discountAmount > 0 && (
-                    <p className="text-xs font-bold text-green-600 mt-1">−{order.discountAmount} DKK</p>
-                  )}
-                </div>
-              )}
+              {order.discountCode && (() => {
+                let displayDiscountAmount = order.discountAmount;
+                if (order.discountCode.type === 'FIXED' && order.discountCode.value) {
+                  displayDiscountAmount = order.discountCode.value;
+                } else if (order.discountCode.type === 'PERCENTAGE' && order.discountCode.value) {
+                  if (!displayDiscountAmount || displayDiscountAmount === order.totalPrice) {
+                    const orig = order.totalPrice / (1 - order.discountCode.value / 100);
+                    displayDiscountAmount = Math.round((orig - order.totalPrice) * 100) / 100;
+                  }
+                }
+                return (
+                  <div className="bg-white rounded p-3 border border-slate-200">
+                    <span className="text-[10px] font-bold uppercase text-slate-500 tracking-widest block mb-1 flex items-center gap-1">
+                      <Tag className="h-3 w-3" /> Applied Discount
+                    </span>
+                    <p className="font-bold text-sm text-slate-800">{order.discountCode.code}</p>
+                    {displayDiscountAmount > 0 && (
+                      <p className="text-xs font-bold text-green-600 mt-1">−{displayDiscountAmount} DKK</p>
+                    )}
+                  </div>
+                );
+              })()}
               <div className="bg-white rounded p-3 border border-slate-200">
                 <span className="text-[10px] font-bold uppercase text-slate-500 tracking-widest block mb-1">Tier</span>
                 <p className="font-bold text-sm text-slate-800">{order.packageName || 'Standard Issue'}</p>

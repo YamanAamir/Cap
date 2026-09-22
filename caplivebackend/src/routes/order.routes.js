@@ -4,6 +4,8 @@ const orderController = require('../controllers/order.controller');
 const { verifyToken } = require('../middleware/auth.middleware');
 
 router.get('/', verifyToken, orderController.getOrders);
+router.post('/bulk-status', verifyToken, orderController.bulkUpdateOrderStatus);
+router.post('/bulk-delete', verifyToken, orderController.bulkDeleteOrders);
 router.get('/:id', verifyToken, orderController.getOrderById);
 router.patch('/:id/status', verifyToken, orderController.updateOrderStatus);
 router.post('/:id/resend-email', verifyToken, orderController.resendOrderEmails);

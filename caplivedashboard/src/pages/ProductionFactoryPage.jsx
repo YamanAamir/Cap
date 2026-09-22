@@ -18,8 +18,11 @@ const ProductionFactoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
   const [debounceSearch, setDebounceSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all'); // 'all' | 'today' | 'month' | 'custom'
+  const [customDates, setCustomDates] = useState({ startDate: '', endDate: '' });
   const [statuses, setStatuses] = useState([]);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, orderId: null, statusId: null });
   const [updatingId, setUpdatingId] = useState(null);
@@ -43,9 +46,12 @@ const ProductionFactoryPage = () => {
       const response = await getOrders({
         page,
         search: debounceSearch,
-        limit: 20,
+        limit,
         statusId: statusFilter,
         isVisibleToProduction: 'true',
+        dateFilter,
+        startDate: customDates.startDate,
+        endDate: customDates.endDate,
       });
       setData(response);
     } catch (error) {
@@ -57,8 +63,12 @@ const ProductionFactoryPage = () => {
   };
 
   useEffect(() => {
+    setPage(1);
+  }, [debounceSearch, statusFilter, limit, dateFilter, customDates.startDate, customDates.endDate]);
+
+  useEffect(() => {
     fetchOrders();
-  }, [page, debounceSearch, statusFilter]);
+  }, [page, debounceSearch, statusFilter, limit, dateFilter, customDates.startDate, customDates.endDate]);
 
   const handleStatusUpdate = async () => {
     if (!confirmModal.orderId || !confirmModal.statusId) return;
@@ -100,7 +110,7 @@ const ProductionFactoryPage = () => {
       </div>
 
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
           <div className="relative w-full md:w-[250px]">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
             <input
@@ -111,6 +121,73 @@ const ProductionFactoryPage = () => {
               className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500"
             />
           </div>
+
+          {/* Date Filter Tabs */}
+          <div className="flex items-center bg-slate-100 border border-slate-200 rounded p-1 text-xs">
+            <button
+              type="button"
+              onClick={() => { setDateFilter('all'); setPage(1); }}
+              className={`px-2.5 py-1 rounded font-semibold transition-all ${
+                dateFilter === 'all'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              onClick={() => { setDateFilter('today'); setPage(1); }}
+              className={`px-2.5 py-1 rounded font-semibold transition-all ${
+                dateFilter === 'today'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              onClick={() => { setDateFilter('month'); setPage(1); }}
+              className={`px-2.5 py-1 rounded font-semibold transition-all ${
+                dateFilter === 'month'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Month
+            </button>
+            <button
+              type="button"
+              onClick={() => { setDateFilter('custom'); setPage(1); }}
+              className={`px-2.5 py-1 rounded font-semibold transition-all ${
+                dateFilter === 'custom'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Custom
+            </button>
+          </div>
+
+          {dateFilter === 'custom' && (
+            <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded px-2 py-1 text-xs shadow-sm">
+              <input
+                type="date"
+                value={customDates.startDate}
+                onChange={(e) => { setCustomDates(prev => ({ ...prev, startDate: e.target.value })); setPage(1); }}
+                className="border border-slate-200 rounded px-1.5 py-0.5 text-slate-700 outline-none focus:border-blue-500"
+              />
+              <span className="text-slate-400 font-medium">to</span>
+              <input
+                type="date"
+                value={customDates.endDate}
+                onChange={(e) => { setCustomDates(prev => ({ ...prev, endDate: e.target.value })); setPage(1); }}
+                className="border border-slate-200 rounded px-1.5 py-0.5 text-slate-700 outline-none focus:border-blue-500"
+              />
+            </div>
+          )}
+
           <div className="relative w-full sm:w-auto">
             <Filter className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
             <select
@@ -127,6 +204,7 @@ const ProductionFactoryPage = () => {
           <button 
             onClick={fetchOrders}
             className={cn("flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 h-9 w-9 rounded border border-slate-200 transition-colors", loading && "opacity-50")}
+            title="Refresh orders"
           >
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
           </button>
@@ -192,22 +270,84 @@ const ProductionFactoryPage = () => {
         </table>
       </div>
 
-      <div className="mt-4 flex items-center justify-between">
-        <p className="text-xs text-slate-500 font-bold">
-          Showing <span className="text-slate-700">{data.orders.length}</span> orders
-        </p>
-        <div className="flex gap-1">
-           <button 
-             disabled={page === 1}
-             onClick={() => setPage(page - 1)}
-             className="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded text-sm hover:bg-slate-50 disabled:opacity-50"
-           >Prev</button>
-           <button 
-             disabled={!data.pagination.totalPages || page === data.pagination.totalPages}
-             onClick={() => setPage(page + 1)}
-             className="px-3 py-1 bg-white border border-slate-200 text-slate-600 rounded text-sm hover:bg-slate-50 disabled:opacity-50"
-           >Next</button>
+      {/* Pagination Footer */}
+      <div className="mt-4 px-5 py-4 bg-slate-50 border border-slate-200 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4 text-sm shrink-0">
+        {/* Entries display limit selector */}
+        <div className="flex items-center gap-2 text-slate-600 text-xs">
+          <span>Show</span>
+          <select
+            value={limit}
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setPage(1);
+            }}
+            className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:border-blue-500 bg-white font-bold"
+          >
+            {[5, 10, 20, 50, 100].map(size => (
+              <option key={size} value={size}>{size}</option>
+            ))}
+          </select>
+          <span>entries</span>
         </div>
+
+        {/* Showing entries info */}
+        <div className="text-slate-500 font-medium text-xs">
+          {(data.pagination?.totalCount || 0) > 0 ? (
+            <>
+              Showing <span className="font-bold text-slate-800">{((page - 1) * limit) + 1}</span> to{' '}
+              <span className="font-bold text-slate-800">{Math.min(page * limit, data.pagination?.totalCount || 0)}</span> of{' '}
+              <span className="font-bold text-slate-800">{data.pagination?.totalCount || 0}</span> orders
+            </>
+          ) : (
+            'No orders to display'
+          )}
+        </div>
+
+        {/* Pagination controls */}
+        {(data.pagination?.totalPages || 0) > 1 && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+              disabled={page === 1}
+              className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            
+            {/* Page numbers list */}
+            {Array.from({ length: data.pagination.totalPages }, (_, i) => i + 1)
+              .filter(p => {
+                return p === 1 || p === data.pagination.totalPages || Math.abs(p - page) <= 1;
+              })
+              .map((p, index, array) => {
+                const showEllipsis = index > 0 && p - array[index - 1] > 1;
+                return (
+                  <React.Fragment key={p}>
+                    {showEllipsis && <span className="px-2 text-slate-400 text-xs">...</span>}
+                    <button
+                      onClick={() => setPage(p)}
+                      className={cn(
+                        "px-3 py-1.5 rounded text-xs font-bold transition-all",
+                        page === p
+                          ? "bg-blue-600 text-white shadow-sm"
+                          : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                      )}
+                    >
+                      {p}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+
+            <button
+              onClick={() => setPage(prev => Math.min(prev + 1, data.pagination.totalPages))}
+              disabled={page === data.pagination.totalPages}
+              className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       <ConfirmModal
@@ -225,3 +365,4 @@ const ProductionFactoryPage = () => {
 };
 
 export default ProductionFactoryPage;
+
