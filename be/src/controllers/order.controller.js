@@ -105,7 +105,23 @@ const getOrders = async (req, res) => {
       where.statusId = parseInt(statusId);
     }
     if (isVisibleToProduction === 'true') {
-      where.productionBatch = { status: 'SENT' };
+      const factoryCondition = {
+        OR: [
+          { orderStatus: { isVisibleToProduction: true } },
+          { orderStatus: { triggersProduction: true } },
+          { productionBatchId: { not: null } },
+          { productionBatch: { status: 'SENT' } }
+        ]
+      };
+      if (where.OR) {
+        where.AND = [
+          { OR: where.OR },
+          factoryCondition
+        ];
+        delete where.OR;
+      } else {
+        where.OR = factoryCondition.OR;
+      }
     }
     if (installment === 'yes') {
       where.installmentDetails = { not: Prisma.AnyNull };

@@ -553,8 +553,7 @@ const getDashboardStats = async (query = {}) => {
   const [
     readyForProduction,
     totalOrders,
-    installmentOrdersCount,
-    installmentOrdersAgg,
+    installmentOrders,
     activeCampaigns,
     smsConsentCount,
     totalDiscountCodes,
@@ -569,24 +568,15 @@ const getDashboardStats = async (query = {}) => {
       ? prisma.order.count({ where: { ...orderWhere, statusId: { in: triggerStatusIds }, productionBatchId: null } })
       : 0,
     prisma.order.count({ where: orderWhere }),
-    prisma.order.count({
+    prisma.order.findMany({
       where: {
         ...orderWhere,
         OR: [
           { installmentPlanId: { not: null } },
           { installmentDetails: { not: null } }
         ]
-      }
-    }),
-    prisma.order.aggregate({
-      _sum: { totalPrice: true },
-      where: {
-        ...orderWhere,
-        OR: [
-          { installmentPlanId: { not: null } },
-          { installmentDetails: { not: null } }
-        ]
-      }
+      },
+      include: { installmentPlan: true }
     }),
     prisma.smsCampaign.count({ where: { isActive: true } }),
     prisma.customer.count({ where: { ...customerWhere, smsMarketingConsent: true, smsOptOut: false } }),
@@ -608,6 +598,55 @@ const getDashboardStats = async (query = {}) => {
     })
   ]);
 
+  let installmentOrdersCount = installmentOrders.length;
+  let installmentTotalValue = 0;
+  let installmentDownPaymentPaid = 0;
+  let installmentRatesTotal = 0;
+  let installmentRatesPaid = 0;
+  let installmentRemainingAmount = 0;
+  let installmentTotalCollected = 0;
+
+  installmentOrders.forEach(o => {
+    let details = o.installmentDetails;
+    if (typeof details === 'string') {
+      try { details = JSON.parse(details); } catch(e) {}
+    }
+    details = details || {};
+
+    const dp = Number(details.downPayment || details.downPaymentAmount || o.installmentPlan?.downPaymentAmount || 0);
+
+    let rates = Array.isArray(details.installments) ? details.installments : [];
+    rates = rates.filter(r => !r.label?.toLowerCase().includes('1. betaling') && !r.label?.toLowerCase().includes('down payment'));
+
+    let rateTotal = 0;
+    let ratePaid = 0;
+    let rateRemaining = 0;
+
+    rates.forEach(r => {
+      const amt = Number(r.amount) || 0;
+      rateTotal += amt;
+      if (r.status === 'Paid') {
+        ratePaid += amt;
+      } else {
+        rateRemaining += amt;
+      }
+    });
+
+    if (rates.length === 0 && o.totalPrice > dp) {
+      rateTotal = o.totalPrice - dp;
+      rateRemaining = rateTotal;
+    }
+
+    const orderTotalPaid = dp + ratePaid;
+
+    installmentTotalValue += o.totalPrice;
+    installmentDownPaymentPaid += dp;
+    installmentRatesTotal += rateTotal;
+    installmentRatesPaid += ratePaid;
+    installmentRemainingAmount += rateRemaining;
+    installmentTotalCollected += orderTotalPaid;
+  });
+
   const statusCounts = allStatuses.map(status => {
     const countMatch = statusCountsRaw.find(s => s.statusId === status.id);
     const count = countMatch ? countMatch._count.id : 0;
@@ -625,7 +664,13 @@ const getDashboardStats = async (query = {}) => {
     readyForProduction,
     totalOrders,
     installmentOrdersCount,
-    installmentOrdersAmount: installmentOrdersAgg._sum.totalPrice || 0,
+    installmentTotalValue,
+    installmentDownPaymentPaid,
+    installmentRatesTotal,
+    installmentRatesPaid,
+    installmentRemainingAmount,
+    installmentTotalCollected,
+    installmentOrdersAmount: installmentTotalValue,
     activeCampaigns,
     smsConsentCount,
     totalDiscountCodes,

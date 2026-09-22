@@ -139,20 +139,51 @@ const DashboardPage = () => {
                 </div>
 
                 {/* Installments Card */}
-                <div className="bg-[#f5f3ff] rounded-xl p-5 flex items-center border border-purple-100">
+                <div className="bg-[#f5f3ff] rounded-xl p-5 flex items-center border border-purple-100 relative group">
                   <div className="w-12 h-12 rounded-full bg-[#8b5cf6] flex items-center justify-center text-white shrink-0 mr-4 shadow-sm">
                     <CreditCard className="h-6 w-6" />
                   </div>
-                  <div className="flex-1">
-                    <p className="text-xs font-bold text-[#5b21b6] mb-1 uppercase tracking-wide">Installments</p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center mb-1">
+                      <p className="text-xs font-bold text-[#5b21b6] uppercase tracking-wide">Installments</p>
+                      <span className="text-[10px] font-extrabold text-[#7c3aed] bg-purple-200/50 px-1.5 py-0.5 rounded">
+                        {formatCurrency(stats?.installmentTotalValue)}
+                      </span>
+                    </div>
                     <div className="flex justify-between items-end">
                       <div>
                         <p className="text-2xl font-black text-[#5b21b6] leading-none">{stats?.installmentOrdersCount || 0}</p>
-                        <p className="text-[10px] text-slate-500 font-semibold mt-1">Installment Orders</p>
+                        <p className="text-[10px] text-slate-500 font-semibold mt-1">Orders</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-bold text-[#8b5cf6]">{formatCurrency(stats?.installmentOrdersAmount)}</p>
-                        <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Total Amount</p>
+                        <p className="text-sm font-black text-emerald-600 leading-none">{formatCurrency(stats?.installmentTotalCollected)}</p>
+                        <p className="text-[10px] text-slate-500 font-semibold mt-1">
+                          Paid <span className="text-amber-600 font-bold">({formatCurrency(stats?.installmentRemainingAmount)} Rem.)</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Hover Tooltip for Detailed Financial Breakdown */}
+                    <div className="absolute left-1/2 -bottom-2 translate-y-full -translate-x-1/2 hidden group-hover:block z-30 w-64 p-3 bg-slate-900 text-white rounded-xl shadow-2xl text-xs space-y-1.5 pointer-events-none transition-all duration-200 border border-slate-700">
+                      <div className="font-bold border-b border-slate-700 pb-1 text-purple-300 text-[11px] flex justify-between">
+                        <span>Installments Breakdown</span>
+                        <span>{stats?.installmentOrdersCount || 0} Orders</span>
+                      </div>
+                      <div className="flex justify-between text-[11px]">
+                        <span className="text-slate-300">Down Payment (Paid):</span>
+                        <span className="font-bold text-emerald-400">{formatCurrency(stats?.installmentDownPaymentPaid)}</span>
+                      </div>
+                      <div className="flex justify-between text-[11px]">
+                        <span className="text-slate-300">Rates Paid:</span>
+                        <span className="font-bold text-emerald-400">{formatCurrency(stats?.installmentRatesPaid)}</span>
+                      </div>
+                      <div className="flex justify-between text-[11px]">
+                        <span className="text-slate-300">Remaining (Unpaid):</span>
+                        <span className="font-bold text-amber-400">{formatCurrency(stats?.installmentRemainingAmount)}</span>
+                      </div>
+                      <div className="flex justify-between text-[11px] pt-1 border-t border-slate-800">
+                        <span className="text-slate-300 font-bold">Total Order Value:</span>
+                        <span className="font-bold text-purple-300">{formatCurrency(stats?.installmentTotalValue)}</span>
                       </div>
                     </div>
                   </div>
