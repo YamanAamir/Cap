@@ -152,9 +152,9 @@ const getOrders = async (req, res) => {
 
     if (activeDateFilter === 'today') {
       const now = new Date();
-      // Cover timezone offsets (e.g. UTC vs UTC+2/UTC+5) by starting 6 hours before midnight UTC
-      dateStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 18, 0, 0, 0);
-      dateEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 6, 0, 0, 0);
+      // Cutoff for local midnight (UTC+3 to UTC+5 offset): 19:00 UTC yesterday to 23:59:59 UTC today
+      dateStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 1, 19, 0, 0, 0));
+      dateEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999));
     } else if (activeDateFilter === 'month' || activeDateFilter === 'this_month') {
       const now = new Date();
       dateStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
