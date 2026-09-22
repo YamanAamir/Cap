@@ -92,64 +92,86 @@ const getOrders = async (req, res) => {
     const take = parseInt(limit);
 
     const where = {};
+    const andConditions = [];
+
     if (search) {
-      where.OR = [
-        { customerEmail: { contains: search } },
-        { orderNumber: { contains: search } },
-      ];
+      andConditions.push({
+        OR: [
+          { customerEmail: { contains: search } },
+          { orderNumber: { contains: search } },
+        ]
+      });
     }
+
     if (status !== 'all') {
       where.status = status;
     }
+
     if (statusId !== 'all') {
       where.statusId = parseInt(statusId);
     }
+
     if (isVisibleToProduction === 'true') {
-      const factoryCondition = {
+      andConditions.push({
         OR: [
           { orderStatus: { isVisibleToProduction: true } },
           { orderStatus: { triggersProduction: true } },
           { productionBatchId: { not: null } },
           { productionBatch: { status: 'SENT' } }
         ]
-      };
-      if (where.OR) {
-        where.AND = [
-          { OR: where.OR },
-          factoryCondition
-        ];
-        delete where.OR;
-      } else {
-        where.OR = factoryCondition.OR;
-      }
-    }
-    if (installment === 'yes') {
-      where.installmentDetails = { not: Prisma.AnyNull };
-    } else if (installment === 'no') {
-      where.installmentDetails = { equals: Prisma.AnyNull };
+      });
     }
 
-    if (dateFilter === 'today') {
+    if (installment === 'yes') {
+      andConditions.push({
+        OR: [
+          { installmentPlanId: { not: null } },
+          { NOT: { installmentDetails: { equals: Prisma.DbNull } } },
+          { NOT: { installmentDetails: { equals: Prisma.JsonNull } } }
+        ]
+      });
+    } else if (installment === 'no') {
+      where.installmentPlanId = null;
+      andConditions.push({
+        OR: [
+          { installmentDetails: { equals: Prisma.DbNull } },
+          { installmentDetails: { equals: Prisma.JsonNull } }
+        ]
+      });
+    }
+
+    const activeDateFilter = dateFilter !== 'all' ? dateFilter : (req.query.filter || 'all');
+
+    if (activeDateFilter === 'today') {
       const start = new Date();
       start.setHours(0, 0, 0, 0);
       const end = new Date();
       end.setHours(23, 59, 59, 999);
       where.createdAt = { gte: start, lte: end };
-    } else if (dateFilter === 'month') {
+    } else if (activeDateFilter === 'month' || activeDateFilter === 'this_month') {
       const now = new Date();
       const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
       const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
       where.createdAt = { gte: start, lte: end };
-    } else if (dateFilter === 'custom' && (startDate || endDate)) {
-      where.createdAt = {};
+    } else if ((startDate || endDate) || activeDateFilter === 'custom') {
+      const dateObj = {};
       if (startDate) {
-        where.createdAt.gte = new Date(startDate);
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        dateObj.gte = start;
       }
       if (endDate) {
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
-        where.createdAt.lte = end;
+        dateObj.lte = end;
       }
+      if (Object.keys(dateObj).length > 0) {
+        where.createdAt = dateObj;
+      }
+    }
+
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
     }
 
     const orderBy = {};
