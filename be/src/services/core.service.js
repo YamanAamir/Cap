@@ -505,32 +505,71 @@ const sendOrderEmail = async (to, subject, htmlBody) => {
   }
 };
 
+const getDateFilterBounds = (filterParam, startDateStr, endDateStr) => {
+  const activeFilter = filterParam || 'all';
+
+  if (activeFilter === 'today') {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    return { start, end };
+  }
+
+  if (activeFilter === 'month' || activeFilter === 'this_month') {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    return { start, end };
+  }
+
+  if (activeFilter === 'custom' || startDateStr || endDateStr) {
+    let start = null;
+    let end = null;
+
+    if (startDateStr) {
+      if (typeof startDateStr === 'string' && startDateStr.includes('-')) {
+        const parts = startDateStr.split('T')[0].split('-').map(Number);
+        if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+          start = new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0);
+        }
+      }
+      if (!start) {
+        start = new Date(startDateStr);
+        start.setHours(0, 0, 0, 0);
+      }
+    }
+
+    if (endDateStr) {
+      if (typeof endDateStr === 'string' && endDateStr.includes('-')) {
+        const parts = endDateStr.split('T')[0].split('-').map(Number);
+        if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+          end = new Date(parts[0], parts[1] - 1, parts[2], 23, 59, 59, 999);
+        }
+      }
+      if (!end) {
+        end = new Date(endDateStr);
+        end.setHours(23, 59, 59, 999);
+      }
+    }
+
+    if (start || end) {
+      return { start, end };
+    }
+  }
+
+  return null;
+};
+
 const getDashboardStats = async (query = {}) => {
   const { filter, startDate, endDate } = query;
 
   let dateWhere = undefined;
-
-  if (filter === 'today') {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const end = new Date();
-    end.setHours(23, 59, 59, 999);
-    dateWhere = { createdAt: { gte: start, lte: end } };
-  } else if (filter === 'month') {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-    dateWhere = { createdAt: { gte: start, lte: end } };
-  } else if (filter === 'custom' && (startDate || endDate)) {
-    dateWhere = { createdAt: {} };
-    if (startDate) {
-      dateWhere.createdAt.gte = new Date(startDate);
-    }
-    if (endDate) {
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      dateWhere.createdAt.lte = end;
-    }
+  const bounds = getDateFilterBounds(filter, startDate, endDate);
+  if (bounds) {
+    const dateObj = {};
+    if (bounds.start) dateObj.gte = bounds.start;
+    if (bounds.end) dateObj.lte = bounds.end;
+    dateWhere = { createdAt: dateObj };
   }
 
   const orderWhere = dateWhere ? { ...dateWhere } : {};

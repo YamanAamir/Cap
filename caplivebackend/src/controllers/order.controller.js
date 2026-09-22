@@ -126,48 +126,70 @@ const getOrders = async (req, res) => {
       andConditions.push({
         OR: [
           { installmentPlanId: { not: null } },
-          { NOT: { installmentDetails: { equals: Prisma.DbNull } } },
-          { NOT: { installmentDetails: { equals: Prisma.JsonNull } } }
+          {
+            AND: [
+              { installmentDetails: { not: null } },
+              { installmentDetails: { not: "" } },
+              { installmentDetails: { not: "null" } }
+            ]
+          }
         ]
       });
     } else if (installment === 'no') {
       where.installmentPlanId = null;
       andConditions.push({
         OR: [
-          { installmentDetails: { equals: Prisma.DbNull } },
-          { installmentDetails: { equals: Prisma.JsonNull } }
+          { installmentDetails: null },
+          { installmentDetails: "" },
+          { installmentDetails: "null" }
         ]
       });
     }
 
     const activeDateFilter = dateFilter !== 'all' ? dateFilter : (req.query.filter || 'all');
+    let dateStart = null;
+    let dateEnd = null;
 
     if (activeDateFilter === 'today') {
-      const start = new Date();
-      start.setHours(0, 0, 0, 0);
-      const end = new Date();
-      end.setHours(23, 59, 59, 999);
-      where.createdAt = { gte: start, lte: end };
+      const now = new Date();
+      dateStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      dateEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
     } else if (activeDateFilter === 'month' || activeDateFilter === 'this_month') {
       const now = new Date();
-      const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-      where.createdAt = { gte: start, lte: end };
-    } else if ((startDate || endDate) || activeDateFilter === 'custom') {
-      const dateObj = {};
+      dateStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      dateEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else if (activeDateFilter === 'custom' || startDate || endDate) {
       if (startDate) {
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        dateObj.gte = start;
+        if (typeof startDate === 'string' && startDate.includes('-')) {
+          const parts = startDate.split('T')[0].split('-').map(Number);
+          if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+            dateStart = new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0);
+          }
+        }
+        if (!dateStart) {
+          dateStart = new Date(startDate);
+          dateStart.setHours(0, 0, 0, 0);
+        }
       }
       if (endDate) {
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        dateObj.lte = end;
+        if (typeof endDate === 'string' && endDate.includes('-')) {
+          const parts = endDate.split('T')[0].split('-').map(Number);
+          if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1]) && !isNaN(parts[2])) {
+            dateEnd = new Date(parts[0], parts[1] - 1, parts[2], 23, 59, 59, 999);
+          }
+        }
+        if (!dateEnd) {
+          dateEnd = new Date(endDate);
+          dateEnd.setHours(23, 59, 59, 999);
+        }
       }
-      if (Object.keys(dateObj).length > 0) {
-        where.createdAt = dateObj;
-      }
+    }
+
+    if (dateStart || dateEnd) {
+      const dateObj = {};
+      if (dateStart) dateObj.gte = dateStart;
+      if (dateEnd) dateObj.lte = dateEnd;
+      where.createdAt = dateObj;
     }
 
     if (andConditions.length > 0) {
