@@ -919,16 +919,26 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
 
     useEffect(() => {
         if (!selectedType) return;
+        const mapPulseToUdenSten = (typeStr) => {
+            if (typeof typeStr !== 'string') return typeStr;
+            if (typeStr === 'Pulse Guld') return 'UDEN_STEN Guld Guld';
+            if (typeStr === 'Pulse Simli Guld') return 'UDEN_STEN Guld Simli Guld';
+            if (typeStr === 'Pulse Sølv') return 'UDEN_STEN Sølv Sølv';
+            if (typeStr === 'Pulse Simli Sølv') return 'UDEN_STEN Sølv Simli Sølv';
+            return typeStr.replace(/\bPulse\b/g, 'UDEN_STEN');
+        };
+
         const sendMessageToIframes = (msg) => {
+            const finalMsg = mapPulseToUdenSten(msg);
             ['preview-iframe', 'preview-iframe2'].forEach((id) => {
                 const iframe = document.getElementById(id);
                 if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
+                    iframe.contentWindow.postMessage(finalMsg, "*");
                 }
             });
         };
 
-        if (selectedType.startsWith('UDEN_STEN') || selectedType.includes(' New ')) {
+        if (selectedType.startsWith('UDEN_STEN') || selectedType.startsWith('Pulse') || selectedType.includes(' New ')) {
             const isGold = selectedEmblem?.name === 'Guld' || selectedEmblem?.value === 'Guld';
             let typeName = selectedType;
             if (isGold && typeName.includes('Sølv')) {
@@ -1138,7 +1148,7 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
             <div className="space-y-4 mt-4">
                 <div>
                     <label className="text-sm font-semibold text-slate-700">Type</label>
-                    <p className="text-sm mt-1 text-slate-700">Valgt: {selectedType}</p>
+                    <p className="text-sm mt-1 text-slate-700">Valgt: {selectedType?.replace(/UDEN_STEN/g, 'Pulse')}</p>
                 </div>
 
                 <div className="flex flex-wrap gap-3 ">

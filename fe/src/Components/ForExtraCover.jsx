@@ -391,8 +391,8 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
                 { name: 'Marokko', icon: Morocco },
                 { name: 'Grønland', icon: Greenland },
                 ...getGoldEmblem(),
-                { name: 'UDEN_STEN Guld Guld', icon: UdenStenGuld },
-                { name: 'UDEN_STEN Guld Simli Guld', icon: UdenStenGuldSimli },
+                { name: 'Pulse Guld', icon: UdenStenGuld },
+                { name: 'Pulse Simli Guld', icon: UdenStenGuldSimli },
                 { name: 'F Key Guld', icon: FKeyGold },
                 { name: 'DNA Guld', icon: DnaGold },
                 { name: 'Pi Guld', icon: PilGold },
@@ -438,8 +438,8 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
                 { name: 'Marokko', icon: Morocco },
                 { name: 'Grønland', icon: Greenland },
                 ...getSilverEmblem(),
-                { name: 'UDEN_STEN Sølv Sølv', icon: UdenStenSoelv },
-                { name: 'UDEN_STEN Sølv Simli Sølv', icon: UdenStenSoelvSimli },
+                { name: 'Pulse Sølv', icon: UdenStenSoelv },
+                { name: 'Pulse Simli Sølv', icon: UdenStenSoelvSimli },
                 { name: 'F Key Sølv', icon: FKeySilver },
                 { name: 'DNA Sølv', icon: DnaSilver },
                 { name: 'Pi Sølv', icon: PiSilver },
@@ -958,7 +958,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
     useEffect(() => { forOptionChange('Type', selectedType); }, [selectedType]);
     useEffect(() => {
         let message;
-        if (selectedType && (selectedType.startsWith('UDEN_STEN') || selectedType.includes(' New '))) {
+        if (selectedType && (selectedType.startsWith('UDEN_STEN') || selectedType.startsWith('Pulse') || selectedType.includes(' New '))) {
             const isGold = selectedEmblem.name === 'Guld' || selectedEmblem.value === 'Guld';
             let typeName = selectedType;
             if (isGold && typeName.includes('Sølv')) {
@@ -980,10 +980,21 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
 
         if (!message) return;
 
+        const mapPulseToUdenSten = (typeStr) => {
+            if (typeof typeStr !== 'string') return typeStr;
+            if (typeStr === 'Pulse Guld') return 'UDEN_STEN Guld Guld';
+            if (typeStr === 'Pulse Simli Guld') return 'UDEN_STEN Guld Simli Guld';
+            if (typeStr === 'Pulse Sølv') return 'UDEN_STEN Sølv Sølv';
+            if (typeStr === 'Pulse Simli Sølv') return 'UDEN_STEN Sølv Simli Sølv';
+            return typeStr.replace(/\bPulse\b/g, 'UDEN_STEN');
+        };
+
+        const iframeMsg = mapPulseToUdenSten(message);
+
         ['preview-iframe', 'preview-iframe2'].forEach((id) => {
             const iframe = document.getElementById(id);
             if (iframe?.contentWindow) {
-                iframe.contentWindow.postMessage(message, "*");
+                iframe.contentWindow.postMessage(iframeMsg, "*");
                 if (cameraTriggers.current["type"]) {
                     iframe.contentWindow.postMessage("type camera", "*");
                 }

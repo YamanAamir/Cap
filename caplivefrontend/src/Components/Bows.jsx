@@ -511,11 +511,11 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig 
             case 'hf':
                 return [
                     { name: 'HF Guld Simli', icon: HfGoldDiamant },
-                    { name: 'GUX Guld Simli', icon: GuxGoldDiamant },
                     { name: 'HF Guld', icon: HfGold },
-                    { name: 'GUX Guld', icon: GuxGold },
                     { name: 'IB Guld', icon: IbGold },
                     { name: 'IB Guld Simli', icon: IbGuldSimli },
+                    { name: 'GUX Guld Simli', icon: GuxGoldDiamant },
+                    { name: 'GUX Guld', icon: GuxGold },
                 ];
             case 'eud':
                 return [
@@ -698,8 +698,8 @@ const getSilverEmblem = () => {
         Signature: {
             Guld: [
                 ...(getGoldEmblem() || []),
-                { name: 'UDEN_STEN Guld Guld', icon: UdenStenGuld },
-                { name: 'UDEN_STEN Guld Simli Guld', icon: UdenStenGuldSimli },
+                { name: 'Pulse Guld', icon: UdenStenGuld },
+                { name: 'Pulse Simli Guld', icon: UdenStenGuldSimli },
                 { name: 'F Key Guld', icon: FKeyGold },
                 { name: 'DNA Guld', icon: DnaGold },
                 { name: 'Pi Guld', icon: PilGold },
@@ -732,8 +732,8 @@ const getSilverEmblem = () => {
 
             Sølv: [
                 ...(getSilverEmblem() || []),
-                { name: 'UDEN_STEN Sølv Sølv', icon: UdenStenSoelv },
-                { name: 'UDEN_STEN Sølv Simli Sølv', icon: UdenStenSoelvSimli },
+                { name: 'Pulse Sølv', icon: UdenStenSoelv },
+                { name: 'Pulse Simli Sølv', icon: UdenStenSoelvSimli },
                 { name: 'F Key Sølv', icon: FKeySilver },
                 { name: 'DNA Sølv', icon: DnaSilver },
                 { name: 'Pi Sølv', icon: PiSilver },
@@ -946,8 +946,18 @@ const getSilverEmblem = () => {
 
 
     useEffect(() => {
+        const mapPulseToUdenSten = (typeStr) => {
+            if (typeof typeStr !== 'string') return typeStr;
+            if (typeStr === 'Pulse Guld') return 'UDEN_STEN Guld Guld';
+            if (typeStr === 'Pulse Simli Guld') return 'UDEN_STEN Guld Simli Guld';
+            if (typeStr === 'Pulse Sølv') return 'UDEN_STEN Sølv Sølv';
+            if (typeStr === 'Pulse Simli Sølv') return 'UDEN_STEN Sølv Simli Sølv';
+            return typeStr.replace(/\bPulse\b/g, 'UDEN_STEN');
+        };
+
         const sendMessageToIframes = (msg) => {
-            sendToActiveIframe(msg);
+            const finalMsg = mapPulseToUdenSten(msg);
+            sendToActiveIframe(finalMsg);
         };
 
         // Country-flag mode: same string shape as Signature ("Teater Guld Guld") → "Kurdistan Guld"
@@ -955,7 +965,7 @@ const getSilverEmblem = () => {
             if (!selectedFlag?.name) return;
             sendMessageToIframes(`${selectedFlag.name} ${selectedEmblem.value}`);
         } else {
-            if (selectedType && (selectedType.startsWith('UDEN_STEN') || selectedType.includes(' New '))) {
+            if (selectedType && (selectedType.startsWith('UDEN_STEN') || selectedType.startsWith('Pulse') || selectedType.includes(' New '))) {
                 const isGold = selectedEmblem.name === 'Guld' || selectedEmblem.value === 'Guld';
                 let typeName = selectedType;
                 if (isGold && typeName.includes('Sølv')) {

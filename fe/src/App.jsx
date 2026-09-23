@@ -10,7 +10,7 @@ import MaintenanceScreen from './Screens/MaintenanceScreen'
 import { initPixel } from './utils/metaPixel'
 
 import { identifyVisitor, pushEvent } from './lib/tracking';
-import { startRecording } from './lib/sessionRecorder';
+// import { startRecording } from './lib/sessionRecorder';
 
 function App() {
   if (window.location.hostname === 'studenterhue.studentlife.dk' && window.location.pathname.includes('/sms-signup/')) {

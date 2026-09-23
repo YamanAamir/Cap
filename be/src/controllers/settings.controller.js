@@ -72,9 +72,9 @@ const DEFAULT_CONFIG = {
           "Globus Guld": 0,
           "Hjerte Guld": 0,
           "Halvmåne Guld Simli": 69,
-          "UDEN_STEN Guld Simli Guld": 69,
+          "Pulse Simli Guld": 69,
           "Halvmåne Guld": 0,
-          "UDEN_STEN Guld Guld": 0,
+          "Pulse Guld": 0,
           "IT Guld": 0,
           "Lotus Guld": 0,
           "Merkurstav Guld Simli": 69,
@@ -115,9 +115,9 @@ const DEFAULT_CONFIG = {
           "Globus Sølv": 0,
           "Hjerte Sølv": 0,
           "Halvmåne Sølv Simli": 69,
-          "UDEN_STEN Sølv Simli Sølv": 69,
+          "Pulse Simli Sølv": 69,
           "Halvmåne Sølv": 0,
-          "UDEN_STEN Sølv Sølv": 0,
+          "Pulse Sølv": 0,
           "IT Sølv": 0,
           "Lotus Sølv": 0,
           "Merkurstav Sølv Simli": 69,
@@ -446,14 +446,16 @@ const DEFAULT_CONFIG = {
           "HF Sølv Simli": 69,
             "GUX Sølv Simli": 69,
           "Halvmåne Guld Simli": 69,
-          "UDEN_STEN Guld Simli Guld": 69,
+          "Pulse Simli Guld": 69,
+          "Pulse Guld": 0,
           "Merkurstav Guld Simli": 69,
           "STX New Guld Simli Guld": 69,
           "HTX New Guld Simli Guld": 69,
           "HHX New Guld Simli Guld": 69,
           "HF New Guld Simli Guld": 69,
           "Halvmåne Sølv Simli": 69,
-          "UDEN_STEN Sølv Simli Sølv": 69,
+          "Pulse Simli Sølv": 69,
+          "Pulse Sølv": 0,
           "Merkurstav Sølv Simli": 69,
           "STX New Sølv Simli Sølv": 69,
           "HTX New Sølv Simli Sølv": 69,
@@ -586,9 +588,9 @@ const DEFAULT_CONFIG = {
           "Globus Guld": 0,
           "Hjerte Guld": 0,
           "Halvmåne Guld Simli": 69,
-          "UDEN_STEN Guld Simli Guld": 69,
+          "Pulse Simli Guld": 69,
           "Halvmåne Guld": 0,
-          "UDEN_STEN Guld Guld": 0,
+          "Pulse Guld": 0,
           "IT Guld": 0,
           "Lotus Guld": 0,
           "Merkurstav Guld Simli": 69,
@@ -629,9 +631,9 @@ const DEFAULT_CONFIG = {
           "Globus Sølv": 0,
           "Hjerte Sølv": 0,
           "Halvmåne Sølv Simli": 69,
-          "UDEN_STEN Sølv Simli Sølv": 69,
+          "Pulse Simli Sølv": 69,
           "Halvmåne Sølv": 0,
-          "UDEN_STEN Sølv Sølv": 0,
+          "Pulse Sølv": 0,
           "IT Sølv": 0,
           "Lotus Sølv": 0,
           "Merkurstav Sølv Simli": 69,
@@ -802,9 +804,9 @@ const DEFAULT_CONFIG = {
           "Globus Guld": 0,
           "Hjerte Guld": 0,
           "Halvmåne Guld Simli": 69,
-          "UDEN_STEN Guld Simli Guld": 69,
+          "Pulse Simli Guld": 69,
           "Halvmåne Guld": 0,
-          "UDEN_STEN Guld Guld": 0,
+          "Pulse Guld": 0,
           "IT Guld": 0,
           "Lotus Guld": 0,
           "Merkurstav Guld Simli": 69,
@@ -845,9 +847,9 @@ const DEFAULT_CONFIG = {
           "Globus Sølv": 0,
           "Hjerte Sølv": 0,
           "Halvmåne Sølv Simli": 69,
-          "UDEN_STEN Sølv Simli Sølv": 69,
+          "Pulse Simli Sølv": 69,
           "Halvmåne Sølv": 0,
-          "UDEN_STEN Sølv Sølv": 0,
+          "Pulse Sølv": 0,
           "IT Sølv": 0,
           "Lotus Sølv": 0,
           "Merkurstav Sølv Simli": 69,
@@ -1171,14 +1173,16 @@ const DEFAULT_CONFIG = {
           "HF Sølv Simli": 69,
             "GUX Sølv Simli": 69,
           "Halvmåne Guld Simli": 69,
-          "UDEN_STEN Guld Simli Guld": 69,
+          "Pulse Simli Guld": 69,
+          "Pulse Guld": 0,
           "Merkurstav Guld Simli": 69,
           "STX New Guld Simli Guld": 69,
           "HTX New Guld Simli Guld": 69,
           "HHX New Guld Simli Guld": 69,
           "HF New Guld Simli Guld": 69,
           "Halvmåne Sølv Simli": 69,
-          "UDEN_STEN Sølv Simli Sølv": 69,
+          "Pulse Simli Sølv": 69,
+          "Pulse Sølv": 0,
           "Merkurstav Sølv Simli": 69,
           "STX New Sølv Simli Sølv": 69,
           "HTX New Sølv Simli Sølv": 69,
@@ -1328,9 +1332,9 @@ const DEFAULT_CONFIG = {
           "Globus Guld": 0,
           "Hjerte Guld": 0,
           "Halvmåne Guld Simli": 69,
-          "UDEN_STEN Guld Simli Guld": 69,
+          "Pulse Simli Guld": 69,
           "Halvmåne Guld": 0,
-          "UDEN_STEN Guld Guld": 0,
+          "Pulse Guld": 0,
           "IT Guld": 0,
           "Lotus Guld": 0,
           "Merkurstav Guld Simli": 69,
@@ -1369,9 +1373,9 @@ const DEFAULT_CONFIG = {
           "Globus Sølv": 0,
           "Hjerte Sølv": 0,
           "Halvmåne Sølv Simli": 69,
-          "UDEN_STEN Sølv Simli Sølv": 69,
+          "Pulse Simli Sølv": 69,
           "Halvmåne Sølv": 0,
-          "UDEN_STEN Sølv Sølv": 0,
+          "Pulse Sølv": 0,
           "IT Sølv": 0,
           "Lotus Sølv": 0,
           "Merkurstav Sølv Simli": 69,
@@ -1689,14 +1693,16 @@ const DEFAULT_CONFIG = {
           "HF Sølv Simli": 69,
             "GUX Sølv Simli": 69,
           "Halvmåne Guld Simli": 69,
-          "UDEN_STEN Guld Simli Guld": 69,
+          "Pulse Simli Guld": 69,
+          "Pulse Guld": 0,
           "Merkurstav Guld Simli": 69,
           "STX New Guld Simli Guld": 69,
           "HTX New Guld Simli Guld": 69,
           "HHX New Guld Simli Guld": 69,
           "HF New Guld Simli Guld": 69,
           "Halvmåne Sølv Simli": 69,
-          "UDEN_STEN Sølv Simli Sølv": 69,
+          "Pulse Simli Sølv": 69,
+          "Pulse Sølv": 0,
           "Merkurstav Sølv Simli": 69,
           "STX New Sølv Simli Sølv": 69,
           "HTX New Sølv Simli Sølv": 69,
@@ -1884,7 +1890,39 @@ exports.getConfiguratorSettings = async (req, res) => {
       }
     }
 
+const cleanEmblemKeys = (targetObj) => {
+  if (!targetObj || typeof targetObj !== 'object') return;
+
+  const keyMap = {
+    'UDEN_STEN Guld Guld': 'Pulse Guld',
+    'Pulse Guld Guld': 'Pulse Guld',
+    'UDEN_STEN Guld Simli Guld': 'Pulse Simli Guld',
+    'Pulse Guld Simli Guld': 'Pulse Simli Guld',
+    'UDEN_STEN Sølv Sølv': 'Pulse Sølv',
+    'Pulse Sølv Sølv': 'Pulse Sølv',
+    'UDEN_STEN Sølv Simli Sølv': 'Pulse Simli Sølv',
+    'Pulse Sølv Simli Sølv': 'Pulse Simli Sølv',
+    'Pulse Guld Simili': 'Pulse Simli Guld',
+    'Pulse Sølv Simili': 'Pulse Simli Sølv'
+  };
+
+  for (const key of Object.keys(targetObj)) {
+    const val = targetObj[key];
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      cleanEmblemKeys(val);
+    }
+    if (keyMap[key]) {
+      const cleanKey = keyMap[key];
+      if (targetObj[cleanKey] === undefined) {
+        targetObj[cleanKey] = val;
+      }
+      delete targetObj[key];
+    }
+  }
+};
+
     let finalValue = { ...DEFAULT_CONFIG, ...(setting.value || {}) };
+    cleanEmblemKeys(finalValue);
     
     // Deep merge for priceConfig to ensure new keys in DEFAULT_CONFIG (like STU options) are preserved
     if (finalValue.priceConfig && DEFAULT_CONFIG.priceConfig) {
@@ -1953,6 +1991,8 @@ exports.getConfiguratorSettings = async (req, res) => {
        finalValue.expressDelivery = PROGRAM_LIST.reduce((acc, p) => ({ ...acc, [p]: legacyExpress }), {});
     }
 
+    cleanEmblemKeys(finalValue);
+
     res.json(finalValue);
   } catch (error) {
     console.error('Error fetching configurator settings:', error);
@@ -1992,6 +2032,7 @@ exports.getBasePrices = async (req, res) => {
 exports.updateConfiguratorSettings = async (req, res) => {
   try {
     const newConfig = req.body;
+    cleanEmblemKeys(newConfig);
     const serialized = JSON.stringify(newConfig);
 
     await prisma.systemSetting.upsert({
