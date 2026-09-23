@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Printer, Download, Mail, CheckCircle, Package, Star, User, CreditCard, ArrowLeft, ArrowRight, Loader2, ShoppingCart, Settings, Tag } from 'lucide-react';
 import { loadStripe } from "@stripe/stripe-js";
 import { useRef } from 'react';
-import { pushEvent, identifyVisitor } from '../lib/tracking';
+import { pushEvent, identifyVisitor, getOrCreateVisitorId } from '../lib/tracking';
 import { captureCapViews } from '../utils/capCapture';
 import { validateDiscountCode } from '../services/marketing.api';
 
@@ -460,6 +460,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       packageName: packageName,
       program: program,
       capImages: Object.keys(capImages).length > 0 ? capImages : null,
+      visitorId: getOrCreateVisitorId(),
       discountCode: appliedDiscount?.discount?.code || null,
       isInstallment: isInstallment,
       installmentPlanId: isInstallment ? installmentPlan.id : null,

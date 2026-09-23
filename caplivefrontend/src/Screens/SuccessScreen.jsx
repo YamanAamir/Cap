@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { CheckCircle, ShoppingCart, FileText } from "lucide-react";
 import gold from '../assets/Student Life.jpg';
 import { trackEvent } from "../utils/metaPixel";
-import { pushEvent } from '../lib/tracking';
+import { pushEvent, getOrCreateVisitorId, getApiBaseUrl } from '../lib/tracking';
 
 const SuccessScreen = ({ onContinueConfiguring, handleResetModal, onClose }) => {
   const [searchParams] = useSearchParams();
@@ -46,17 +46,46 @@ const SuccessScreen = ({ onContinueConfiguring, handleResetModal, onClose }) => 
             value: totalValue,
             currency: currencyCode
           });
-          
-          pushEvent('purchase', {
-            transaction_id: orderId,
-            value: totalValue,
-            currency: currencyCode,
-            items: itemsList,
-            order_ref: orderId,
-            email: data.customer_email || null,
-            consentGiven: false,
-            package: data.metadata?.packageName || undefined
-          }, 'gradcap_configurator');
+
+          // Use direct HTTP POST for guaranteed purchase tracking (socket may not be ready on fresh page load)
+          const visitorId = getOrCreateVisitorId();
+          const purchasePayload = {
+            visitorId,
+            eventName: 'purchase',
+            sourceApp: 'gradcap_configurator',
+            eventParams: {
+              transaction_id: orderId,
+              value: totalValue,
+              currency: currencyCode,
+              items: itemsList,
+              order_ref: orderId,
+              email: data.customer_email || null,
+              consentGiven: false,
+              package: data.metadata?.packageName || undefined,
+            }
+          };
+
+          try {
+            await fetch(`${getApiBaseUrl()}/api/events/track`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              keepalive: true,
+              body: JSON.stringify(purchasePayload),
+            });
+          } catch (trackErr) {
+            console.warn('[Tracking] HTTP purchase tracking failed, falling back to socket:', trackErr.message);
+            // Fallback to socket-based tracking
+            pushEvent('purchase', {
+              transaction_id: orderId,
+              value: totalValue,
+              currency: currencyCode,
+              items: itemsList,
+              order_ref: orderId,
+              email: data.customer_email || null,
+              consentGiven: false,
+              package: data.metadata?.packageName || undefined
+            }, 'gradcap_configurator');
+          }
         }
       } catch (err) {
         console.error("Error fetching checkout session:", err);
