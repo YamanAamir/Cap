@@ -99,10 +99,10 @@ import TeaterGold from '../assets/images/Teater gold.webp';
 import TwinSilver from '../assets/images/twin silver.webp';
 import TwinGold from '../assets/images/twin gold.webp';
 
-import UdenStenGuld from '../assets/images/uden_sten_guld.png';
-import UdenStenGuldSimli from '../assets/images/uden_sten_guld_simli.png';
-import UdenStenSoelvSimli from '../assets/images/uden_sten_soelv_simli.png';
-import UdenStenSoelv from '../assets/images/uden_sten_soelv.png';
+import PulseGuld from '../assets/images/pulse_guld.png';
+import PulseGuldSimli from '../assets/images/pulse_guld_simli.png';
+import PulseSoelvSimli from '../assets/images/pulse_soelv_simli.png';
+import PulseSoelv from '../assets/images/pulse_soelv.png';
 import NodeSilver from '../assets/images/Node silv.webp';
 import NodeGold from '../assets/images/Node gold.webp';
 import SportGold from '../assets/images/sport gold.webp';
@@ -391,8 +391,8 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
                 { name: 'Marokko', icon: Morocco },
                 { name: 'Grønland', icon: Greenland },
                 ...getGoldEmblem(),
-                { name: 'Pulse Guld', icon: UdenStenGuld },
-                { name: 'Pulse Simli Guld', icon: UdenStenGuldSimli },
+                { name: 'Pulse Guld', icon: PulseGuld },
+                { name: 'Pulse Simli Guld', icon: PulseGuldSimli },
                 { name: 'F Key Guld', icon: FKeyGold },
                 { name: 'DNA Guld', icon: DnaGold },
                 { name: 'Pi Guld', icon: PilGold },
@@ -438,8 +438,8 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
                 { name: 'Marokko', icon: Morocco },
                 { name: 'Grønland', icon: Greenland },
                 ...getSilverEmblem(),
-                { name: 'Pulse Sølv', icon: UdenStenSoelv },
-                { name: 'Pulse Simli Sølv', icon: UdenStenSoelvSimli },
+                { name: 'Pulse Sølv', icon: PulseSoelv },
+                { name: 'Pulse Simli Sølv', icon: PulseSoelvSimli },
                 { name: 'F Key Sølv', icon: FKeySilver },
                 { name: 'DNA Sølv', icon: DnaSilver },
                 { name: 'Pi Sølv', icon: PiSilver },
@@ -958,7 +958,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
     useEffect(() => { forOptionChange('Type', selectedType); }, [selectedType]);
     useEffect(() => {
         let message;
-        if (selectedType && (selectedType.startsWith('UDEN_STEN') || selectedType.startsWith('Pulse') || selectedType.includes(' New '))) {
+        if (selectedType && (selectedType.startsWith('Pulse') || selectedType.includes(' New '))) {
             const isGold = selectedEmblem.name === 'Guld' || selectedEmblem.value === 'Guld';
             let typeName = selectedType;
             if (isGold && typeName.includes('Sølv')) {
@@ -980,21 +980,21 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
 
         if (!message) return;
 
-        const mapPulseToUdenSten = (typeStr) => {
+        const mapPulseForPostMessage = (typeStr) => {
             if (typeof typeStr !== 'string') return typeStr;
-            if (typeStr === 'Pulse Guld') return 'UDEN_STEN Guld Guld';
-            if (typeStr === 'Pulse Simli Guld') return 'UDEN_STEN Guld Simli Guld';
-            if (typeStr === 'Pulse Sølv') return 'UDEN_STEN Sølv Sølv';
-            if (typeStr === 'Pulse Simli Sølv') return 'UDEN_STEN Sølv Simli Sølv';
-            return typeStr.replace(/\bPulse\b/g, 'UDEN_STEN');
+            if (typeStr === 'Pulse Guld') return 'Pulse Guld Guld';
+            if (typeStr === 'Pulse Simli Guld') return 'Pulse Guld Simli Guld';
+            if (typeStr === 'Pulse Sølv') return 'Pulse Sølv Sølv';
+            if (typeStr === 'Pulse Simli Sølv') return 'Pulse Sølv Simli Sølv';
+            return typeStr;
         };
 
-        const iframeMsg = mapPulseToUdenSten(message);
+        const finalMsg = mapPulseForPostMessage(message);
 
         ['preview-iframe', 'preview-iframe2'].forEach((id) => {
             const iframe = document.getElementById(id);
             if (iframe?.contentWindow) {
-                iframe.contentWindow.postMessage(iframeMsg, "*");
+                iframe.contentWindow.postMessage(finalMsg, "*");
                 if (cameraTriggers.current["type"]) {
                     iframe.contentWindow.postMessage("type camera", "*");
                 }

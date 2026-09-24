@@ -1894,13 +1894,9 @@ const cleanEmblemKeys = (targetObj) => {
   if (!targetObj || typeof targetObj !== 'object') return;
 
   const keyMap = {
-    'UDEN_STEN Guld Guld': 'Pulse Guld',
     'Pulse Guld Guld': 'Pulse Guld',
-    'UDEN_STEN Guld Simli Guld': 'Pulse Simli Guld',
     'Pulse Guld Simli Guld': 'Pulse Simli Guld',
-    'UDEN_STEN Sølv Sølv': 'Pulse Sølv',
     'Pulse Sølv Sølv': 'Pulse Sølv',
-    'UDEN_STEN Sølv Simli Sølv': 'Pulse Simli Sølv',
     'Pulse Sølv Simli Sølv': 'Pulse Simli Sølv',
     'Pulse Guld Simili': 'Pulse Simli Guld',
     'Pulse Sølv Simili': 'Pulse Simli Sølv'

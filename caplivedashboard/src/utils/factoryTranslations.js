@@ -715,7 +715,7 @@ export const translateFactoryValue = (val) => {
   }
 
   // 4. Smart Compound Phrase Word-by-Word Replacement
-  // e.g. "Bordeaux / Guld", "Sort hagerem", "Sort velour æske", "UDEN_STEN Guld Simli Guld"
+  // e.g. "Bordeaux / Guld", "Sort hagerem", "Sort velour æske", "Pulse Simli Guld"
   const words = str.split(/(\s+|[-/+,&_])/);
   let replacedAny = false;
   const translatedWords = words.map(chunk => {

@@ -65,10 +65,10 @@ import AnkerSilver from '../assets/images/anker silver.webp';
 import AtomGold from '../assets/images/atom gold.webp';
 import AtomSilver from '../assets/images/atom silver.webp';
 
-import UdenStenGuld from '../assets/images/uden_sten_guld.webp';
-import UdenStenGuldSimli from '../assets/images/uden_sten_guld_simli.webp';
-import UdenStenSoelvSimli from '../assets/images/uden_sten_soelv_simli.webp';
-import UdenStenSoelv from '../assets/images/uden_sten_soelv.webp';
+import PulseGuld from '../assets/images/pulse_guld.webp';
+import PulseGuldSimli from '../assets/images/pulse_guld_simli.webp';
+import PulseSoelvSimli from '../assets/images/pulse_soelv_simli.webp';
+import PulseSoelv from '../assets/images/pulse_soelv.webp';
 import DnaGold from '../assets/images/dna gold.webp';
 import DnaSilver from '../assets/images/dna silver.webp';
 import ItSilver from '../assets/images/It silver.webp';
@@ -698,8 +698,8 @@ const getSilverEmblem = () => {
         Signature: {
             Guld: [
                 ...(getGoldEmblem() || []),
-                { name: 'Pulse Guld', icon: UdenStenGuld },
-                { name: 'Pulse Simli Guld', icon: UdenStenGuldSimli },
+                { name: 'Pulse Guld', icon: PulseGuld },
+                { name: 'Pulse Simli Guld', icon: PulseGuldSimli },
                 { name: 'F Key Guld', icon: FKeyGold },
                 { name: 'DNA Guld', icon: DnaGold },
                 { name: 'Pi Guld', icon: PilGold },
@@ -732,8 +732,8 @@ const getSilverEmblem = () => {
 
             Sølv: [
                 ...(getSilverEmblem() || []),
-                { name: 'Pulse Sølv', icon: UdenStenSoelv },
-                { name: 'Pulse Simli Sølv', icon: UdenStenSoelvSimli },
+                { name: 'Pulse Sølv', icon: PulseSoelv },
+                { name: 'Pulse Simli Sølv', icon: PulseSoelvSimli },
                 { name: 'F Key Sølv', icon: FKeySilver },
                 { name: 'DNA Sølv', icon: DnaSilver },
                 { name: 'Pi Sølv', icon: PiSilver },
@@ -946,18 +946,17 @@ const getSilverEmblem = () => {
 
 
     useEffect(() => {
-        const mapPulseToUdenSten = (typeStr) => {
+        const mapPulseForPostMessage = (typeStr) => {
             if (typeof typeStr !== 'string') return typeStr;
-            if (typeStr === 'Pulse Guld') return 'UDEN_STEN Guld Guld';
-            if (typeStr === 'Pulse Simli Guld') return 'UDEN_STEN Guld Simli Guld';
-            if (typeStr === 'Pulse Sølv') return 'UDEN_STEN Sølv Sølv';
-            if (typeStr === 'Pulse Simli Sølv') return 'UDEN_STEN Sølv Simli Sølv';
-            return typeStr.replace(/\bPulse\b/g, 'UDEN_STEN');
+            if (typeStr === 'Pulse Guld') return 'Pulse Guld Guld';
+            if (typeStr === 'Pulse Simli Guld') return 'Pulse Guld Simli Guld';
+            if (typeStr === 'Pulse Sølv') return 'Pulse Sølv Sølv';
+            if (typeStr === 'Pulse Simli Sølv') return 'Pulse Sølv Simli Sølv';
+            return typeStr;
         };
 
         const sendMessageToIframes = (msg) => {
-            const finalMsg = mapPulseToUdenSten(msg);
-            sendToActiveIframe(finalMsg);
+            sendToActiveIframe(mapPulseForPostMessage(msg));
         };
 
         // Country-flag mode: same string shape as Signature ("Teater Guld Guld") → "Kurdistan Guld"
@@ -965,7 +964,7 @@ const getSilverEmblem = () => {
             if (!selectedFlag?.name) return;
             sendMessageToIframes(`${selectedFlag.name} ${selectedEmblem.value}`);
         } else {
-            if (selectedType && (selectedType.startsWith('UDEN_STEN') || selectedType.startsWith('Pulse') || selectedType.includes(' New '))) {
+            if (selectedType && (selectedType.startsWith('Pulse') || selectedType.includes(' New '))) {
                 const isGold = selectedEmblem.name === 'Guld' || selectedEmblem.value === 'Guld';
                 let typeName = selectedType;
                 if (isGold && typeName.includes('Sølv')) {
