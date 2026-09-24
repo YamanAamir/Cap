@@ -409,8 +409,20 @@ const StudentDashboard = () => {
 
     // Add dynamic flags cost from TILBEHØR
     if (selectedOptions.TILBEHØR?.selectedFlags) {
-      selectedOptions.TILBEHØR.selectedFlags.forEach(flag => {
-        if (flag.price) total += flag.price;
+      selectedOptions.TILBEHØR.selectedFlags.forEach((flag, index) => {
+        if (packageName === "premium") {
+          // All flags free in premium
+        } else if (packageName === "luksus") {
+          // 1st flag (index 0) is free, 2nd flag (index 1) adds price
+          if (index > 0 && flag.price) {
+            total += flag.price;
+          }
+        } else {
+          // Standard / Basichue: all flags charged
+          if (flag.price) {
+            total += flag.price;
+          }
+        }
       });
     }
 

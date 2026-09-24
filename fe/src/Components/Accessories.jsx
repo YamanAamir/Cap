@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getTilbehorForTier, hueæskeToTier, syncTilbehorToIframes } from '../utils/tilbehorDefaults';
 
-const SearchableFlagSelect = ({ selectedFlag, programFlags, onSelectFlag, placeholder = "Vælg flag...", isPremium = false }) => {
+const SearchableFlagSelect = ({ selectedFlag, programFlags, onSelectFlag, placeholder = "Vælg flag...", isPremium = false, isFree = false }) => {
+    const showAsFree = isFree || isPremium;
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const dropdownRef = useRef(null);
@@ -29,7 +30,7 @@ const SearchableFlagSelect = ({ selectedFlag, programFlags, onSelectFlag, placeh
             >
                 <span className={selectedFlag ? 'text-slate-800 font-medium' : 'text-slate-400'}>
                     {selectedFlag
-                        ? `${selectedFlag.name} ${!isPremium && selectedFlag.price > 0 ? `(+${selectedFlag.price} DKK)` : '(Inkluderet)'}`
+                        ? `${selectedFlag.name} ${!showAsFree && selectedFlag.price > 0 ? `(+${selectedFlag.price} DKK)` : '(Inkluderet)'}`
                         : placeholder
                     }
                 </span>
@@ -95,7 +96,7 @@ const SearchableFlagSelect = ({ selectedFlag, programFlags, onSelectFlag, placeh
                                     >
                                         <span>{flag.name}</span>
                                         <span className="text-xs text-slate-400 font-medium">
-                                            {!isPremium && flag.price > 0 ? `+${flag.price} DKK` : 'Inkluderet'}
+                                            {!showAsFree && flag.price > 0 ? `+${flag.price} DKK` : 'Inkluderet'}
                                         </span>
                                     </button>
                                 );
@@ -134,6 +135,7 @@ const AccessorySelector = ({ label, currentSelection, onSelectionChange, accesso
 const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, pakke, programFlags = [], visibilityConfig = {} }) => {
     const isVisible = (key) => visibilityConfig?.['TILBEHOR_' + key] !== false;
     const isPremium = (pakke || '').toLowerCase() === 'premium';
+    const isLuksus = (pakke || '').toLowerCase() === 'luksus';
     const cameraTriggers = useRef({});
     const tilbehor = selectedOptions?.TILBEHØR || {};
 
@@ -238,11 +240,13 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
             }
         }
 
+        const limitedSelected = newSelected.slice(0, 2);
+
         updateTilbehor({
-            selectedFlags: newSelected,
-            'Flag 1': newSelected[0]?.name || '',
-            'Flag 2': newSelected[1]?.name || '',
-            'Flag 3': newSelected[2]?.name || '',
+            selectedFlags: limitedSelected,
+            'Flag 1': limitedSelected[0]?.name || '',
+            'Flag 2': limitedSelected[1]?.name || '',
+            'Flag 3': '',
         });
 
         if (newSelected.length > 0) {
@@ -423,19 +427,26 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
             <div className="space-y-6 pt-6 border-t border-slate-100">
                 <div className="space-y-1">
                     <h4 className="text-lg font-bold text-slate-900">Små Flag Add-on</h4>
-                    <p className="text-sm text-slate-500 italic">Vælg op til 3 flag</p>
+                    <p className="text-sm text-slate-500 italic">Vælg op til 2 flag</p>
                 </div>
 
-                {[0, 1, 2].map((index) => {
+                {[0, 1].map((index) => {
                     if (index > 0 && !selectedFlags[index - 1]) return null;
+
+                    const isFree = isPremium || (isLuksus && index === 0);
 
                     return (
                         <div key={index} className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                             <div className="flex justify-between items-center">
                                 <label className="text-sm font-semibold text-slate-700">Flag {index + 1}</label>
-                                {!isPremium && selectedFlags[index]?.price > 0 && (
+                                {!isFree && selectedFlags[index]?.price > 0 && (
                                     <span className="text-xs font-bold text-green-600">
                                         +{selectedFlags[index].price} DKK
+                                    </span>
+                                )}
+                                {isFree && selectedFlags[index] && (
+                                    <span className="text-xs font-bold text-blue-600">
+                                        (Inkluderet)
                                     </span>
                                 )}
                             </div>
@@ -444,6 +455,7 @@ const Accessories = ({ selectedOptions = {}, onOptionChange, errors, setErrors, 
                                 programFlags={programFlags}
                                 onSelectFlag={(flagId) => handleFlagSelection(index, flagId)}
                                 placeholder="Vælg flag..."
+                                isFree={isFree}
                                 isPremium={isPremium}
                             />
                         </div>

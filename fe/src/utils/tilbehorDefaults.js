@@ -52,10 +52,10 @@ export const getTilbehorForTier = (tier, baseTilbehor = {}) => {
         ...baseTilbehor,
         ...ALL_NO,
         'Ekstra korkarde Text': tier === 'standard' ? '' : (baseTilbehor['Ekstra korkarde Text'] || ''),
-        selectedFlags: tier === 'standard' ? [] : (baseTilbehor.selectedFlags || []),
+        selectedFlags: tier === 'standard' ? [] : (baseTilbehor.selectedFlags || []).slice(0, 2),
         'Flag 1': tier === 'standard' ? '' : (baseTilbehor['Flag 1'] || ''),
         'Flag 2': tier === 'standard' ? '' : (baseTilbehor['Flag 2'] || ''),
-        'Flag 3': tier === 'standard' ? '' : (baseTilbehor['Flag 3'] || ''),
+        'Flag 3': '',
     };
 
     if (tier === 'luksus') {
