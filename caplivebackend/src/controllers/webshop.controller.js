@@ -293,9 +293,13 @@ exports.createCheckoutSession = async (req, res) => {
       });
     }
 
+    // Generate unique order number
+    const orderNumber = `WS-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
+
     // Store cart & customer details in session metadata
     const metadata = {
       isWebshop: 'true',
+      orderNumber,
       customerName: `${customerDetails.firstName || ''} ${customerDetails.lastName || ''}`.trim(),
       customerEmail: customerDetails.email,
       customerPhone: customerDetails.phone || '',
@@ -399,8 +403,8 @@ exports.handleWebshopCheckoutSuccess = async (session) => {
       });
     }
 
-    // 2. Generate unique order number
-    const orderNumber = `WS-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
+    // 2. Generate or retrieve unique order number
+    const orderNumber = session.metadata?.orderNumber || `WS-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
     const totalAmount = (session.amount_total || 0) / 100;
 
     // 3. Create Webshop Order record
