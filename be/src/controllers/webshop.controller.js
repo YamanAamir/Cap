@@ -314,8 +314,8 @@ exports.createCheckoutSession = async (req, res) => {
       mode: 'payment',
       customer_email: customerDetails.email,
       metadata,
-      success_url: `${clientOrigin}/webshop.html?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${clientOrigin}/checkoutnew.html?payment=cancelled`,
+      success_url: `${clientOrigin}/webshop-betaling?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${clientOrigin}/webshop-betaling-annullere?payment=cancelled`,
     });
 
     return res.status(200).json({ success: true, url: session.url, sessionId: session.id });
