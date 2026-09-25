@@ -3790,7 +3790,7 @@ const getSessionDetails = async (req, res) => {
 
   try {
     const session = await stripe.checkout.sessions.retrieve(session_id, {
-      expand: ["line_items"],
+      expand: ["line_items", "payment_intent.payment_method"],
     });
 
     res.json(session);

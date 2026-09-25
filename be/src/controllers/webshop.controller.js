@@ -303,8 +303,10 @@ exports.createCheckoutSession = async (req, res) => {
       customerName: `${customerDetails.firstName || ''} ${customerDetails.lastName || ''}`.trim(),
       customerEmail: customerDetails.email,
       customerPhone: customerDetails.phone || '',
+      customerSchool: customerDetails.school || '',
       customerAddress: JSON.stringify({
         address: customerDetails.address || '',
+        apartment: customerDetails.apartment || '',
         city: customerDetails.city || '',
         zip: customerDetails.postalCode || customerDetails.zip || '',
         country: customerDetails.country || 'Denmark',
