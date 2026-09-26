@@ -40,7 +40,7 @@ const DashboardPage = () => {
   return (
     <div className="max-w-[1400px] mx-auto animate-in fade-in duration-500 pb-12">
       
-      <div className="flex flex-col xl:flex-row gap-6">
+      <div className="flex flex-col lg:flex-row gap-6">
         
         {/* Main Content Area */}
         <div className="flex-1 space-y-8">
@@ -120,7 +120,7 @@ const DashboardPage = () => {
             </div>
             
             <div className="bg-[#f0f4f8] rounded-xl p-4 sm:p-6 border border-slate-200">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 
                 {/* Total Orders Card */}
                 <div className="bg-[#eef2f6] rounded-xl p-5 flex items-center border border-blue-100">
@@ -279,7 +279,7 @@ const DashboardPage = () => {
         </div>
         
         {/* Right Sidebar - Portal Status */}
-        <aside className="xl:w-[320px] shrink-0">
+        <aside className="lg:w-[300px] shrink-0">
           <div className="flex items-center justify-between mb-4">
              <div className="flex bg-blue-50 rounded overflow-hidden shadow-sm border border-blue-100">
                <button className="px-4 py-1.5 bg-blue-600 text-white text-xs font-bold tracking-wider">DKK</button>

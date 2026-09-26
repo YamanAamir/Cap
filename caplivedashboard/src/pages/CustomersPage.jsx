@@ -106,11 +106,6 @@ const CustomersPage = () => {
             className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           />
         </div>
-        <button 
-          className="flex items-center gap-2 text-white text-xs font-bold px-4 py-2.5 rounded shadow-sm transition-colors bg-[#7cb342] hover:bg-[#689f38]"
-        >
-          <Plus className="h-4 w-4" /> NEW USER
-        </button>
       </div>
 
       {/* Table Section */}
