@@ -128,20 +128,20 @@ const DashboardPage = () => {
             </div>
 
             <div className="bg-[#f0f4f8] rounded-xl p-4 sm:p-6 border border-slate-200">
-              {/* FIX: don't jump to 4 columns until lg, so each card gets enough
-                  width on typical laptop screens (was xl:grid-cols-4 only,
-                  which meant 4 cramped columns as soon as xl hit). */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4">
+              {/* FIX: the row now scrolls horizontally instead of squeezing
+                  cards into narrower columns. Each card below has a fixed
+                  min-width, so its content is never compressed and never
+                  needs to be abbreviated/truncated - if the screen is too
+                  narrow to fit all four, you just scroll the row sideways. */}
+              <div className="flex gap-4 overflow-x-auto custom-scrollbar pb-2 -mb-2">
 
                 {/* Total Orders Card */}
-                {/* FIX: overflow-hidden on every card so nothing inside can ever
-                    visually spill into a neighboring card. */}
-                <div className="bg-[#eef2f6] rounded-xl p-5 flex items-center border border-blue-100 overflow-hidden min-w-0">
+                <div className="bg-[#eef2f6] rounded-xl p-5 flex items-center border border-blue-100 min-w-[240px] flex-1">
                   <div className="w-12 h-12 rounded-full bg-[#4a90e2] flex items-center justify-center text-white shrink-0 mr-4 shadow-sm">
                     <Package className="h-6 w-6" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-[#1e3a8a] mb-1 uppercase tracking-wide truncate">Total Orders</p>
+                  <div className="flex-1">
+                    <p className="text-xs font-bold text-[#1e3a8a] mb-1 uppercase tracking-wide">Total Orders</p>
                     <div className="flex justify-between items-end">
                       <div>
                         <p className="text-2xl font-black text-[#1e3a8a] leading-none">{stats?.totalOrders || 0}</p>
@@ -152,30 +152,25 @@ const DashboardPage = () => {
                 </div>
 
                 {/* Installments Card */}
-                <div className="bg-[#f5f3ff] rounded-xl p-5 flex items-center border border-purple-100 relative group overflow-hidden min-w-0">
+                <div className="bg-[#f5f3ff] rounded-xl p-5 flex items-center border border-purple-100 relative group min-w-[260px] flex-1">
                   <div className="w-12 h-12 rounded-full bg-[#8b5cf6] flex items-center justify-center text-white shrink-0 mr-4 shadow-sm">
                     <CreditCard className="h-6 w-6" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    {/* FIX: this row was the exact spot the "14,464.00 kr." badge was
-                        escaping from. flex-wrap + gap lets label and badge wrap onto
-                        their own line instead of overflowing the card when tight,
-                        and min-w-0 + truncate keeps the label itself from forcing
-                        the row wider than the card. */}
-                    <div className="flex flex-wrap justify-between items-center gap-1 mb-1">
-                      <p className="text-xs font-bold text-[#5b21b6] uppercase tracking-wide truncate">Installments</p>
-                      <span className="text-[10px] font-extrabold text-[#7c3aed] bg-purple-200/50 px-1.5 py-0.5 rounded whitespace-nowrap shrink-0">
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-1">
+                      <p className="text-xs font-bold text-[#5b21b6] uppercase tracking-wide">Installments</p>
+                      <span className="text-[10px] font-extrabold text-[#7c3aed] bg-purple-200/50 px-1.5 py-0.5 rounded whitespace-nowrap">
                         {formatCurrency(stats?.installmentTotalValue)}
                       </span>
                     </div>
-                    <div className="flex justify-between items-end gap-2">
-                      <div className="min-w-0">
+                    <div className="flex justify-between items-end">
+                      <div>
                         <p className="text-2xl font-black text-[#5b21b6] leading-none">{stats?.installmentOrdersCount || 0}</p>
                         <p className="text-[10px] text-slate-500 font-semibold mt-1">Orders</p>
                       </div>
-                      <div className="text-right min-w-0">
-                        <p className="text-sm font-black text-emerald-600 leading-none truncate">{formatCurrency(stats?.installmentTotalCollected)}</p>
-                        <p className="text-[10px] text-slate-500 font-semibold mt-1 truncate">
+                      <div className="text-right">
+                        <p className="text-sm font-black text-emerald-600 leading-none">{formatCurrency(stats?.installmentTotalCollected)}</p>
+                        <p className="text-[10px] text-slate-500 font-semibold mt-1">
                           Paid <span className="text-amber-600 font-bold">({formatCurrency(stats?.installmentRemainingAmount)} Rem.)</span>
                         </p>
                       </div>
@@ -208,15 +203,15 @@ const DashboardPage = () => {
                 </div>
 
                 {/* Revenue Card */}
-                <div className="bg-[#fdf8f4] rounded-xl p-5 flex items-center border border-orange-100 overflow-hidden min-w-0">
+                <div className="bg-[#fdf8f4] rounded-xl p-5 flex items-center border border-orange-100 min-w-[220px] flex-1">
                   <div className="w-12 h-12 rounded-full bg-[#f59e0b] flex items-center justify-center text-white shrink-0 mr-4 shadow-sm">
                     <ShoppingCart className="h-6 w-6" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-[#78350f] mb-1 uppercase tracking-wide truncate">Total Revenue</p>
+                  <div className="flex-1">
+                    <p className="text-xs font-bold text-[#78350f] mb-1 uppercase tracking-wide">Total Revenue</p>
                     <div className="flex justify-between items-end">
-                      <div className="min-w-0">
-                        <p className="text-xl font-black text-[#78350f] leading-none truncate">{formatCurrency(stats?.totalRevenue)}</p>
+                      <div>
+                        <p className="text-xl font-black text-[#78350f] leading-none">{formatCurrency(stats?.totalRevenue)}</p>
                         <p className="text-[10px] text-slate-500 font-semibold mt-1">{activeFilter === 'all' ? 'Lifetime' : 'Filtered'}</p>
                       </div>
                     </div>
@@ -224,18 +219,18 @@ const DashboardPage = () => {
                 </div>
 
                 {/* Marketing Card */}
-                <div className="bg-[#f1f8f5] rounded-xl p-5 flex items-center border border-green-100 overflow-hidden min-w-0">
+                <div className="bg-[#f1f8f5] rounded-xl p-5 flex items-center border border-green-100 min-w-[240px] flex-1">
                   <div className="w-12 h-12 rounded-full bg-[#5cb85c] flex items-center justify-center text-white shrink-0 mr-4 shadow-sm">
                     <CalendarCheck className="h-6 w-6" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-[#2d6a4f] mb-1 uppercase tracking-wide truncate">Marketing</p>
-                    <div className="flex justify-between items-end gap-2">
-                      <div className="min-w-0">
+                  <div className="flex-1">
+                    <p className="text-xs font-bold text-[#2d6a4f] mb-1 uppercase tracking-wide">Marketing</p>
+                    <div className="flex justify-between items-end">
+                      <div>
                         <p className="text-2xl font-black text-[#2d6a4f] leading-none">{stats?.smsConsentCount || 0}</p>
                         <p className="text-[10px] text-slate-500 font-semibold mt-1">SMS Consents</p>
                       </div>
-                      <div className="text-right min-w-0">
+                      <div className="text-right">
                         <p className="text-sm font-bold text-[#5cb85c]">{stats?.usedDiscountCodes || 0}</p>
                         <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Discounts Used</p>
                       </div>
@@ -318,15 +313,15 @@ const DashboardPage = () => {
 
           <div className="space-y-3">
             {stats?.statusCounts?.map((status) => (
-              <div key={status.id} className="p-4 rounded-xl flex items-center border shadow-sm bg-white hover:border-slate-300 transition-colors overflow-hidden min-w-0">
+              <div key={status.id} className="p-4 rounded-xl flex items-center border shadow-sm bg-white hover:border-slate-300 transition-colors">
                 <div className="w-8 h-8 rounded flex items-center justify-center shrink-0 mr-4 shadow-sm border border-slate-100" style={{ backgroundColor: status.color + '15' }}>
                   <Activity className="h-4 w-4" style={{ color: status.color }} />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mb-1 truncate">{status.name}</p>
-                  <div className="flex items-center justify-between gap-2">
+                <div className="flex-1">
+                  <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mb-1">{status.name}</p>
+                  <div className="flex items-center justify-between">
                     <span className="text-lg font-black text-slate-800 leading-none">{status.count}</span>
-                    <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
+                    <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
                       {status.percentage}%
                     </span>
                   </div>
