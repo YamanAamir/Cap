@@ -203,7 +203,7 @@ const DashboardLayout = () => {
       {/* Mobile Overlay */}
       {isMobile && isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-slate-900/50 z-20 transition-opacity"
+          className="fixed inset-0 bg-slate-900/50 z-40 transition-opacity"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
@@ -211,7 +211,7 @@ const DashboardLayout = () => {
       {/* Sidebar */}
       <aside
         className={cn(
-          'absolute lg:relative flex flex-col transition-transform duration-300 ease-in-out z-30 bg-white shadow-[2px_0_10px_rgba(0,0,0,0.05)] border-r border-slate-100 h-full',
+          'fixed lg:relative top-0 bottom-0 left-0 flex flex-col transition-transform duration-300 ease-in-out z-50 bg-white shadow-[2px_0_10px_rgba(0,0,0,0.05)] border-r border-slate-100 h-full',
           isSidebarOpen ? 'w-[260px] translate-x-0' : 'w-[260px] lg:w-[70px] -translate-x-full lg:translate-x-0'
         )}
       >
@@ -308,47 +308,49 @@ const DashboardLayout = () => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         
         {/* Header */}
-        <header className="h-[72px] bg-white flex items-center justify-between px-4 md:px-8 shadow-sm z-10">
-          <div className="flex items-center gap-3">
+        <header className="h-[72px] bg-white flex items-center justify-between px-3 sm:px-6 md:px-8 shadow-sm z-10 gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             {isMobile && (
               <button 
                 onClick={() => setIsSidebarOpen(true)}
-                className="p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded"
+                className="p-1.5 text-slate-500 hover:bg-slate-100 rounded shrink-0"
               >
                 <Menu className="h-5 w-5" />
               </button>
             )}
-            <div className="flex flex-col">
-              <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight truncate max-w-[200px] md:max-w-none">{currentTitle}</h1>
+            <div className="flex flex-col min-w-0">
+              <h1 className="text-base sm:text-xl md:text-2xl font-black text-slate-900 tracking-tight leading-tight truncate max-w-[130px] sm:max-w-[220px] md:max-w-none">{currentTitle}</h1>
               {currentSubtitle && !isMobile && (
-                <p className="text-[11px] text-slate-500 uppercase tracking-wide font-medium mt-1">{currentSubtitle}</p>
+                <p className="text-[11px] text-slate-500 uppercase tracking-wide font-medium mt-1 truncate">{currentSubtitle}</p>
               )}
             </div>
           </div>
 
-          <div className="flex items-center gap-4 md:gap-6">
+          <div className="flex items-center gap-2 sm:gap-4 md:gap-6 shrink-0">
             {/* Dashboard Mode Switcher */}
             {user?.role !== 'production' && (
-              <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+              <div className="flex items-center bg-slate-100 p-0.5 sm:p-1 rounded-xl border border-slate-200">
                 <button
                   type="button"
                   onClick={() => handleSwitchMode('cap')}
                   className={cn(
-                    "px-3 py-1.5 text-xs font-bold rounded-lg transition-all",
+                    "px-2 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-bold rounded-lg transition-all whitespace-nowrap",
                     dashboardMode === 'cap' ? "bg-white text-[#1e3a8a] shadow-sm" : "text-slate-600 hover:text-slate-900"
                   )}
                 >
-                  Cap Dashboard
+                  <span className="hidden sm:inline">Cap Dashboard</span>
+                  <span className="sm:hidden">Cap</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleSwitchMode('web')}
                   className={cn(
-                    "px-3 py-1.5 text-xs font-bold rounded-lg transition-all",
+                    "px-2 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-bold rounded-lg transition-all whitespace-nowrap",
                     dashboardMode === 'web' ? "bg-[#1e3a8a] text-white shadow-sm" : "text-slate-600 hover:text-slate-900"
                   )}
                 >
-                  Web Dashboard
+                  <span className="hidden sm:inline">Web Dashboard</span>
+                  <span className="sm:hidden">Web</span>
                 </button>
               </div>
             )}
@@ -360,7 +362,7 @@ const DashboardLayout = () => {
             <div className="hidden lg:block w-px h-8 bg-slate-200"></div>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 text-slate-600 hover:text-slate-900 font-bold text-xs uppercase tracking-wider transition-colors"
+              className="flex items-center gap-1.5 sm:gap-2 text-slate-600 hover:text-slate-900 font-bold text-xs uppercase tracking-wider transition-colors p-1"
             >
               <span className="hidden md:inline">LOGOUT</span> <LogOut className="h-4 w-4" />
             </button>
@@ -368,7 +370,7 @@ const DashboardLayout = () => {
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 relative bg-white">
+        <main className="flex-1 overflow-auto p-3 sm:p-4 md:p-6 lg:p-8 relative bg-white">
           <Outlet />
         </main>
       </div>

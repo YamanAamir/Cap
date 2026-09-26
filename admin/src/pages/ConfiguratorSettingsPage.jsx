@@ -745,16 +745,16 @@ const ConfiguratorSettingsPage = () => {
       </div>
 
       {showConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 overflow-hidden">
-            <div className="flex items-center mb-4 text-orange-500">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="flex items-center mb-4 text-orange-500 shrink-0">
               <AlertCircle className="w-8 h-8 mr-3" />
               <h3 className="text-xl font-bold text-gray-900">Confirm Changes</h3>
             </div>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 mb-6 overflow-y-auto flex-1 custom-scrollbar">
               Are you sure you want to save these changes? This will instantly update the live configurator for all users.
             </p>
-            <div className="flex justify-end space-x-3">
+            <div className="flex justify-end space-x-3 shrink-0 pt-2 border-t border-slate-100">
               <button
                 onClick={() => setShowConfirmModal(false)}
                 className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
@@ -776,10 +776,10 @@ const ConfiguratorSettingsPage = () => {
       )}
 
       {addFlagModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 overflow-hidden">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Add Flag</h3>
-            <div className="mb-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 flex flex-col max-h-[90vh] overflow-hidden">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 shrink-0">Add Flag</h3>
+            <div className="mb-6 overflow-y-auto flex-1 custom-scrollbar">
               <label className="block text-sm font-medium text-gray-700 mb-2">Flag (Country) Name</label>
               <input
                 type="text"
@@ -791,7 +791,7 @@ const ConfiguratorSettingsPage = () => {
                 placeholder="e.g. Denmark"
               />
             </div>
-            <div className="flex justify-end space-x-3">
+            <div className="flex justify-end space-x-3 shrink-0 pt-2 border-t border-slate-100">
               <button
                 onClick={() => setAddFlagModal({ isOpen: false, program: '', name: '' })}
                 className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
@@ -811,16 +811,16 @@ const ConfiguratorSettingsPage = () => {
       )}
 
       {deleteFlagModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 overflow-hidden">
-            <div className="flex items-center mb-4 text-red-500">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="flex items-center mb-4 text-red-500 shrink-0">
               <AlertCircle className="w-8 h-8 mr-3" />
               <h3 className="text-xl font-bold text-gray-900">Delete Flag</h3>
             </div>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 mb-6 overflow-y-auto flex-1 custom-scrollbar">
               Are you sure you want to remove this flag? This action cannot be undone.
             </p>
-            <div className="flex justify-end space-x-3">
+            <div className="flex justify-end space-x-3 shrink-0 pt-2 border-t border-slate-100">
               <button
                 onClick={() => setDeleteFlagModal({ isOpen: false, program: '', id: '' })}
                 className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition"

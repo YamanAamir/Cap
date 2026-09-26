@@ -608,11 +608,11 @@ const ExcelTemplatesPage = () => {
 
       {/* Edit Column Modal */}
       {editModal.isOpen && editModal.column && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-[#fafafa]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200 overflow-hidden">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200">
+            <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-100 bg-[#fafafa] shrink-0">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded bg-blue-50 text-blue-600 flex items-center justify-center">
+                <div className="w-8 h-8 rounded bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
                   <Pencil className="w-4 h-4" />
                 </div>
                 <div>
@@ -622,14 +622,14 @@ const ExcelTemplatesPage = () => {
               </div>
               <button 
                 onClick={() => setEditModal({ isOpen: false, column: null, headerLabel: '', fieldKey: '' })}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100 transition-colors"
+                className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100 transition-colors shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveEdit}>
-              <div className="p-6 space-y-4">
+            <form onSubmit={handleSaveEdit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-4 sm:p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
                 <div>
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">
                     Data Path / Mapped Value (Categorized by Configurator Step)
@@ -673,7 +673,7 @@ const ExcelTemplatesPage = () => {
                 </div>
               </div>
 
-              <div className="px-6 py-4 bg-[#fafafa] border-t border-slate-100 flex items-center justify-end gap-3">
+              <div className="px-4 sm:px-6 py-4 bg-[#fafafa] border-t border-slate-100 flex items-center justify-end gap-3 shrink-0">
                 <button
                   type="button"
                   onClick={() => setEditModal({ isOpen: false, column: null, headerLabel: '', fieldKey: '' })}
@@ -684,7 +684,7 @@ const ExcelTemplatesPage = () => {
                 <button
                   type="submit"
                   disabled={isUpdating}
-                  className="px-5 py-2 rounded text-sm font-bold text-white bg-[#1e3a8a] hover:bg-blue-800 transition-colors flex items-center gap-2 shadow-sm"
+                  className="px-5 py-2 rounded text-sm font-bold text-white bg-[#1e3a8a] hover:bg-blue-800 transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50"
                 >
                   {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   Save Changes

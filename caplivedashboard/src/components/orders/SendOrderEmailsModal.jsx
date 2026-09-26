@@ -74,11 +74,11 @@ const SendOrderEmailsModal = ({ isOpen, onClose, order, onSuccess }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200 overflow-hidden">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-emerald-50/70 via-slate-50 to-white">
+        <div className="flex items-center justify-between px-5 sm:px-6 py-4 sm:py-5 border-b border-slate-100 bg-gradient-to-r from-emerald-50/70 via-slate-50 to-white shrink-0">
           <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-emerald-100/80 border border-emerald-200 flex items-center justify-center text-emerald-700 shadow-sm shrink-0">
               <Mail className="w-5 h-5" />
@@ -105,7 +105,7 @@ const SendOrderEmailsModal = ({ isOpen, onClose, order, onSuccess }) => {
         </div>
 
         {/* Content Body */}
-        <div className="p-6 overflow-y-auto space-y-4">
+        <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1 space-y-4">
           
           {/* Quick toggle bar */}
           <div className="flex items-center justify-between pb-1 border-b border-slate-100">
@@ -294,7 +294,7 @@ const SendOrderEmailsModal = ({ isOpen, onClose, order, onSuccess }) => {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+        <div className="px-5 sm:px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between shrink-0">
           <span className="text-xs font-medium text-slate-500">
             {selectedCount > 0 ? `${selectedCount} af 3 valgt` : 'Ingen modtagere valgt'}
           </span>

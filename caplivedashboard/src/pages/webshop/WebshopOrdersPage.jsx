@@ -319,18 +319,18 @@ const WebshopOrdersPage = () => {
     return (
       <div className="animate-in fade-in duration-300 max-w-[1400px] mx-auto pb-12 space-y-6">
         {/* Top Navigation & Action Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-6 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <button
               onClick={() => setSelectedOrder(null)}
-              className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2 text-sm font-semibold"
+              className="p-1.5 sm:p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-2 text-sm font-semibold"
             >
               <ArrowLeft className="w-5 h-5" />
               <span>Back to Orders</span>
             </button>
-            <div className="h-6 w-px bg-slate-200" />
+            <div className="hidden sm:block h-6 w-px bg-slate-200" />
             <div>
-              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-3">
+              <h2 className="text-lg sm:text-xl font-bold text-[#1e3a8a] flex flex-wrap items-center gap-2 sm:gap-3">
                 Order #{selectedOrder.orderNumber}
                 {getStatusBadge(selectedOrder.orderStatus)}
               </h2>

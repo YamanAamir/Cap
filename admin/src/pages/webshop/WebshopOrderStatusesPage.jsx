@@ -379,75 +379,77 @@ const WebshopOrderStatusesPage = () => {
 
       {/* CREATE / EDIT ORDER STATUS MODAL */}
       {isStatusModalOpen && (
-        <div className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md overflow-hidden my-8">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
               <h3 className="text-lg font-bold text-slate-900">
                 {editingStatus ? 'Edit Order Status' : 'Add New Order Status'}
               </h3>
-              <button onClick={() => setIsStatusModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setIsStatusModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded">
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleRequestSaveStatus} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                  Status Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Processing, Shipped"
-                  value={statusForm.name}
-                  onChange={(e) => setStatusForm({ ...statusForm, name: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1e3a8a]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                  Badge Color (Hex)
-                </label>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="color"
-                    value={statusForm.color}
-                    onChange={(e) => setStatusForm({ ...statusForm, color: e.target.value })}
-                    className="w-10 h-10 rounded border border-slate-300 cursor-pointer"
-                  />
+            <form onSubmit={handleRequestSaveStatus} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-4 sm:p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                    Status Name *
+                  </label>
                   <input
                     type="text"
-                    value={statusForm.color}
-                    onChange={(e) => setStatusForm({ ...statusForm, color: e.target.value })}
-                    className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
+                    required
+                    placeholder="e.g. Processing, Shipped"
+                    value={statusForm.name}
+                    onChange={(e) => setStatusForm({ ...statusForm, name: e.target.value })}
+                    className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1e3a8a]"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                    Badge Color (Hex)
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={statusForm.color}
+                      onChange={(e) => setStatusForm({ ...statusForm, color: e.target.value })}
+                      className="w-10 h-10 rounded border border-slate-300 cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={statusForm.color}
+                      onChange={(e) => setStatusForm({ ...statusForm, color: e.target.value })}
+                      className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                    Attach Email Template
+                  </label>
+                  <select
+                    value={statusForm.webshopEmailTemplateId || ''}
+                    onChange={(e) => setStatusForm({ ...statusForm, webshopEmailTemplateId: e.target.value })}
+                    className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1e3a8a]"
+                  >
+                    <option value="">-- No Email Attached --</option>
+                    {templates.map((tpl) => (
+                      <option key={tpl.id} value={tpl.id}>
+                        📧 {tpl.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                  Attach Email Template
-                </label>
-                <select
-                  value={statusForm.webshopEmailTemplateId || ''}
-                  onChange={(e) => setStatusForm({ ...statusForm, webshopEmailTemplateId: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1e3a8a]"
-                >
-                  <option value="">-- No Email Attached --</option>
-                  {templates.map((tpl) => (
-                    <option key={tpl.id} value={tpl.id}>
-                      📧 {tpl.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+              <div className="p-4 sm:p-6 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0 bg-slate-50">
                 <button
                   type="button"
                   onClick={() => setIsStatusModalOpen(false)}
-                  className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700"
+                  className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:bg-white transition-colors"
                 >
                   Cancel
                 </button>

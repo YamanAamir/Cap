@@ -20,8 +20,8 @@ const ConfirmModal = ({
   const showSpinner = loading || isLoading;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-md p-6 space-y-5 transform transition-all scale-100">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar transform transition-all scale-100">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <div

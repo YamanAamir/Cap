@@ -399,7 +399,7 @@ const ProductionPage = () => {
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
                     <Calendar className="w-3 h-3 text-slate-400" /> Date Preset
                   </label>
-                  <div className="grid grid-cols-3 gap-1.5 text-[11px]">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 text-[11px]">
                     {[
                       { id: 'ALL', label: 'All Dates' },
                       { id: 'TODAY', label: 'Today' },
@@ -752,11 +752,11 @@ const ProductionPage = () => {
 
       {/* Orders List Modal */}
       {ordersModal.isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-4 border-b border-slate-100">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-sm overflow-hidden">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] sm:max-h-[85vh] flex flex-col animate-in zoom-in-95 duration-200 overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 shrink-0 bg-white">
               <h3 className="font-bold text-slate-800">Batch #{selectedBatch?.id} Orders</h3>
-              <button onClick={() => setOrdersModal({ isOpen: false, loading: false, orders: [] })} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setOrdersModal({ isOpen: false, loading: false, orders: [] })} className="text-slate-400 hover:text-slate-600 p-1 rounded">
                 <X className="w-5 h-5" />
               </button>
             </div>

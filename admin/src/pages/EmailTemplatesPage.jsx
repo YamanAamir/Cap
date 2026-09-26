@@ -305,10 +305,10 @@ const EmailTemplatesPage = () => {
 
       {/* Warning Modal when Template is currently attached to Order Status(es) */}
       {inUseModal.isOpen && inUseModal.template && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200 border border-amber-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 border border-amber-200">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-amber-100 bg-amber-50/80">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-amber-100 bg-amber-50/80 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
                   <AlertTriangle className="w-5 h-5" />
@@ -327,7 +327,7 @@ const EmailTemplatesPage = () => {
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-4">
+            <div className="p-5 sm:p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
               <p className="text-sm text-slate-600 leading-relaxed">
                 The template <span className="font-bold text-slate-800">"{labels[inUseModal.template.key] || inUseModal.template.name || inUseModal.template.key}"</span> cannot be deleted because it is currently attached to the following <span className="font-bold text-slate-800">Order Status(es)</span>:
               </p>
@@ -361,7 +361,7 @@ const EmailTemplatesPage = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className="px-5 py-4 bg-[#fafafa] border-t border-slate-100 flex items-center justify-between gap-3">
+            <div className="px-5 py-4 bg-[#fafafa] border-t border-slate-100 flex items-center justify-between gap-3 shrink-0">
               <button
                 onClick={() => setInUseModal({ isOpen: false, template: null })}
                 className="px-4 py-2 rounded text-sm font-bold text-slate-600 hover:bg-slate-200 transition-colors"

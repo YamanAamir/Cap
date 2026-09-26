@@ -506,10 +506,10 @@ const WebshopProductsPage = () => {
 
       {/* Create / Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-2xl overflow-hidden my-8">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-slate-900">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl flex flex-col max-h-[92vh] sm:max-h-[85vh] overflow-hidden">
+            <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900">
                 {editingProduct ? 'Edit Product' : 'Add New Webshop Product'}
               </h3>
               <button
@@ -521,164 +521,166 @@ const WebshopProductsPage = () => {
               </button>
             </div>
 
-            <form onSubmit={handleRequestSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                    Product Title *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Premium Grad Cap"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1e3a8a] outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                    Slug (URL Key)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="auto-generated-from-title"
-                    value={formData.slug}
-                    onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1e3a8a] outline-none font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                    Price (DKK) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    placeholder="e.g. 299.00"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1e3a8a] outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                    Stock Quantity
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="10"
-                    value={formData.stockCount}
-                    onChange={(e) => setFormData({ ...formData, stockCount: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1e3a8a] outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                  Short Description
-                </label>
-                <input
-                  type="text"
-                  placeholder="Brief 1-sentence summary"
-                  value={formData.shortDescription}
-                  onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1e3a8a] outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                  Detailed Description (Rich Text)
-                </label>
-                <RichTextEditor
-                  value={formData.longDescription}
-                  onChange={(html) => setFormData({ ...formData, longDescription: html })}
-                  placeholder="Describe product details, specifications, etc..."
-                />
-              </div>
-
-              <div className="flex items-center gap-6 pt-2">
-                <label className="flex items-center gap-2 text-sm text-slate-700 font-medium cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                    className="w-4 h-4 text-[#1e3a8a] rounded border-slate-300 focus:ring-[#1e3a8a]"
-                  />
-                  Active (Visible in Webshop)
-                </label>
-                <label className="flex items-center gap-2 text-sm text-slate-700 font-medium cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.isOutOfStock}
-                    onChange={(e) => setFormData({ ...formData, isOutOfStock: e.target.checked })}
-                    className="w-4 h-4 text-red-600 rounded border-slate-300 focus:ring-red-500"
-                  />
-                  Mark as Out of Stock
-                </label>
-              </div>
-
-              {/* Product Images File Upload Section */}
-              <div className="space-y-3 pt-2">
-                <label className="block text-xs font-semibold text-slate-700 uppercase">
-                  Product Images (Upload Files)
-                </label>
-
-                {/* Previews Grid */}
-                {formData.images.length > 0 && (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                    {formData.images.map((item, index) => {
-                      const isObj = typeof item === 'object' && item !== null && item.preview;
-                      const displaySrc = isObj ? item.preview : getImageUrl(item);
-                      return (
-                        <div
-                          key={index}
-                          className="relative w-full h-24 rounded-xl border border-slate-200 overflow-hidden group bg-slate-50 shadow-sm"
-                        >
-                          <img src={displaySrc} alt={`Product image ${index + 1}`} className="w-full h-full object-cover" />
-                          {index === 0 && (
-                            <span className="absolute top-1 left-1 bg-[#1e3a8a] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow">
-                              Main
-                            </span>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveImage(index)}
-                            className="absolute inset-0 bg-slate-900/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                            title="Remove image"
-                          >
-                            <Trash2 className="w-5 h-5 text-red-400 hover:text-red-200" />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* File Dropzone Input */}
-                <label className="border-2 border-dashed border-slate-300 hover:border-[#1e3a8a] bg-slate-50 hover:bg-blue-50/50 rounded-xl p-5 text-center cursor-pointer flex flex-col items-center justify-center gap-2 transition-colors">
-                  <Upload className="w-6 h-6 text-[#1e3a8a]" />
+            <form onSubmit={handleRequestSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-4 sm:p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <span className="text-sm font-bold text-slate-800">Click to upload product images</span>
-                    <p className="text-xs text-slate-400">Supports JPG, PNG, WEBP files</p>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                      Product Title *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Premium Grad Cap"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1e3a8a] outline-none"
+                    />
                   </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                      Slug (URL Key)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="auto-generated-from-title"
+                      value={formData.slug}
+                      onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                      className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1e3a8a] outline-none font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                      Price (DKK) *
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      required
+                      placeholder="e.g. 299.00"
+                      value={formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                      className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1e3a8a] outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                      Stock Quantity
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="10"
+                      value={formData.stockCount}
+                      onChange={(e) => setFormData({ ...formData, stockCount: e.target.value })}
+                      className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1e3a8a] outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                    Short Description
+                  </label>
                   <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleFileUpload}
-                    className="hidden"
+                    type="text"
+                    placeholder="Brief 1-sentence summary"
+                    value={formData.shortDescription}
+                    onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
+                    className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-[#1e3a8a] outline-none"
                   />
-                </label>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                    Detailed Description (Rich Text)
+                  </label>
+                  <RichTextEditor
+                    value={formData.longDescription}
+                    onChange={(html) => setFormData({ ...formData, longDescription: html })}
+                    placeholder="Describe product details, specifications, etc..."
+                  />
+                </div>
+
+                <div className="flex flex-wrap items-center gap-4 sm:gap-6 pt-2">
+                  <label className="flex items-center gap-2 text-sm text-slate-700 font-medium cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isActive}
+                      onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                      className="w-4 h-4 text-[#1e3a8a] rounded border-slate-300 focus:ring-[#1e3a8a]"
+                    />
+                    Active (Visible in Webshop)
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-slate-700 font-medium cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.isOutOfStock}
+                      onChange={(e) => setFormData({ ...formData, isOutOfStock: e.target.checked })}
+                      className="w-4 h-4 text-red-600 rounded border-slate-300 focus:ring-red-500"
+                    />
+                    Mark as Out of Stock
+                  </label>
+                </div>
+
+                {/* Product Images File Upload Section */}
+                <div className="space-y-3 pt-2">
+                  <label className="block text-xs font-semibold text-slate-700 uppercase">
+                    Product Images (Upload Files)
+                  </label>
+
+                  {/* Previews Grid */}
+                  {formData.images.length > 0 && (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                      {formData.images.map((item, index) => {
+                        const isObj = typeof item === 'object' && item !== null && item.preview;
+                        const displaySrc = isObj ? item.preview : getImageUrl(item);
+                        return (
+                          <div
+                            key={index}
+                            className="relative w-full h-24 rounded-xl border border-slate-200 overflow-hidden group bg-slate-50 shadow-sm"
+                          >
+                            <img src={displaySrc} alt={`Product image ${index + 1}`} className="w-full h-full object-cover" />
+                            {index === 0 && (
+                              <span className="absolute top-1 left-1 bg-[#1e3a8a] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow">
+                                Main
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveImage(index)}
+                              className="absolute inset-0 bg-slate-900/60 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                              title="Remove image"
+                            >
+                              <Trash2 className="w-5 h-5 text-red-400 hover:text-red-200" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* File Dropzone Input */}
+                  <label className="border-2 border-dashed border-slate-300 hover:border-[#1e3a8a] bg-slate-50 hover:bg-blue-50/50 rounded-xl p-5 text-center cursor-pointer flex flex-col items-center justify-center gap-2 transition-colors">
+                    <Upload className="w-6 h-6 text-[#1e3a8a]" />
+                    <div>
+                      <span className="text-sm font-bold text-slate-800">Click to upload product images</span>
+                      <p className="text-xs text-slate-400">Supports JPG, PNG, WEBP files</p>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+              <div className="p-4 sm:p-6 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0 bg-slate-50">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}

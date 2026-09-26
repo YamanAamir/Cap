@@ -205,11 +205,11 @@ const OrdersPage = () => {
           
           <div className="flex items-center gap-2.5 w-full md:w-auto flex-wrap">
               {/* Date Filter Tabs */}
-              <div className="flex items-center bg-slate-100 border border-slate-200 rounded p-1 text-xs">
+              <div className="flex items-center bg-slate-100 border border-slate-200 rounded p-1 text-xs max-w-full overflow-x-auto custom-scrollbar">
                 <button
                   type="button"
                   onClick={() => { setDateFilter('all'); setPage(1); }}
-                  className={`px-2.5 py-1 rounded font-semibold transition-all ${
+                  className={`px-2.5 py-1 rounded font-semibold transition-all whitespace-nowrap ${
                     dateFilter === 'all'
                       ? 'bg-white text-slate-900 shadow-sm'
                       : 'text-slate-600 hover:text-slate-900'
@@ -220,7 +220,7 @@ const OrdersPage = () => {
                 <button
                   type="button"
                   onClick={() => { setDateFilter('today'); setPage(1); }}
-                  className={`px-2.5 py-1 rounded font-semibold transition-all ${
+                  className={`px-2.5 py-1 rounded font-semibold transition-all whitespace-nowrap ${
                     dateFilter === 'today'
                       ? 'bg-white text-slate-900 shadow-sm'
                       : 'text-slate-600 hover:text-slate-900'
@@ -231,7 +231,7 @@ const OrdersPage = () => {
                 <button
                   type="button"
                   onClick={() => { setDateFilter('month'); setPage(1); }}
-                  className={`px-2.5 py-1 rounded font-semibold transition-all ${
+                  className={`px-2.5 py-1 rounded font-semibold transition-all whitespace-nowrap ${
                     dateFilter === 'month'
                       ? 'bg-white text-slate-900 shadow-sm'
                       : 'text-slate-600 hover:text-slate-900'
@@ -242,7 +242,7 @@ const OrdersPage = () => {
                 <button
                   type="button"
                   onClick={() => { setDateFilter('custom'); setPage(1); }}
-                  className={`px-2.5 py-1 rounded font-semibold transition-all ${
+                  className={`px-2.5 py-1 rounded font-semibold transition-all whitespace-nowrap ${
                     dateFilter === 'custom'
                       ? 'bg-white text-slate-900 shadow-sm'
                       : 'text-slate-600 hover:text-slate-900'
@@ -253,7 +253,7 @@ const OrdersPage = () => {
               </div>
 
               {dateFilter === 'custom' && (
-                <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded px-2 py-1 text-xs shadow-sm">
+                <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded px-2 py-1 text-xs shadow-sm flex-wrap max-w-full">
                   <input
                     type="date"
                     value={customDates.startDate}

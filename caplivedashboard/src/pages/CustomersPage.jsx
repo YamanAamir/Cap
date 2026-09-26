@@ -306,96 +306,98 @@ const CustomersPage = () => {
       />
 
       {editModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-[#fafafa]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in overflow-hidden">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-[#fafafa] shrink-0">
               <h3 className="text-sm font-bold text-slate-800">Edit Customer {editModal.customer.name}</h3>
-              <button onClick={() => setEditModal({ isOpen: false, customer: null })} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setEditModal({ isOpen: false, customer: null })} className="text-slate-400 hover:text-slate-600 p-1 rounded">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleUpdate} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Name</label>
-                <input 
-                  type="text" 
-                  value={editModal.customer.name}
-                  onChange={(e) => setEditModal({ ...editModal, customer: { ...editModal.customer, name: e.target.value }})}
-                  className="w-full p-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500" 
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Email</label>
-                <input 
-                  type="email" 
-                  value={editModal.customer.email}
-                  onChange={(e) => setEditModal({ ...editModal, customer: { ...editModal.customer, email: e.target.value }})}
-                  className="w-full p-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500" 
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">Phone</label>
-                <input 
-                  type="text" 
-                  value={editModal.customer.phone || ''}
-                  onChange={(e) => setEditModal({ ...editModal, customer: { ...editModal.customer, phone: e.target.value }})}
-                  className="w-full p-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500" 
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-500 mb-1">School</label>
-                <input 
-                  type="text" 
-                  value={editModal.customer.school || ''}
-                  onChange={(e) => setEditModal({ ...editModal, customer: { ...editModal.customer, school: e.target.value }})}
-                  className="w-full p-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500" 
-                />
-              </div>
-              
-              <div className="space-y-2 mt-4 border-t pt-4">
-                <label className="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer">
+            <form onSubmit={handleUpdate} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-5 sm:p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Name</label>
                   <input 
-                    type="checkbox" 
-                    checked={editModal.customer.orderEmailConsent}
-                    onChange={(e) => setEditModal({ ...editModal, customer: { ...editModal.customer, orderEmailConsent: e.target.checked }})}
-                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    type="text" 
+                    value={editModal.customer.name}
+                    onChange={(e) => setEditModal({ ...editModal, customer: { ...editModal.customer, name: e.target.value }})}
+                    className="w-full p-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500" 
+                    required
                   />
-                  <span>Order Email Consent</span>
-                </label>
-                <label className="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer">
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Email</label>
                   <input 
-                    type="checkbox" 
-                    checked={editModal.customer.smsMarketingConsent}
-                    onChange={(e) => setEditModal({ ...editModal, customer: { ...editModal.customer, smsMarketingConsent: e.target.checked }})}
-                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    type="email" 
+                    value={editModal.customer.email}
+                    onChange={(e) => setEditModal({ ...editModal, customer: { ...editModal.customer, email: e.target.value }})}
+                    className="w-full p-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500" 
+                    required
                   />
-                  <span>SMS Marketing Consent</span>
-                </label>
-                <label className="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer">
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">Phone</label>
                   <input 
-                    type="checkbox" 
-                    checked={editModal.customer.emailMarketingConsent}
-                    onChange={(e) => setEditModal({ ...editModal, customer: { ...editModal.customer, emailMarketingConsent: e.target.checked }})}
-                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    type="text" 
+                    value={editModal.customer.phone || ''}
+                    onChange={(e) => setEditModal({ ...editModal, customer: { ...editModal.customer, phone: e.target.value }})}
+                    className="w-full p-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500" 
                   />
-                  <span>Email Marketing Consent</span>
-                </label>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 mb-1">School</label>
+                  <input 
+                    type="text" 
+                    value={editModal.customer.school || ''}
+                    onChange={(e) => setEditModal({ ...editModal, customer: { ...editModal.customer, school: e.target.value }})}
+                    className="w-full p-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500" 
+                  />
+                </div>
+                
+                <div className="space-y-2 mt-4 border-t border-slate-100 pt-4">
+                  <label className="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={editModal.customer.orderEmailConsent}
+                      onChange={(e) => setEditModal({ ...editModal, customer: { ...editModal.customer, orderEmailConsent: e.target.checked }})}
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span>Order Email Consent</span>
+                  </label>
+                  <label className="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={editModal.customer.smsMarketingConsent}
+                      onChange={(e) => setEditModal({ ...editModal, customer: { ...editModal.customer, smsMarketingConsent: e.target.checked }})}
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span>SMS Marketing Consent</span>
+                  </label>
+                  <label className="flex items-center space-x-2 text-sm text-slate-700 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={editModal.customer.emailMarketingConsent}
+                      onChange={(e) => setEditModal({ ...editModal, customer: { ...editModal.customer, emailMarketingConsent: e.target.checked }})}
+                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span>Email Marketing Consent</span>
+                  </label>
+                </div>
               </div>
 
-              <div className="pt-4 flex justify-end gap-2">
+              <div className="p-4 border-t border-slate-100 flex justify-end gap-2 shrink-0 bg-slate-50">
                 <button 
                   type="button" 
                   onClick={() => setEditModal({ isOpen: false, customer: null })}
-                  className="px-4 py-2 rounded text-sm font-bold text-slate-600 hover:bg-slate-100"
+                  className="px-4 py-2 rounded text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
                   disabled={isUpdating}
-                  className="px-4 py-2 rounded text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
+                  className="px-4 py-2 rounded text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 flex items-center gap-2 transition-colors disabled:opacity-50"
                 >
                   {isUpdating && <Loader2 className="w-4 h-4 animate-spin" />}
                   Save Changes

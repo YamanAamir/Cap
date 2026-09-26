@@ -656,9 +656,9 @@ const OrderStatusesPage = () => {
 
       {/* Warning Modal when status cannot be permanently deleted due to orders */}
       {orderInUseModal.isOpen && orderInUseModal.status && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 border border-amber-200">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-amber-100 bg-amber-50/80">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200 border border-amber-200">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-amber-100 bg-amber-50/80 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
                   <AlertTriangle className="w-5 h-5" />
@@ -670,13 +670,13 @@ const OrderStatusesPage = () => {
               </div>
               <button 
                 onClick={() => setOrderInUseModal({ isOpen: false, status: null })}
-                className="text-slate-400 hover:text-slate-600 p-1"
+                className="text-slate-400 hover:text-slate-600 p-1 rounded"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 space-y-4">
+            <div className="p-5 sm:p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
               <p className="text-sm text-slate-600 leading-relaxed">
                 The status <span className="font-bold text-slate-800">"{orderInUseModal.status.name}"</span> is currently assigned to <span className="font-bold text-slate-800">{orderInUseModal.status._count?.orders || 0} order(s)</span> in your database.
               </p>
@@ -686,7 +686,7 @@ const OrderStatusesPage = () => {
               </div>
             </div>
 
-            <div className="px-5 py-4 bg-[#fafafa] border-t border-slate-100 flex items-center justify-end">
+            <div className="px-5 py-4 bg-[#fafafa] border-t border-slate-100 flex items-center justify-end shrink-0">
               <button
                 onClick={() => setOrderInUseModal({ isOpen: false, status: null })}
                 className="px-4 py-2 rounded text-sm font-bold text-slate-700 bg-slate-200 hover:bg-slate-300 transition-colors"

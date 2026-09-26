@@ -240,80 +240,82 @@ const DiscountCodesPage = () => {
 
       {/* Edit Modal */}
       {editingCode && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-[#fafafa]">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 overflow-hidden">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-[#fafafa] shrink-0">
               <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
                 <Edit2 className="w-4 h-4 text-blue-600" /> Edit Coupon #{editingCode.id}
               </h3>
               <button 
                 onClick={() => setEditingCode(null)} 
-                className="text-slate-400 hover:text-slate-600 transition-colors"
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveEdit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-600 mb-1">Coupon Code</label>
-                <input 
-                  type="text"
-                  value={editForm.code} 
-                  onChange={e => setEditForm({ ...editForm, code: e.target.value.toUpperCase() })} 
-                  required 
-                  className="w-full px-3 py-2 border border-slate-200 rounded text-sm font-mono font-bold focus:outline-none focus:border-blue-500"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSaveEdit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-5 sm:p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1">Discount Type</label>
-                  <select 
-                    value={editForm.type} 
-                    onChange={e => setEditForm({ ...editForm, type: e.target.value })} 
-                    className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 bg-white"
-                  >
-                    <option value="PERCENTAGE">Percentage (%)</option>
-                    <option value="FIXED">Fixed Amount</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1">Value</label>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">Coupon Code</label>
                   <input 
-                    type="number" 
-                    value={editForm.value} 
-                    onChange={e => setEditForm({ ...editForm, value: e.target.value })} 
+                    type="text"
+                    value={editForm.code} 
+                    onChange={e => setEditForm({ ...editForm, code: e.target.value.toUpperCase() })} 
                     required 
-                    min="1"
-                    className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-slate-200 rounded text-sm font-mono font-bold focus:outline-none focus:border-blue-500"
                   />
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1">Max Uses (Limit)</label>
-                  <input 
-                    type="number" 
-                    placeholder="Unlimited"
-                    value={editForm.maxUses} 
-                    onChange={e => setEditForm({ ...editForm, maxUses: e.target.value })} 
-                    min="1"
-                    className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1">Discount Type</label>
+                    <select 
+                      value={editForm.type} 
+                      onChange={e => setEditForm({ ...editForm, type: e.target.value })} 
+                      className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 bg-white"
+                    >
+                      <option value="PERCENTAGE">Percentage (%)</option>
+                      <option value="FIXED">Fixed Amount</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1">Value</label>
+                    <input 
+                      type="number" 
+                      value={editForm.value} 
+                      onChange={e => setEditForm({ ...editForm, value: e.target.value })} 
+                      required 
+                      min="1"
+                      className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1">Expiry Date</label>
-                  <input 
-                    type="date" 
-                    value={editForm.expiresAt} 
-                    onChange={e => setEditForm({ ...editForm, expiresAt: e.target.value })} 
-                    required 
-                    className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1">Max Uses (Limit)</label>
+                    <input 
+                      type="number" 
+                      placeholder="Unlimited"
+                      value={editForm.maxUses} 
+                      onChange={e => setEditForm({ ...editForm, maxUses: e.target.value })} 
+                      min="1"
+                      className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1">Expiry Date</label>
+                    <input 
+                      type="date" 
+                      value={editForm.expiresAt} 
+                      onChange={e => setEditForm({ ...editForm, expiresAt: e.target.value })} 
+                      required 
+                      className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+              <div className="p-4 sm:p-5 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0 bg-slate-50">
                 <button 
                   type="button" 
                   onClick={() => setEditingCode(null)}

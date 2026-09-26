@@ -44,8 +44,8 @@ const WebshopDashboardPage = () => {
       <section>
         <h2 className="text-lg font-bold text-slate-800 mb-4">Webshop Dashboard Overview</h2>
 
-        <div className="bg-[#f0f4f8] rounded-xl p-6 border border-slate-200">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-[#f0f4f8] rounded-xl p-4 sm:p-6 border border-slate-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             
             {/* Total Revenue Card */}
             <div className="bg-[#fdf8f4] rounded-xl p-5 flex items-center border border-orange-100 shadow-sm">
@@ -120,7 +120,7 @@ const WebshopDashboardPage = () => {
       </section>
 
       {/* Quick Action Cards Grid */}
-      <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Link
           to="/dashboard/webshop/products"
           className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow flex items-center justify-between group"

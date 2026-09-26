@@ -51,12 +51,12 @@ const DashboardPage = () => {
               <h2 className="text-lg font-bold text-slate-800">Dashboard Overview</h2>
               
               {/* Date Filter Controls */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 shadow-sm text-xs">
+              <div className="flex items-center gap-2 flex-wrap max-w-full">
+                <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 shadow-sm text-xs overflow-x-auto custom-scrollbar max-w-full">
                   <button
                     type="button"
                     onClick={() => setActiveFilter('all')}
-                    className={`px-3 py-1.5 rounded-md font-semibold transition-all ${
+                    className={`px-3 py-1.5 rounded-md font-semibold transition-all whitespace-nowrap ${
                       activeFilter === 'all'
                         ? 'bg-blue-600 text-white shadow-sm'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -67,7 +67,7 @@ const DashboardPage = () => {
                   <button
                     type="button"
                     onClick={() => setActiveFilter('today')}
-                    className={`px-3 py-1.5 rounded-md font-semibold transition-all ${
+                    className={`px-3 py-1.5 rounded-md font-semibold transition-all whitespace-nowrap ${
                       activeFilter === 'today'
                         ? 'bg-blue-600 text-white shadow-sm'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -78,7 +78,7 @@ const DashboardPage = () => {
                   <button
                     type="button"
                     onClick={() => setActiveFilter('month')}
-                    className={`px-3 py-1.5 rounded-md font-semibold transition-all ${
+                    className={`px-3 py-1.5 rounded-md font-semibold transition-all whitespace-nowrap ${
                       activeFilter === 'month'
                         ? 'bg-blue-600 text-white shadow-sm'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -89,7 +89,7 @@ const DashboardPage = () => {
                   <button
                     type="button"
                     onClick={() => setActiveFilter('custom')}
-                    className={`px-3 py-1.5 rounded-md font-semibold transition-all ${
+                    className={`px-3 py-1.5 rounded-md font-semibold transition-all whitespace-nowrap ${
                       activeFilter === 'custom'
                         ? 'bg-blue-600 text-white shadow-sm'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -100,7 +100,7 @@ const DashboardPage = () => {
                 </div>
 
                 {activeFilter === 'custom' && (
-                  <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-2.5 py-1 shadow-sm text-xs animate-in fade-in duration-300">
+                  <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-2.5 py-1 shadow-sm text-xs animate-in fade-in duration-300 flex-wrap">
                     <input
                       type="date"
                       value={customDates.startDate}
@@ -119,7 +119,7 @@ const DashboardPage = () => {
               </div>
             </div>
             
-            <div className="bg-[#f0f4f8] rounded-xl p-6 border border-slate-200">
+            <div className="bg-[#f0f4f8] rounded-xl p-4 sm:p-6 border border-slate-200">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 
                 {/* Total Orders Card */}
@@ -164,7 +164,7 @@ const DashboardPage = () => {
                     </div>
 
                     {/* Hover Tooltip for Detailed Financial Breakdown */}
-                    <div className="absolute left-1/2 -bottom-2 translate-y-full -translate-x-1/2 hidden group-hover:block z-30 w-64 p-3 bg-slate-900 text-white rounded-xl shadow-2xl text-xs space-y-1.5 pointer-events-none transition-all duration-200 border border-slate-700">
+                    <div className="absolute left-1/2 -bottom-2 translate-y-full -translate-x-1/2 hidden group-hover:block z-30 w-64 max-w-[calc(100vw-3rem)] p-3 bg-slate-900 text-white rounded-xl shadow-2xl text-xs space-y-1.5 pointer-events-none transition-all duration-200 border border-slate-700">
                       <div className="font-bold border-b border-slate-700 pb-1 text-purple-300 text-[11px] flex justify-between">
                         <span>Installments Breakdown</span>
                         <span>{stats?.installmentOrdersCount || 0} Orders</span>
@@ -238,8 +238,8 @@ const DashboardPage = () => {
               </Link>
             </div>
 
-            <div className="bg-white rounded border border-slate-200 overflow-hidden">
-              <table className="w-full text-left text-sm">
+            <div className="bg-white rounded border border-slate-200 overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left text-sm whitespace-nowrap">
                 <thead className="bg-[#fafafa] border-b border-slate-200">
                   <tr>
                     <th className="px-6 py-4 font-bold text-slate-700">Order #</th>

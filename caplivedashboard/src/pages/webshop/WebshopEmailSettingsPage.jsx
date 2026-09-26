@@ -316,75 +316,77 @@ const WebshopEmailSettingsPage = () => {
 
       {/* CREATE / EDIT TEMPLATE MODAL */}
       {isTemplateModalOpen && (
-        <div className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-2xl overflow-hidden my-8">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-2xl flex flex-col max-h-[90vh] sm:max-h-[85vh] overflow-hidden">
+            <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
               <h3 className="text-lg font-bold text-slate-900">
                 {editingTemplate ? 'Edit Email Template' : 'Add New Email Template'}
               </h3>
-              <button onClick={() => setIsTemplateModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setIsTemplateModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded">
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleRequestSaveTemplate} className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                  Template Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Order Shipped Email"
-                  value={templateForm.name}
-                  onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1e3a8a]"
-                />
+            <form onSubmit={handleRequestSaveTemplate} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="p-4 sm:p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                    Template Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Order Shipped Email"
+                    value={templateForm.name}
+                    onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })}
+                    className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1e3a8a]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                    Email Subject Line *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Your order {order_number} has been shipped!"
+                    value={templateForm.subject}
+                    onChange={(e) => setTemplateForm({ ...templateForm, subject: e.target.value })}
+                    className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1e3a8a]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                    Email Body (Rich Text)
+                  </label>
+                  <RichTextEditor
+                    value={templateForm.body}
+                    onChange={(html) => setTemplateForm({ ...templateForm, body: html })}
+                    placeholder="Compose email template message..."
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="tplActive"
+                    checked={templateForm.isActive}
+                    onChange={(e) => setTemplateForm({ ...templateForm, isActive: e.target.checked })}
+                    className="w-4 h-4 text-[#1e3a8a] rounded cursor-pointer"
+                  />
+                  <label htmlFor="tplActive" className="text-sm font-medium text-slate-700 cursor-pointer">
+                    Template Active
+                  </label>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                  Email Subject Line *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Your order {order_number} has been shipped!"
-                  value={templateForm.subject}
-                  onChange={(e) => setTemplateForm({ ...templateForm, subject: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#1e3a8a]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                  Email Body (Rich Text)
-                </label>
-                <RichTextEditor
-                  value={templateForm.body}
-                  onChange={(html) => setTemplateForm({ ...templateForm, body: html })}
-                  placeholder="Compose email template message..."
-                />
-              </div>
-
-              <div className="pt-2 flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="tplActive"
-                  checked={templateForm.isActive}
-                  onChange={(e) => setTemplateForm({ ...templateForm, isActive: e.target.checked })}
-                  className="w-4 h-4 text-[#1e3a8a] rounded"
-                />
-                <label htmlFor="tplActive" className="text-sm font-medium text-slate-700 cursor-pointer">
-                  Template Active
-                </label>
-              </div>
-
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+              <div className="p-4 sm:p-6 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0 bg-slate-50">
                 <button
                   type="button"
                   onClick={() => setIsTemplateModalOpen(false)}
-                  className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700"
+                  className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-semibold text-slate-700 hover:bg-white transition-colors"
                 >
                   Cancel
                 </button>

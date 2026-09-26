@@ -119,13 +119,13 @@ const PlanModal = ({ plan, onClose, onSaved }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded border border-slate-200 shadow-xl w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200 overflow-hidden">
+      <div className="bg-white rounded border border-slate-200 shadow-xl w-full max-w-2xl max-h-[92vh] sm:max-h-[85vh] flex flex-col overflow-hidden">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-[#fafafa]">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-slate-200 bg-[#fafafa] shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-[#1e3a8a] rounded text-white">
+            <div className="p-2 bg-[#1e3a8a] rounded text-white shrink-0">
               <CreditCard className="h-4 w-4" />
             </div>
             <div>
@@ -137,13 +137,13 @@ const PlanModal = ({ plan, onClose, onSaved }) => {
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors">
+          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors shrink-0">
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 space-y-6">
 
           {/* Name & Target Program/Tier */}
           <div className="space-y-4">
@@ -364,11 +364,11 @@ const PlanModal = ({ plan, onClose, onSaved }) => {
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 py-4 border-t border-slate-200 bg-[#fafafa] flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-500">
+        <div className="px-4 sm:px-6 py-4 border-t border-slate-200 bg-[#fafafa] flex items-center justify-between shrink-0">
+          <span className="text-xs font-bold text-slate-500 hidden sm:inline">
             Ready to save
           </span>
-          <div className="flex gap-3">
+          <div className="flex gap-3 ml-auto">
             <button
               onClick={onClose}
               className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 hover:bg-slate-200 rounded transition-colors"
