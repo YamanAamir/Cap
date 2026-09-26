@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { getDashboardStats } from '../services/admin.service';
 import { Loader2, Package, CalendarCheck, ShoppingCart, Activity, CreditCard } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -9,6 +10,56 @@ const DashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all'); // 'all' | 'today' | 'month' | 'custom'
   const [customDates, setCustomDates] = useState({ startDate: '', endDate: '' });
+
+  // FIX: the installments card sits inside a horizontally scrollable row
+  // (overflow-x-auto). Setting overflow-x forces the browser to also clip
+  // overflow-y, so the old absolute/group-hover tooltip was getting cropped
+  // by that scroll box. Rendering it through a portal straight to <body>,
+  // positioned with real screen coordinates on hover, makes it fully escape
+  // that clipping - it always appears outside/above everything else.
+  const installmentsCardRef = useRef(null);
+  const [showInstallmentTooltip, setShowInstallmentTooltip] = useState(false);
+  const [tooltipCoords, setTooltipCoords] = useState({ top: 0, left: 0 });
+
+  const updateInstallmentTooltipPosition = () => {
+    if (installmentsCardRef.current) {
+      const rect = installmentsCardRef.current.getBoundingClientRect();
+      setTooltipCoords({
+        top: rect.bottom + 10,
+        left: rect.left + rect.width / 2,
+      });
+    }
+  };
+
+  // Desktop: show/hide on hover.
+  const handleInstallmentsEnter = () => {
+    updateInstallmentTooltipPosition();
+    setShowInstallmentTooltip(true);
+  };
+
+  const handleInstallmentsLeave = () => setShowInstallmentTooltip(false);
+
+  // FIX: touch devices don't fire hover events at all, so on mobile the
+  // installments tooltip was simply unreachable. Tapping the card now
+  // toggles it open/closed instead.
+  const handleInstallmentsClick = (e) => {
+    e.stopPropagation();
+    updateInstallmentTooltipPosition();
+    setShowInstallmentTooltip((prev) => !prev);
+  };
+
+  // FIX: since mobile has no "mouse leave" to close it, tapping anywhere
+  // else on the page closes the tooltip.
+  useEffect(() => {
+    if (!showInstallmentTooltip) return;
+    const handleOutsideClick = (e) => {
+      if (installmentsCardRef.current && !installmentsCardRef.current.contains(e.target)) {
+        setShowInstallmentTooltip(false);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => document.removeEventListener('click', handleOutsideClick);
+  }, [showInstallmentTooltip]);
 
   const fetchStats = (filter = activeFilter, dates = customDates) => {
     setLoading(true);
@@ -152,7 +203,13 @@ const DashboardPage = () => {
                 </div>
 
                 {/* Installments Card */}
-                <div className="bg-[#f5f3ff] rounded-xl p-5 flex items-center border border-purple-100 relative group min-w-[260px] flex-1">
+                <div
+                  ref={installmentsCardRef}
+                  onMouseEnter={handleInstallmentsEnter}
+                  onMouseLeave={handleInstallmentsLeave}
+                  onClick={handleInstallmentsClick}
+                  className="bg-[#f5f3ff] rounded-xl p-5 flex items-center border border-purple-100 relative min-w-[260px] flex-1 cursor-pointer"
+                >
                   <div className="w-12 h-12 rounded-full bg-[#8b5cf6] flex items-center justify-center text-white shrink-0 mr-4 shadow-sm">
                     <CreditCard className="h-6 w-6" />
                   </div>
@@ -175,32 +232,45 @@ const DashboardPage = () => {
                         </p>
                       </div>
                     </div>
-
-                    {/* Hover Tooltip for Detailed Financial Breakdown */}
-                    <div className="absolute left-1/2 -bottom-2 translate-y-full -translate-x-1/2 hidden group-hover:block z-30 w-64 max-w-[calc(100vw-3rem)] p-3 bg-slate-900 text-white rounded-xl shadow-2xl text-xs space-y-1.5 pointer-events-none transition-all duration-200 border border-slate-700">
-                      <div className="font-bold border-b border-slate-700 pb-1 text-purple-300 text-[11px] flex justify-between">
-                        <span>Installments Breakdown</span>
-                        <span>{stats?.installmentOrdersCount || 0} Orders</span>
-                      </div>
-                      <div className="flex justify-between text-[11px]">
-                        <span className="text-slate-300">Down Payment (Paid):</span>
-                        <span className="font-bold text-emerald-400">{formatCurrency(stats?.installmentDownPaymentPaid)}</span>
-                      </div>
-                      <div className="flex justify-between text-[11px]">
-                        <span className="text-slate-300">Rates Paid:</span>
-                        <span className="font-bold text-emerald-400">{formatCurrency(stats?.installmentRatesPaid)}</span>
-                      </div>
-                      <div className="flex justify-between text-[11px]">
-                        <span className="text-slate-300">Remaining (Unpaid):</span>
-                        <span className="font-bold text-amber-400">{formatCurrency(stats?.installmentRemainingAmount)}</span>
-                      </div>
-                      <div className="flex justify-between text-[11px] pt-1 border-t border-slate-800">
-                        <span className="text-slate-300 font-bold">Total Order Value:</span>
-                        <span className="font-bold text-purple-300">{formatCurrency(stats?.installmentTotalValue)}</span>
-                      </div>
-                    </div>
                   </div>
                 </div>
+
+                {/* Hover Tooltip for Detailed Financial Breakdown - rendered via
+                    portal directly to <body> so it always renders on top and
+                    is never clipped by the scrollable card row above. */}
+                {showInstallmentTooltip && createPortal(
+                  <div
+                    style={{
+                      position: 'fixed',
+                      top: tooltipCoords.top,
+                      left: tooltipCoords.left,
+                      transform: 'translateX(-50%)',
+                    }}
+                    className="z-[9999] w-64 max-w-[calc(100vw-3rem)] p-3 bg-slate-900 text-white rounded-xl shadow-2xl text-xs space-y-1.5 pointer-events-none border border-slate-700"
+                  >
+                    <div className="font-bold border-b border-slate-700 pb-1 text-purple-300 text-[11px] flex justify-between">
+                      <span>Installments Breakdown</span>
+                      <span>{stats?.installmentOrdersCount || 0} Orders</span>
+                    </div>
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-slate-300">Down Payment (Paid):</span>
+                      <span className="font-bold text-emerald-400">{formatCurrency(stats?.installmentDownPaymentPaid)}</span>
+                    </div>
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-slate-300">Rates Paid:</span>
+                      <span className="font-bold text-emerald-400">{formatCurrency(stats?.installmentRatesPaid)}</span>
+                    </div>
+                    <div className="flex justify-between text-[11px]">
+                      <span className="text-slate-300">Remaining (Unpaid):</span>
+                      <span className="font-bold text-amber-400">{formatCurrency(stats?.installmentRemainingAmount)}</span>
+                    </div>
+                    <div className="flex justify-between text-[11px] pt-1 border-t border-slate-800">
+                      <span className="text-slate-300 font-bold">Total Order Value:</span>
+                      <span className="font-bold text-purple-300">{formatCurrency(stats?.installmentTotalValue)}</span>
+                    </div>
+                  </div>,
+                  document.body
+                )}
 
                 {/* Revenue Card */}
                 <div className="bg-[#fdf8f4] rounded-xl p-5 flex items-center border border-orange-100 min-w-[220px] flex-1">
