@@ -49,8 +49,8 @@ const getInnerImagePostMessage = (options) => {
   const layout = foer['Indvendigt foer billede layout'];
   const img = foer['Indvendigt foer billede'];
   const hasImage = (Array.isArray(layout) && layout.length > 0) ||
-                   (Array.isArray(img) && img.length > 0) ||
-                   (typeof img === 'string' && img.trim().length > 0 && img !== 'Ingen');
+    (Array.isArray(img) && img.length > 0) ||
+    (typeof img === 'string' && img.trim().length > 0 && img !== 'Ingen');
   return hasImage ? "inner image yes" : "inner image no";
 };
 
@@ -143,7 +143,7 @@ const StudentDashboard = () => {
   const handleCaptureFullView = async () => {
     setIsCapturingFullView(true);
     console.log('Requesting screenshots from PlayCanvas...');
-    
+
     try {
       const capCapture = await import('../utils/capCapture');
       const images = await capCapture.captureCapViews();
@@ -268,13 +268,13 @@ const StudentDashboard = () => {
     syncTilbehorToIframes(selectedOptions.TILBEHØR);
   }, [activeMenu, isAppReady]);
 
-  
+
 
   // ---------------- LUKSUS ----------------
-  
+
 
   // ---------------- PREMIUM ----------------
-  
+
 
   let prices = dynamicConfig?.priceConfig?.[packageName || 'standard'] || {};
 
@@ -413,10 +413,10 @@ const StudentDashboard = () => {
 
     // Package base price
     let iniialPrice = 0;
-    
+
     // Attempt to read from dynamicConfig
     const progKey = program ? (Object.keys(dynamicConfig?.basePrices || {}).find(k => k.toLowerCase() === program.toLowerCase()) || program) : 'STX';
-    
+
     if (dynamicConfig?.basePrices && dynamicConfig.basePrices[progKey] && dynamicConfig.basePrices[progKey][packageName] !== undefined) {
       iniialPrice = dynamicConfig.basePrices[progKey][packageName];
     } else {
@@ -434,11 +434,11 @@ const StudentDashboard = () => {
       const front = selectedOptions["UDDANNELSESBÅND"]?.['Broderi foran'] || '';
       const name = selectedOptions.BRODERI?.['Navne broderi'] || '';
       const school = selectedOptions.BRODERI?.['Skolebroderi'] || '';
-      
+
       if (front.trim() !== '' && name.trim() !== '' && school.trim() !== '') {
         const activePrices = prices || standardPrices;
         let frontPrice = 0, namePrice = 0, schoolPrice = 0;
-        
+
         const frontPricing = activePrices["UDDANNELSESBÅND"]?.['Broderi foran'] || standardPrices["UDDANNELSESBÅND"]?.['Broderi foran'];
         if (frontPricing) {
           frontPrice = calcTextPrice(front, frontPricing);
@@ -451,7 +451,7 @@ const StudentDashboard = () => {
         if (schoolPricing) {
           schoolPrice = calcTextPrice(school, schoolPricing);
         }
-        
+
         const bundlePrice = (dynamicConfig?.basichueBundlePrices?.[progKey] !== undefined)
           ? parseFloat(dynamicConfig.basichueBundlePrices[progKey])
           : (parseFloat(dynamicConfig?.basichueBundlePrice) || 220);
@@ -823,8 +823,8 @@ const StudentDashboard = () => {
 
 
     window.addEventListener("message", handleMessage);
-    
-  return () => window.removeEventListener("message", handleMessage);
+
+    return () => window.removeEventListener("message", handleMessage);
   }, [program, selectedOptions]);
 
   // Add this useEffect to debug
@@ -837,7 +837,7 @@ const StudentDashboard = () => {
   useEffect(() => {
     var iframe_desktop = document.getElementById("preview-iframe");
     var iframe_mobile = document.getElementById("preview-iframe2");
-    
+
     if (!iframe_desktop || !iframe_mobile) return;
 
     if (window.innerWidth >= 768) {
@@ -1035,12 +1035,12 @@ const StudentDashboard = () => {
               )}
               {activeMenu === "SKYGGE" && (
                 <Shade
-                    selectedOptions={selectedOptions.SKYGGE}
-                    onOptionChange={(key, value) =>
-                      handleOptionChange("SKYGGE", key, value)
-                    }
-                    program={program} visibilityConfig={visibilityConfig} pakke={packageName}
-                  />
+                  selectedOptions={selectedOptions.SKYGGE}
+                  onOptionChange={(key, value) =>
+                    handleOptionChange("SKYGGE", key, value)
+                  }
+                  program={program} visibilityConfig={visibilityConfig} pakke={packageName}
+                />
               )}
               {activeMenu === "FOER" && (
                 <Foer
@@ -1115,34 +1115,17 @@ const StudentDashboard = () => {
                   +{getDeliveryFee().toFixed(2)} DKK
                 </span>
               </div>
-                <button
-                  onClick={handleCaptureFullView}
-                  disabled={isCapturingFullView}
-                  type="button"
-                  className="w-full mb-3 py-3 rounded text-sm font-bold uppercase tracking-wider transition-all duration-200 bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
-                >
-                  {isCapturingFullView ? (
-                    <>
-                      <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
-                      Henter 3D Billeder...
-                    </>
-                  ) : (
-                    <>
-                      <span>📸</span> Download 3D Billeder
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={collectSelectedOptions}
-                  disabled={!sizeFlag}
-                  className={`w-full py-3.5 rounded text-sm font-bold uppercase tracking-wider transition-colors
+              <button
+                onClick={collectSelectedOptions}
+                disabled={!sizeFlag}
+                className={`w-full py-3.5 rounded text-sm font-bold uppercase tracking-wider transition-colors
                   ${sizeFlag
-                      ? "bg-[#16a34a] text-white hover:bg-[#15803d]"
-                      : "bg-slate-100 text-slate-400 cursor-not-allowed"
-                    }`}
-                >
-                  Godkend og Betal
-                </button>
+                    ? "bg-[#16a34a] text-white hover:bg-[#15803d]"
+                    : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                  }`}
+              >
+                Godkend og Betal
+              </button>
             </div>
           </div>
 
@@ -1150,78 +1133,78 @@ const StudentDashboard = () => {
           <div className="flex-1 relative bg-slate-50">
             {/* Iframe Preview Area */}
             <div className="absolute inset-0 w-full h-full overflow-hidden">
-                <iframe
-                  id="preview-iframe"
-                  src=""
-                  className="w-full h-full"
-                  frameBorder="0"
-                  title="3D Student Card Preview"
-                  onLoad={handleIframeLoad}
-                />
+              <iframe
+                id="preview-iframe"
+                src=""
+                className="w-full h-full"
+                frameBorder="0"
+                title="3D Student Card Preview"
+                onLoad={handleIframeLoad}
+              />
 
-                {/* Model Loading Overlay - Desktop */}
-                {!isModelLoaded && (
-                  <div style={{
-                    position: "absolute",
-                    inset: 0,
-                    background: showBlurEffect ? "rgba(255, 255, 255, 0.5)" : "#ffffff",
-                    backdropFilter: showBlurEffect ? "blur(8px)" : "none",
-                    WebkitBackdropFilter: showBlurEffect ? "blur(8px)" : "none",
-                    transition: "all 0.5s ease",
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    zIndex: 30,
-                    gap: 36,
-                  }}>
+              {/* Model Loading Overlay - Desktop */}
+              {!isModelLoaded && (
+                <div style={{
+                  position: "absolute",
+                  inset: 0,
+                  background: showBlurEffect ? "rgba(255, 255, 255, 0.5)" : "#ffffff",
+                  backdropFilter: showBlurEffect ? "blur(8px)" : "none",
+                  WebkitBackdropFilter: showBlurEffect ? "blur(8px)" : "none",
+                  transition: "all 0.5s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  zIndex: 30,
+                  gap: 36,
+                }}>
 
-                    {/* Large Student Life Logo — no circle */}
-                    <img
-                      src={LOGO}
-                      alt="Student Life"
-                      style={{
-                        height: 160,
-                        objectFit: "contain",
-                        userSelect: "none",
-                        filter: "brightness(0)",
-                      }}
-                    />
+                  {/* Large Student Life Logo — no circle */}
+                  <img
+                    src={LOGO}
+                    alt="Student Life"
+                    style={{
+                      height: 160,
+                      objectFit: "contain",
+                      userSelect: "none",
+                      filter: "brightness(0)",
+                    }}
+                  />
 
-                    {/* Premium shimmer loader bar */}
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, marginTop: -30 }}>
+                  {/* Premium shimmer loader bar */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, marginTop: -30 }}>
+                    <div style={{
+                      width: 200,
+                      height: 2,
+                      borderRadius: 99,
+                      background: "#cbd5e1",
+                      overflow: "hidden",
+                      position: "relative",
+                    }}>
                       <div style={{
-                        width: 200,
-                        height: 2,
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        height: "100%",
+                        width: "45%",
                         borderRadius: 99,
-                        background: "#cbd5e1",
-                        overflow: "hidden",
-                        position: "relative",
-                      }}>
-                        <div style={{
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
-                          height: "100%",
-                          width: "45%",
-                          borderRadius: 99,
-                          background: "linear-gradient(90deg, transparent, #475569, #0f172a, #475569, transparent)",
-                          animation: "sl-shimmer 1.8s ease-in-out infinite",
-                        }} />
-                      </div>
-
-                      <p style={{
-                        margin: 0,
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: "#0f172a",
-                        letterSpacing: "0.18em",
-                        textTransform: "uppercase",
-                        fontFamily: "'Inter', 'Segoe UI', sans-serif",
-                      }}>{showBlurEffect ? "Indlæser standardkonfiguration…" : "Indlæser din model…"}</p>
+                        background: "linear-gradient(90deg, transparent, #475569, #0f172a, #475569, transparent)",
+                        animation: "sl-shimmer 1.8s ease-in-out infinite",
+                      }} />
                     </div>
 
-                    <style>{`
+                    <p style={{
+                      margin: 0,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: "#0f172a",
+                      letterSpacing: "0.18em",
+                      textTransform: "uppercase",
+                      fontFamily: "'Inter', 'Segoe UI', sans-serif",
+                    }}>{showBlurEffect ? "Indlæser standardkonfiguration…" : "Indlæser din model…"}</p>
+                  </div>
+
+                  <style>{`
                       @keyframes sl-float {
                         0%, 100% { transform: translateY(0px); opacity: 1; }
                         50% { transform: translateY(-8px); opacity: 0.92; }
@@ -1231,25 +1214,25 @@ const StudentDashboard = () => {
                         100% { left: 110%; }
                       }
                     `}</style>
-                  </div>
-                )}
+                </div>
+              )}
 
-                {/* Floating AR Button */}
-                <button
-                  onClick={() => window.open("https://elipsestudio.com/CapAR/", "_blank")}
-                  className="absolute top-4 right-4 z-20 group transition-all duration-300 active:scale-95"
-                >
-                  <div className="p-2 bg-white/20 backdrop-blur-md rounded-xl border border-white/30 transition-transform duration-300 group-hover:scale-110 group-hover:bg-white/40 shadow-sm">
-                    <svg viewBox="0 0 24 24" fill="none" className="w-10 h-10 text-green-600 drop-shadow-sm">
-                      <path d="M12 3L20 7.5V16.5L12 21L4 16.5V7.5L12 3Z" fill="white" fillOpacity="0.8" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-                      <path d="M12 12L20 7.5M12 12V21M12 12L4 7.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </div>
-                </button>
-              </div>
+              {/* Floating AR Button */}
+              <button
+                onClick={() => window.open("https://elipsestudio.com/CapAR/", "_blank")}
+                className="absolute top-4 right-4 z-20 group transition-all duration-300 active:scale-95"
+              >
+                <div className="p-2 bg-white/20 backdrop-blur-md rounded-xl border border-white/30 transition-transform duration-300 group-hover:scale-110 group-hover:bg-white/40 shadow-sm">
+                  <svg viewBox="0 0 24 24" fill="none" className="w-10 h-10 text-green-600 drop-shadow-sm">
+                    <path d="M12 3L20 7.5V16.5L12 21L4 16.5V7.5L12 3Z" fill="white" fillOpacity="0.8" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                    <path d="M12 12L20 7.5M12 12V21M12 12L4 7.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+              </button>
             </div>
           </div>
         </div>
+      </div>
       {/* moblail */}
       <div className="md:hidden flex flex-col ">
         {/* Mobile Preview Panel - Top */}
@@ -1453,12 +1436,12 @@ const StudentDashboard = () => {
                   )}
                   {activeMenu === "SKYGGE" && (
                     <Shade
-                    selectedOptions={selectedOptions.SKYGGE}
-                    onOptionChange={(key, value) =>
-                      handleOptionChange("SKYGGE", key, value)
-                    }
-                    program={program} visibilityConfig={visibilityConfig} pakke={packageName}
-                  />
+                      selectedOptions={selectedOptions.SKYGGE}
+                      onOptionChange={(key, value) =>
+                        handleOptionChange("SKYGGE", key, value)
+                      }
+                      program={program} visibilityConfig={visibilityConfig} pakke={packageName}
+                    />
                   )}
                   {activeMenu === "FOER" && (
                     <Foer
@@ -1518,7 +1501,7 @@ const StudentDashboard = () => {
                   <span className="text-sm">⚡</span> Betal i 3 rater
                 </span>
                 <span className="font-semibold text-emerald-700">
-                 I dag: {matchingInstallmentPlan.downPaymentAmount} kr.
+                  I dag: {matchingInstallmentPlan.downPaymentAmount} kr.
                 </span>
               </div>
             )}
@@ -1538,23 +1521,6 @@ const StudentDashboard = () => {
                 </div>
               </div>
             </div>
-            <button
-              onClick={handleCaptureFullView}
-              disabled={isCapturingFullView}
-              type="button"
-              className="w-full mb-2 py-2.5 rounded-xl font-semibold transition-all duration-200 bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
-            >
-              {isCapturingFullView ? (
-                <>
-                  <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
-                  Henter 3D Billeder...
-                </>
-              ) : (
-                <>
-                  <span>📸</span> Download 3D Billeder
-                </>
-              )}
-            </button>
             <button
               onClick={collectSelectedOptions}
               disabled={!sizeFlag}

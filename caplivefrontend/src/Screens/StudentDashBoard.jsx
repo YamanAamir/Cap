@@ -52,8 +52,8 @@ const getInnerImagePostMessage = (options) => {
   const layout = foer['Indvendigt foer billede layout'];
   const img = foer['Indvendigt foer billede'];
   const hasImage = (Array.isArray(layout) && layout.length > 0) ||
-                   (Array.isArray(img) && img.length > 0) ||
-                   (typeof img === 'string' && img.trim().length > 0 && img !== 'Ingen');
+    (Array.isArray(img) && img.length > 0) ||
+    (typeof img === 'string' && img.trim().length > 0 && img !== 'Ingen');
   return hasImage ? "inner image yes" : "inner image no";
 };
 
@@ -1181,23 +1181,6 @@ const StudentDashboard = () => {
                   </span>
                 </div>
                 <button
-                  onClick={handleCaptureFullView}
-                  disabled={isCapturingFullView}
-                  type="button"
-                  className="w-full mb-3 py-3 rounded text-sm font-bold uppercase tracking-wider transition-all duration-200 bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
-                >
-                  {isCapturingFullView ? (
-                    <>
-                      <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
-                      Henter 3D Billeder...
-                    </>
-                  ) : (
-                    <>
-                      <span>📸</span> Download 3D Billeder
-                    </>
-                  )}
-                </button>
-                <button
                   onClick={collectSelectedOptions}
                   disabled={!sizeFlag}
                   className={`w-full py-3.5 rounded text-sm font-bold uppercase tracking-wider transition-colors
@@ -1612,23 +1595,6 @@ const StudentDashboard = () => {
                 </div>
               </div>
             </div>
-            <button
-              onClick={handleCaptureFullView}
-              disabled={isCapturingFullView}
-              type="button"
-              className="w-full mb-2 py-2.5 rounded-xl font-semibold transition-all duration-200 bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
-            >
-              {isCapturingFullView ? (
-                <>
-                  <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
-                  Henter 3D Billeder...
-                </>
-              ) : (
-                <>
-                  <span>📸</span> Download 3D Billeder
-                </>
-              )}
-            </button>
             <button
               onClick={collectSelectedOptions}
               disabled={!sizeFlag}
