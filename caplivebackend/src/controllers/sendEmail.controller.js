@@ -1479,7 +1479,7 @@ const capOrderEmail = (orderData) => {
                               <td style="padding:10px 0;">
                                 <table width="100%" border="0" cellpadding="0" cellspacing="0">
                                   <tr><td style="font-size:14px; text-transform:uppercase; padding-bottom:5px;">Emblem type</td></tr>
-                                  <tr><td style="font-size:16px;">${selectedOptions.KOKARDE.Type}</td></tr>
+                                  <tr><td style="font-size:16px;">${selectedOptions.KOKARDE?.Kokarde === 'Flag' ? (selectedOptions.KOKARDE?.Flag?.name || selectedOptions.KOKARDE?.Flag || selectedOptions.KOKARDE?.Type || 'Ikke valgt') : (selectedOptions.KOKARDE?.Type?.name || selectedOptions.KOKARDE?.Type || 'Ikke valgt')}</td></tr>
                                 </table>
                               </td>
                             </tr>
@@ -2653,7 +2653,7 @@ const capOrderAdminEmail = (orderData) => {
                               <td style="padding:10px 0;">
                                 <table width="100%" border="0" cellpadding="0" cellspacing="0">
                                   <tr><td style="font-size:14px; text-transform:uppercase; padding-bottom:5px;">Emblem type</td></tr>
-                                  <tr><td style="font-size:16px;">${selectedOptions.KOKARDE.Type}</td></tr>
+                                  <tr><td style="font-size:16px;">${selectedOptions.KOKARDE?.Kokarde === 'Flag' ? (selectedOptions.KOKARDE?.Flag?.name || selectedOptions.KOKARDE?.Flag || selectedOptions.KOKARDE?.Type || 'Ikke valgt') : (selectedOptions.KOKARDE?.Type?.name || selectedOptions.KOKARDE?.Type || 'Ikke valgt')}</td></tr>
                                 </table>
                               </td>
                             </tr>

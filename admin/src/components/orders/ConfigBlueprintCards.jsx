@@ -151,6 +151,12 @@ const ConfigBlueprintCards = ({ selectedOptions, productionFilters, isFactoryVie
                     if (typeof value === 'string' && value.startsWith('data:image')) return null;
                     if (Array.isArray(value) && value[0]?.url) return null;
                     
+                    if (category.toUpperCase() === 'KOKARDE') {
+                      const kokardeVal = details.Kokarde || details.kokarde;
+                      if (kokardeVal === 'Flag' && (key === 'Type' || key === 'selectedType')) return null;
+                      if (kokardeVal !== 'Flag' && (key === 'Flag' || key === 'selectedFlag')) return null;
+                    }
+
                     let displayKey = key;
                     let isFieldVisible = true;
                     

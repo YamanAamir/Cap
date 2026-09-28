@@ -805,6 +805,17 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
     useEffect(() => {
         if (onOptionChange) {
             onOptionChange('Kokarde', selectedPrestige);
+            if (selectedPrestige === 'Flag') {
+                onOptionChange('Type', null);
+                if (selectedFlag) {
+                    onOptionChange('Flag', selectedFlag);
+                }
+            } else {
+                onOptionChange('Flag', null);
+                if (selectedType) {
+                    onOptionChange('Type', selectedType);
+                }
+            }
         }
     }, [selectedPrestige]);
 
@@ -862,9 +873,14 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
 
     useEffect(() => {
         if (onOptionChange) {
-            onOptionChange('Type', selectedType);
+            if (selectedPrestige === 'Flag') {
+                onOptionChange('Type', null);
+            } else {
+                onOptionChange('Type', selectedType);
+                onOptionChange('Flag', null);
+            }
         }
-    }, [selectedType]);
+    }, [selectedType, selectedPrestige]);
 
 
     useEffect(() => {
@@ -953,6 +969,21 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
     const handlePrestigeChange = (type) => {
         const currentBaseName = getBaseName(selectedType);
         setSelectedPrestige(type);
+
+        if (type === 'Flag') {
+            if (onOptionChange) {
+                onOptionChange('Type', null);
+                if (selectedFlag) {
+                    onOptionChange('Flag', selectedFlag);
+                }
+            }
+            return;
+        } else {
+            if (onOptionChange) {
+                onOptionChange('Flag', null);
+            }
+        }
+
         const newOptions = allTypeOptions[type]?.[selectedEmblem.name] || [];
 
         if (newOptions.length > 0) {
@@ -960,7 +991,12 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
             const matchingOption = newOptions.find(option =>
                 getBaseName(option.name) === currentBaseName
             );
-            setSelectedType(matchingOption ? matchingOption.name : newOptions[0].name);
+            const newType = matchingOption ? matchingOption.name : newOptions[0].name;
+            setSelectedType(newType);
+            if (onOptionChange) {
+                onOptionChange('Type', newType);
+                onOptionChange('Flag', null);
+            }
         }
     };
 

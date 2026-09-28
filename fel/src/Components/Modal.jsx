@@ -461,6 +461,14 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
     // Make a shallow copy so we can safely modify it
     const filtered = { ...options };
 
+    if (filtered.Kokarde === "Flag") {
+      delete filtered.Type;
+      delete filtered.selectedType;
+    } else if (filtered.Kokarde) {
+      delete filtered.Flag;
+      delete filtered.selectedFlag;
+    }
+
     // Remove empty text fields and their related color fields
     for (const [textKey, colorKey] of Object.entries(relatedPairs)) {
       if (filtered[textKey] === "") {

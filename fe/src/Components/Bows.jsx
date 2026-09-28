@@ -885,6 +885,17 @@ const getSilverEmblem = () => {
     useEffect(() => {
         if (onOptionChange) {
             onOptionChange('Kokarde', selectedPrestige);
+            if (selectedPrestige === 'Flag') {
+                onOptionChange('Type', null);
+                if (selectedFlag) {
+                    onOptionChange('Flag', selectedFlag);
+                }
+            } else {
+                onOptionChange('Flag', null);
+                if (selectedType) {
+                    onOptionChange('Type', selectedType);
+                }
+            }
         }
     }, [selectedPrestige]);
 
@@ -954,9 +965,14 @@ const getSilverEmblem = () => {
 
     useEffect(() => {
         if (onOptionChange) {
-            onOptionChange('Type', selectedType);
+            if (selectedPrestige === 'Flag') {
+                onOptionChange('Type', null);
+            } else {
+                onOptionChange('Type', selectedType);
+                onOptionChange('Flag', null);
+            }
         }
-    }, [selectedType]);
+    }, [selectedType, selectedPrestige]);
 
 
     useEffect(() => {
@@ -1042,12 +1058,22 @@ const getSilverEmblem = () => {
     // Report flag changes to parent
     useEffect(() => {
         if (onOptionChange) {
-            onOptionChange('Flag', selectedFlag);
+            if (selectedPrestige === 'Flag') {
+                onOptionChange('Flag', selectedFlag);
+                onOptionChange('Type', null);
+            } else {
+                onOptionChange('Flag', null);
+            }
         }
-    }, [selectedFlag]);
+    }, [selectedFlag, selectedPrestige]);
 
     const handleFlagChange = (flag) => {
-        setSelectedFlag(prev => prev?.name === flag.name ? null : flag);
+        const newFlag = selectedFlag?.name === flag.name ? null : flag;
+        setSelectedFlag(newFlag);
+        if (onOptionChange) {
+            onOptionChange('Flag', newFlag);
+            onOptionChange('Type', null);
+        }
     };
 
     const handleColorChange = (color) => {
@@ -1067,8 +1093,19 @@ const getSilverEmblem = () => {
         const currentBaseName = getBaseName(selectedType);
         setSelectedPrestige(type);
 
-        // Flag tab doesn't use allTypeOptions — just switch the tab
-        if (type === 'Flag') return;
+        if (type === 'Flag') {
+            if (onOptionChange) {
+                onOptionChange('Type', null);
+                if (selectedFlag) {
+                    onOptionChange('Flag', selectedFlag);
+                }
+            }
+            return;
+        } else {
+            if (onOptionChange) {
+                onOptionChange('Flag', null);
+            }
+        }
 
         const newOptions = allTypeOptions[type]?.[selectedEmblem.name] || [];
 
@@ -1077,7 +1114,12 @@ const getSilverEmblem = () => {
             const matchingOption = newOptions.find(option =>
                 getBaseName(option.name) === currentBaseName
             );
-            setSelectedType(matchingOption ? matchingOption.name : newOptions[0].name);
+            const newType = matchingOption ? matchingOption.name : newOptions[0].name;
+            setSelectedType(newType);
+            if (onOptionChange) {
+                onOptionChange('Type', newType);
+                onOptionChange('Flag', null);
+            }
         }
     };
 
