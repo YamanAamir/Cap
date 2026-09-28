@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getOrders, updateOrderStatus } from '../services/auth.service';
 import { getOrderStatuses } from '../services/admin.service';
-import { Loader2, Search, Filter, RefreshCw, ImageIcon } from 'lucide-react';
+import { Loader2, Search, Filter, RefreshCw, ImageIcon, Layers } from 'lucide-react';
 import ConfirmModal from '../components/common/ConfirmModal';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -18,9 +18,9 @@ const ProductionFactoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(100);
   const [debounceSearch, setDebounceSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('');
   const [dateFilter, setDateFilter] = useState('all'); // 'all' | 'today' | 'month' | 'custom'
   const [customDates, setCustomDates] = useState({ startDate: '', endDate: '' });
   const [statuses, setStatuses] = useState([]);
@@ -31,7 +31,11 @@ const ProductionFactoryPage = () => {
   useEffect(() => {
     getOrderStatuses().then(res => {
       // Only production-visible statuses
-      setStatuses(res.filter(s => s.isVisibleToProduction));
+      const prodStatuses = res.filter(s => s.isVisibleToProduction);
+      setStatuses(prodStatuses);
+      if (prodStatuses.length > 0) {
+        setStatusFilter(String(prodStatuses[0].id));
+      }
     }).catch(console.error);
   }, []);
 
@@ -44,10 +48,10 @@ const ProductionFactoryPage = () => {
     setLoading(true);
     try {
       const response = await getOrders({
-        page,
+        page: 1,
         search: debounceSearch,
         limit,
-        statusId: statusFilter,
+        statusId: 'all',
         isVisibleToProduction: 'true',
         dateFilter,
         startDate: customDates.startDate,
@@ -63,12 +67,8 @@ const ProductionFactoryPage = () => {
   };
 
   useEffect(() => {
-    setPage(1);
-  }, [debounceSearch, statusFilter, limit, dateFilter, customDates.startDate, customDates.endDate]);
-
-  useEffect(() => {
     fetchOrders();
-  }, [page, debounceSearch, statusFilter, limit, dateFilter, customDates.startDate, customDates.endDate]);
+  }, [debounceSearch, limit, dateFilter, customDates.startDate, customDates.endDate]);
 
   const handleStatusUpdate = async () => {
     if (!confirmModal.orderId || !confirmModal.statusId) return;
@@ -84,6 +84,14 @@ const ProductionFactoryPage = () => {
       setConfirmModal({ isOpen: false, orderId: null, statusId: null });
     }
   };
+
+  const allOrders = data.orders || [];
+
+  const displayedOrders = statusFilter === 'all'
+    ? allOrders
+    : allOrders.filter(o => String(o.statusId) === String(statusFilter));
+
+  const selectedStatus = statuses.find(s => String(s.id) === String(statusFilter));
 
   if (loading && !data.orders.length) {
     return (
@@ -109,6 +117,64 @@ const ProductionFactoryPage = () => {
         </button>
       </div>
 
+      {/* Dynamic Status Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200 mb-6 bg-slate-50/70 p-1.5 rounded-lg border border-slate-200/80 overflow-x-auto custom-scrollbar">
+        <button
+          type="button"
+          onClick={() => setStatusFilter('all')}
+          className={cn(
+            "flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-bold rounded-md transition-all cursor-pointer whitespace-nowrap shrink-0",
+            statusFilter === 'all'
+              ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+              : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+          )}
+        >
+          <Layers className="w-4 h-4 text-slate-500" />
+          <span>All Visible Queue</span>
+          <span className={cn(
+            "px-2 py-0.5 text-[11px] rounded-full font-extrabold ml-1",
+            statusFilter === 'all' ? "bg-slate-900 text-white" : "bg-slate-200 text-slate-700"
+          )}>
+            {allOrders.length}
+          </span>
+        </button>
+
+        {statuses.map(s => {
+          const count = allOrders.filter(o => String(o.statusId) === String(s.id)).length;
+          const isSelected = String(statusFilter) === String(s.id);
+          const statusColor = s.color || '#6366f1';
+
+          return (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setStatusFilter(String(s.id))}
+              className={cn(
+                "flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-bold rounded-md transition-all cursor-pointer whitespace-nowrap shrink-0",
+                isSelected
+                  ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+              )}
+            >
+              <span
+                className="w-2.5 h-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: statusColor }}
+              />
+              <span>{s.name}</span>
+              <span
+                className={cn(
+                  "px-2 py-0.5 text-[11px] rounded-full font-extrabold ml-1 transition-colors",
+                  isSelected ? "text-white" : "bg-slate-200 text-slate-700"
+                )}
+                style={{ backgroundColor: isSelected ? statusColor : undefined }}
+              >
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
           <div className="relative w-full sm:w-[220px] md:w-[250px]">
@@ -117,7 +183,7 @@ const ProductionFactoryPage = () => {
               type="text"
               placeholder="Search order or email..."
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500"
             />
           </div>
@@ -126,7 +192,7 @@ const ProductionFactoryPage = () => {
           <div className="flex items-center bg-slate-100 border border-slate-200 rounded p-1 text-xs max-w-full overflow-x-auto custom-scrollbar">
             <button
               type="button"
-              onClick={() => { setDateFilter('all'); setPage(1); }}
+              onClick={() => setDateFilter('all')}
               className={`px-2.5 py-1 rounded font-semibold transition-all whitespace-nowrap ${
                 dateFilter === 'all'
                   ? 'bg-white text-slate-900 shadow-sm'
@@ -137,7 +203,7 @@ const ProductionFactoryPage = () => {
             </button>
             <button
               type="button"
-              onClick={() => { setDateFilter('today'); setPage(1); }}
+              onClick={() => setDateFilter('today')}
               className={`px-2.5 py-1 rounded font-semibold transition-all whitespace-nowrap ${
                 dateFilter === 'today'
                   ? 'bg-white text-slate-900 shadow-sm'
@@ -148,7 +214,7 @@ const ProductionFactoryPage = () => {
             </button>
             <button
               type="button"
-              onClick={() => { setDateFilter('month'); setPage(1); }}
+              onClick={() => setDateFilter('month')}
               className={`px-2.5 py-1 rounded font-semibold transition-all whitespace-nowrap ${
                 dateFilter === 'month'
                   ? 'bg-white text-slate-900 shadow-sm'
@@ -159,7 +225,7 @@ const ProductionFactoryPage = () => {
             </button>
             <button
               type="button"
-              onClick={() => { setDateFilter('custom'); setPage(1); }}
+              onClick={() => setDateFilter('custom')}
               className={`px-2.5 py-1 rounded font-semibold transition-all whitespace-nowrap ${
                 dateFilter === 'custom'
                   ? 'bg-white text-slate-900 shadow-sm'
@@ -175,14 +241,14 @@ const ProductionFactoryPage = () => {
               <input
                 type="date"
                 value={customDates.startDate}
-                onChange={(e) => { setCustomDates(prev => ({ ...prev, startDate: e.target.value })); setPage(1); }}
+                onChange={(e) => setCustomDates(prev => ({ ...prev, startDate: e.target.value }))}
                 className="border border-slate-200 rounded px-1.5 py-0.5 text-slate-700 outline-none focus:border-blue-500"
               />
               <span className="text-slate-400 font-medium">to</span>
               <input
                 type="date"
                 value={customDates.endDate}
-                onChange={(e) => { setCustomDates(prev => ({ ...prev, endDate: e.target.value })); setPage(1); }}
+                onChange={(e) => setCustomDates(prev => ({ ...prev, endDate: e.target.value }))}
                 className="border border-slate-200 rounded px-1.5 py-0.5 text-slate-700 outline-none focus:border-blue-500"
               />
             </div>
@@ -192,8 +258,8 @@ const ProductionFactoryPage = () => {
             <Filter className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
             <select
               value={statusFilter}
-              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
-              className="w-full sm:w-48 pl-9 pr-4 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 bg-white"
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full sm:w-48 pl-9 pr-4 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 bg-white cursor-pointer"
             >
               <option value="all">All Visible Statuses</option>
               {statuses.map(s => (
@@ -203,7 +269,7 @@ const ProductionFactoryPage = () => {
           </div>
           <button 
             onClick={fetchOrders}
-            className={cn("flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 h-9 w-9 rounded border border-slate-200 transition-colors", loading && "opacity-50")}
+            className={cn("flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 h-9 w-9 rounded border border-slate-200 transition-colors cursor-pointer", loading && "opacity-50")}
             title="Refresh orders"
           >
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
@@ -211,7 +277,7 @@ const ProductionFactoryPage = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded border border-slate-200 overflow-x-auto">
+      <div className="bg-white rounded border border-slate-200 overflow-x-auto shadow-xs">
         <table className="w-full text-left text-sm whitespace-nowrap">
           <thead className="bg-[#fafafa] border-b border-slate-200">
             <tr>
@@ -223,15 +289,25 @@ const ProductionFactoryPage = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {data.orders.length === 0 && !loading ? (
+            {displayedOrders.length === 0 && !loading ? (
               <tr>
-                <td colSpan="5" className="px-6 py-8 text-center text-slate-500 font-medium">No production orders found.</td>
+                <td colSpan="5" className="px-6 py-12 text-center text-slate-500 font-medium">
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <p className="font-bold text-slate-700">No orders found for this status.</p>
+                    <p className="text-xs text-slate-400">
+                      {selectedStatus ? `Currently no orders are in status "${selectedStatus.name}".` : 'Try selecting another status tab or clear filters.'}
+                    </p>
+                  </div>
+                </td>
               </tr>
             ) : (
-              data.orders.map((order) => {
+              displayedOrders.map((order) => {
                 const customerDetails = safeParseJSON(order.customerDetails);
+                const currentStatusObj = statuses.find(s => String(s.id) === String(order.statusId));
+                const statusColor = currentStatusObj?.color || '#6366f1';
+
                 return (
-                  <tr key={order.id} className="hover:bg-slate-50 transition-colors">
+                  <tr key={order.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-6 py-4 font-bold text-slate-700">{order.orderNumber}</td>
                     <td className="px-6 py-4 text-slate-600">
                       {new Date(order.createdAt).toLocaleDateString()}
@@ -247,7 +323,10 @@ const ProductionFactoryPage = () => {
                           value={order.statusId || ''}
                           onChange={(e) => setConfirmModal({ isOpen: true, orderId: order.id, statusId: e.target.value })}
                           disabled={updatingId === order.id}
-                          className="px-2.5 py-1.5 border border-slate-200 rounded text-xs font-bold text-slate-700 bg-[#fafafa] focus:outline-none focus:border-blue-500 disabled:opacity-50"
+                          className="px-2.5 py-1.5 border rounded text-xs font-bold focus:outline-none disabled:opacity-50 transition-colors bg-[#fafafa] border-slate-200 cursor-pointer"
+                          style={{
+                            borderColor: statusColor ? `${statusColor}40` : undefined,
+                          }}
                         >
                           {statuses.map(s => (
                             <option key={s.id} value={s.id}>{s.name}</option>
@@ -256,7 +335,7 @@ const ProductionFactoryPage = () => {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <button 
-                        className="px-3 py-1.5 bg-[#1e3a8a] text-white text-xs font-bold rounded shadow-sm hover:bg-blue-800 transition-colors flex items-center gap-1.5 mx-auto"
+                        className="px-3 py-1.5 bg-[#1e3a8a] text-white text-xs font-bold rounded shadow-sm hover:bg-blue-800 transition-colors flex items-center gap-1.5 mx-auto cursor-pointer"
                         onClick={() => navigate(`/dashboard/factory/orders/${order.id}`)}
                       >
                         <ImageIcon className="h-3 w-3" /> View Specs
@@ -270,84 +349,11 @@ const ProductionFactoryPage = () => {
         </table>
       </div>
 
-      {/* Pagination Footer */}
+      {/* Footer info */}
       <div className="mt-4 px-5 py-4 bg-slate-50 border border-slate-200 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4 text-sm shrink-0">
-        {/* Entries display limit selector */}
-        <div className="flex items-center gap-2 text-slate-600 text-xs">
-          <span>Show</span>
-          <select
-            value={limit}
-            onChange={(e) => {
-              setLimit(Number(e.target.value));
-              setPage(1);
-            }}
-            className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:border-blue-500 bg-white font-bold"
-          >
-            {[5, 10, 20, 50, 100].map(size => (
-              <option key={size} value={size}>{size}</option>
-            ))}
-          </select>
-          <span>entries</span>
-        </div>
-
-        {/* Showing entries info */}
         <div className="text-slate-500 font-medium text-xs">
-          {(data.pagination?.totalCount || 0) > 0 ? (
-            <>
-              Showing <span className="font-bold text-slate-800">{((page - 1) * limit) + 1}</span> to{' '}
-              <span className="font-bold text-slate-800">{Math.min(page * limit, data.pagination?.totalCount || 0)}</span> of{' '}
-              <span className="font-bold text-slate-800">{data.pagination?.totalCount || 0}</span> orders
-            </>
-          ) : (
-            'No orders to display'
-          )}
+          Showing <span className="font-bold text-slate-800">{displayedOrders.length}</span> orders in {statusFilter === 'all' ? 'All Visible Statuses' : `"${selectedStatus?.name || 'Selected Status'}"`}
         </div>
-
-        {/* Pagination controls */}
-        {(data.pagination?.totalPages || 0) > 1 && (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPage(prev => Math.max(prev - 1, 1))}
-              disabled={page === 1}
-              className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed"
-            >
-              Previous
-            </button>
-            
-            {/* Page numbers list */}
-            {Array.from({ length: data.pagination.totalPages }, (_, i) => i + 1)
-              .filter(p => {
-                return p === 1 || p === data.pagination.totalPages || Math.abs(p - page) <= 1;
-              })
-              .map((p, index, array) => {
-                const showEllipsis = index > 0 && p - array[index - 1] > 1;
-                return (
-                  <React.Fragment key={p}>
-                    {showEllipsis && <span className="px-2 text-slate-400 text-xs">...</span>}
-                    <button
-                      onClick={() => setPage(p)}
-                      className={cn(
-                        "px-3 py-1.5 rounded text-xs font-bold transition-all",
-                        page === p
-                          ? "bg-blue-600 text-white shadow-sm"
-                          : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                      )}
-                    >
-                      {p}
-                    </button>
-                  </React.Fragment>
-                );
-              })}
-
-            <button
-              onClick={() => setPage(prev => Math.min(prev + 1, data.pagination.totalPages))}
-              disabled={page === data.pagination.totalPages}
-              className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed"
-            >
-              Next
-            </button>
-          </div>
-        )}
       </div>
 
       <ConfirmModal
@@ -365,4 +371,3 @@ const ProductionFactoryPage = () => {
 };
 
 export default ProductionFactoryPage;
-
