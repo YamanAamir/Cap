@@ -166,8 +166,16 @@ const ConfiguratorSettingsPage = () => {
   const fetchSettings = async () => {
     try {
       const response = await api.get('/admin/settings/configurator');
-      setConfig(response.data);
-      setOriginalConfigStr(JSON.stringify(response.data));
+      const data = response.data || {};
+      if (data.priceConfig) {
+        ['standard', 'basichue', 'luksus', 'premium'].forEach(tier => {
+          if (!data.priceConfig[tier]) {
+            data.priceConfig[tier] = JSON.parse(JSON.stringify(data.priceConfig.standard || {}));
+          }
+        });
+      }
+      setConfig(data);
+      setOriginalConfigStr(JSON.stringify(data));
       setError(null);
     } catch (err) {
       console.error('Error fetching settings:', err);

@@ -322,25 +322,13 @@ const StudentDashboard = () => {
 
     for (const category in selectedOptions) {
       const categoryOptions = selectedOptions[category];
-      let categoryPrices = prices[category];
-
-      if (packageName === 'basichue' && !categoryPrices && (category === 'UDDANNELSESBÅND' || category === 'BRODERI')) {
-        categoryPrices = standardPrices[category];
-      }
+      let categoryPrices = prices[category] || standardPrices[category];
 
       if (!categoryPrices) continue;
 
       for (const optionKey in categoryOptions) {
         const value = categoryOptions[optionKey];
-        let optionPrices = categoryPrices[optionKey];
-
-        if (packageName === 'basichue' && (
-          (category === 'UDDANNELSESBÅND' && optionKey === 'Broderi foran') ||
-          (category === 'BRODERI' && optionKey === 'Navne broderi') ||
-          (category === 'BRODERI' && optionKey === 'Skolebroderi')
-        )) {
-          optionPrices = standardPrices[category]?.[optionKey];
-        }
+        let optionPrices = categoryPrices[optionKey] ?? standardPrices[category]?.[optionKey];
 
         if (!optionPrices) continue;
 
@@ -458,17 +446,20 @@ const StudentDashboard = () => {
       const school = selectedOptions.BRODERI?.['Skolebroderi'] || '';
 
       if (front.trim() !== '' && name.trim() !== '' && school.trim() !== '') {
-        const standardPrices = dynamicConfig?.priceConfig?.['standard'] || {};
+        const activePrices = prices || standardPrices;
         let frontPrice = 0, namePrice = 0, schoolPrice = 0;
 
-        if (standardPrices["UDDANNELSESBÅND"] && standardPrices["UDDANNELSESBÅND"]['Broderi foran']) {
-          frontPrice = calcTextPrice(front, standardPrices["UDDANNELSESBÅND"]['Broderi foran']);
+        const frontPricing = activePrices["UDDANNELSESBÅND"]?.['Broderi foran'] || standardPrices["UDDANNELSESBÅND"]?.['Broderi foran'];
+        if (frontPricing) {
+          frontPrice = calcTextPrice(front, frontPricing);
         }
-        if (standardPrices.BRODERI && standardPrices.BRODERI['Navne broderi']) {
-          namePrice = calcTextPrice(name, standardPrices.BRODERI['Navne broderi']);
+        const namePricing = activePrices.BRODERI?.['Navne broderi'] || standardPrices.BRODERI?.['Navne broderi'];
+        if (namePricing) {
+          namePrice = calcTextPrice(name, namePricing);
         }
-        if (standardPrices.BRODERI && standardPrices.BRODERI['Skolebroderi']) {
-          schoolPrice = calcTextPrice(school, standardPrices.BRODERI['Skolebroderi']);
+        const schoolPricing = activePrices.BRODERI?.['Skolebroderi'] || standardPrices.BRODERI?.['Skolebroderi'];
+        if (schoolPricing) {
+          schoolPrice = calcTextPrice(school, schoolPricing);
         }
 
         const bundlePrice = (dynamicConfig?.basichueBundlePrices?.[progKey] !== undefined)

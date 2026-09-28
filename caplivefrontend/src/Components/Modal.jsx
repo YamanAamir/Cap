@@ -184,6 +184,8 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       displayValue = value.name;
       if (currentPriceConfig[section] && currentPriceConfig[section][key] && currentPriceConfig[section][key][value.name] !== undefined) {
         price = currentPriceConfig[section][key][value.name];
+      } else if (standardConfig[section] && standardConfig[section][key] && standardConfig[section][key][value.name] !== undefined) {
+        price = standardConfig[section][key][value.name];
       }
       if (standardConfig[section] && standardConfig[section][key] && standardConfig[section][key][value.name] !== undefined) {
         standardPrice = standardConfig[section][key][value.name];
@@ -195,6 +197,8 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
         displayValue = value;
         if (currentPriceConfig[section] && currentPriceConfig[section][key] && currentPriceConfig[section][key][value] !== undefined) {
           price = currentPriceConfig[section][key][value];
+        } else if (standardConfig[section] && standardConfig[section][key] && standardConfig[section][key][value] !== undefined) {
+          price = standardConfig[section][key][value];
         }
         if (standardConfig[section] && standardConfig[section][key] && standardConfig[section][key][value] !== undefined) {
           standardPrice = standardConfig[section][key][value];
@@ -204,6 +208,8 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
       displayValue = value.toString();
       if (currentPriceConfig[section] && currentPriceConfig[section][key] && currentPriceConfig[section][key][value.toString()] !== undefined) {
         price = currentPriceConfig[section][key][value.toString()];
+      } else if (standardConfig[section] && standardConfig[section][key] && standardConfig[section][key][value.toString()] !== undefined) {
+        price = standardConfig[section][key][value.toString()];
       }
       if (standardConfig[section] && standardConfig[section][key] && standardConfig[section][key][value.toString()] !== undefined) {
         standardPrice = standardConfig[section][key][value.toString()];

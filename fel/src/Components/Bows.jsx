@@ -688,56 +688,6 @@ const Bows = ({ selectedOptions = {}, onOptionChange, program, changeCurrentEmbl
             ].filter(Boolean)
         },
 
-
-
-
-
-            ].filter(Boolean),
-
-            Sølv: [
-                { name: 'Danmark', icon: Denmark },
-                { name: 'Sweden', icon: Sweden },
-                { name: 'Palæstina', icon: Palestine },
-                { name: 'Tyrkiet', icon: Turkey },
-                { name: 'Pakistan', icon: Pakistan },
-                { name: 'Kurdistan', icon: Kurdistan },
-                { name: 'Irak', icon: Iraq },
-                { name: 'Iran', icon: Iran },
-                { name: 'Somalia', icon: Somalia },
-                { name: 'Somaliland', icon: Somaliland },
-                { name: 'Libanon', icon: Lebanon },
-                { name: 'Afghanistan', icon: Afghanistan },
-                { name: 'Albanien', icon: Albania },
-                { name: 'Serbien', icon: Serbia },
-                { name: 'Bosnien', icon: Bosnia },
-                { name: 'Marokko', icon: Morocco },
-                ...(getSilverEmblem() || []),
-                { name: 'F Key Sølv', icon: FKeySilver },
-                { name: 'DNA Sølv', icon: DnaSilver },
-                { name: 'Pi Sølv', icon: PiSilver },
-                { name: 'IT Sølv', icon: ItSilver },
-                // { name: 'IB Sølv', icon: IbSilver },
-                // { name: 'IB Sølv Simli', icon: IbSølvSimli },
-                { name: 'Halvmåne Sølv', icon: HalvmoneSilver },
-                { name: 'Halvmåne Sølv Simli', icon: HalvmoneSilverSimli },
-                { name: 'Merkurstav Sølv', icon: MerkurstavSilver },
-                { name: 'Merkurstav Sølv Simli', icon: MerkurstavSilverDiamant },
-                { name: 'Hjerte Sølv', icon: HjerteSilv },
-                //   { name: 'Hjerte Sølv Simli', icon: HjerteSilverSimli },    
-                { name: 'Atom Sølv', icon: AtomSilver },
-                { name: 'Ahornblad Sølv', icon: AhornbladSilver },
-                { name: 'Anker Sølv', icon: AnkerSilver },
-                { name: 'Globus Sølv', icon: GlobusSilver },
-                { name: 'Lotus Sølv', icon: LotusSilver },
-                { name: 'Node Sølv', icon: NodeSilver },
-                { name: 'Sport Sølv', icon: SportSilver },
-                { name: 'Teater Sølv', icon: TeaterSilver },
-
-
-
-            ].filter(Boolean)
-        },
-
         Prestige: {
             Guld: [
                 { name: 'Diamant', icon: JupiterGold },
