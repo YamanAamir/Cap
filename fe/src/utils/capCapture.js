@@ -1,6 +1,6 @@
 const IFRAME_IDS = ['preview-iframe', 'preview-iframe2'];
 
-const compressImage = (base64Str, maxWidth = 800, quality = 0.7) => {
+const compressImage = (base64Str, maxWidth = 1920, quality = 0.95) => {
   return new Promise((resolve) => {
     if (!base64Str) return resolve(null);
     const img = new Image();
@@ -97,10 +97,10 @@ export async function captureCapViews({ timeoutMs = 15000 } = {}) {
         const { front, back, top, bottom } = data.screenshots;
         
         Promise.all([
-          compressImage(front),
-          compressImage(back),
-          compressImage(top),
-          compressImage(bottom)
+          compressImage(front, 1920, 0.95),
+          compressImage(back, 1920, 0.95),
+          compressImage(top, 1920, 0.95),
+          compressImage(bottom, 1920, 0.95)
         ]).then(([cFront, cBack, cTop, cBottom]) => {
           const result = {};
           if (cFront) result.front = cFront;
@@ -108,13 +108,13 @@ export async function captureCapViews({ timeoutMs = 15000 } = {}) {
           if (cTop) result.top = cTop;
           if (cBottom) result.bottom = cBottom;
           
-          // Auto-download pictures in browser for temporary testing
+          // Auto-download Full HD pictures in browser
           const timestamp = Date.now();
           const itemsToDownload = [
-            { url: cFront || front, name: `cap_front_${timestamp}.jpg` },
-            { url: cBack || back, name: `cap_back_${timestamp}.jpg` },
-            { url: cTop || top, name: `cap_top_${timestamp}.jpg` },
-            { url: cBottom || bottom, name: `cap_bottom_${timestamp}.jpg` },
+            { url: front || cFront, name: `cap_front_fullhd_${timestamp}.jpg` },
+            { url: back || cBack, name: `cap_back_fullhd_${timestamp}.jpg` },
+            { url: top || cTop, name: `cap_top_fullhd_${timestamp}.jpg` },
+            { url: bottom || cBottom, name: `cap_bottom_fullhd_${timestamp}.jpg` },
           ];
 
           itemsToDownload.forEach((item, index) => {
