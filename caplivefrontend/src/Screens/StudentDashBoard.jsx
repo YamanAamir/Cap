@@ -551,6 +551,10 @@ const StudentDashboard = () => {
       const penMsg = "Accessories Huekuglepen:no";
       console.log("Sending pen message to active iframe:", penMsg);
       sendToActiveIframe(penMsg);
+    } else if (packageName === "premium" || packageName === "luksus") {
+      const penMsg = "Accessories Huekuglepen:yes";
+      console.log("Sending pen message to active iframe:", penMsg);
+      sendToActiveIframe(penMsg);
     }
 
     const innerMsg = getInnerImagePostMessage(selectedOptions);

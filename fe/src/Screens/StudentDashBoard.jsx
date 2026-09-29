@@ -532,6 +532,11 @@ const StudentDashboard = () => {
         console.log("Sending pen message to iframe:", penMsg);
         iframe.contentWindow.postMessage(penMsg, "*");
         if (iframe2) iframe2.contentWindow.postMessage(penMsg, "*");
+      } else if (packageName === "premium" || packageName === "luksus") {
+        const penMsg = "Accessories Huekuglepen:yes";
+        console.log("Sending pen message to iframe:", penMsg);
+        iframe.contentWindow.postMessage(penMsg, "*");
+        if (iframe2) iframe2.contentWindow.postMessage(penMsg, "*");
       }
 
       const innerMsg = getInnerImagePostMessage(selectedOptions);
