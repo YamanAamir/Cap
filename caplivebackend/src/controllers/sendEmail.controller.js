@@ -1,4 +1,6 @@
 const prisma = require("../utils/prisma");
+const { extractOrderField } = require('../utils/helpers');
+const { translateFactoryValue } = require('../utils/factoryTranslations');
 const nodemailer = require("nodemailer");
 const Stripe = require("stripe");
 
@@ -128,18 +130,25 @@ const translateValue = (value) => {
   return map[value] || value;
 };
 
-const factoryOrderEmail = (orderData) => {
-  let kokardeValue = '';
-  let colorOfCapSection = '';
-  let broderiSection = '';
-  let betraekSection = '';
-  let skyggeSection = '';
-  let foerSection = '';
-  let ekstraSection = '';
-  let tilbehorSection = '';
-  let storrelseSection = '';
+const RAW_PASSTHROUGH_FIELDS = new Set([
+  'orderId', 'orderNumber', 'orderDate', 'createdAt', 'updatedAt',
+  'customerId', 'customerName', 'customerEmail', 'customerPhone',
+  'customerAddress', 'customerCity', 'customerPostalCode',
+  'customerDeliveryCountry', 'schoolName',
+  'totalPrice', 'currency', 'packageName',
+  'status', 'paymentStatus', 'paymentIntentId', 'discountCode', 'discountAmount',
+  'options.SKYGGE.Laserengravering', 'options.BETRÆK.Stjerner farve',
+  'options.BRODERI.Navne broderi', 'Navne broderi',
+  'options.UDDANNELSESBÅND.Broderi foran', 'Broderi foran',
+  'options.BRODERI.Skolebroderi', 'Skolebroderi',
+  'options.SKYGGE.Skyggegravering Line 1', 'Skyggegravering Line 1', 'Line 1',
+  'options.SKYGGE.Skyggegravering Line 2', 'Skyggegravering Line 2', 'Line 2',
+  'options.SKYGGE.Skyggegravering Line 3', 'Skyggegravering Line 3', 'Line 3'
+]);
+
+const factoryOrderEmail = async (orderData, columnsConfig = null) => {
   const {
-    customerDetails,
+    customerDetails = {},
     selectedOptions = {},
     totalPrice,
     currency,
@@ -150,255 +159,135 @@ const factoryOrderEmail = (orderData) => {
     email
   } = orderData;
 
-  const topEmbroideryVal = 
-    selectedOptions.BRODERI?.['Top broderi'] ||
-    selectedOptions['Top broderi'] ||
-    selectedOptions.BRODERI?.topBroderi ||
-    selectedOptions.topBroderi ||
-    selectedOptions.BRODERI?.['Topbroderi'] ||
-    selectedOptions['Topbroderi'];
-
-
-  const hideSelectorsPrograms = [
-    'sosuassistent',
-    'sosuhjælper',
-    'frisør',
-    'kosmetolog',
-    'pædagog',
-    'pau',
-    'ernæringsassisten'
-  ];
-
-  const shouldHideSelectors = hideSelectorsPrograms.includes(program?.toLowerCase());
-
-  const formatLabel = (label) => {
-    const labelMap = {
-      // General Cap Options
-      // 'Farve': 'Color',
-      // 'Materiale': 'Material',
-      // 'Hagerem': 'Chinstrap',
-      // 'Hagerem Materiale': 'Chinstrap Material',
-      // 'Broderi farve': 'Embroidery color',
-      // 'Knap farve': 'Button color',
-      // 'år': 'Year',
-      // 'Huebånd': 'Flag ribbon',
-      // 'Topkant': 'Top edging',
-      // 'Kantbånd': 'Edge band',
-      // 'Stjerner': 'Stars',
-      // 'Skyggebånd': 'Shadow band',
-      // 'Svederem': 'Sweatband',
-      // 'Foer': 'Inside color',
-      // 'Sløjfe': 'Bow',
-      // 'Ekstrabetræk': 'Extra cover',
-      // 'Hueæske': 'Cap box',
-      // 'Silkepude': 'Silk cushion',
-      // 'Lyskugle': 'Light ball',
-      // 'Smart Tag': 'Smart Tag',
-      // 'Handsker': 'Gloves',
-      // 'Skolebroderi farve': 'School embroidery color',
-      // 'Broderi': 'Embroidery',
-      // 'BETRÆK': 'Cover',
-      // 'SKYGGE': 'Brim',
-      // 'FOER': 'Inside of the cap',
-      // 'EKSTRABETRÆK': 'Extra cover',
-      // 'TILBEHØR': 'Accessories',
-      // 'STØRRELSE': 'Size',
-
-      // // HHX - KOKARDE Section
-      // 'KOKARDE': 'KOKARDE',
-      // 'Emblem': 'Emblem',
-      // 'Kokarde': 'Kokarde type',
-      // 'Roset farve': 'Rosette color',
-      // 'Type': 'Type',
-
-      // // HHX - UDDANNELSESBÅND Section
-      // 'UDDANNELSESBÅND': 'UDDANNELSESBÅND',
-      // 'Broderi foran': 'Front embroidery',
-      // 'Broderi farve foran': 'Front embroidery color',
-      // 'Hagerem Materiale': 'Chinstrap Material',
-      // 'Hagerem Type': 'Chinstrap Type',
-      // 'Broderi farve bagpå': 'Back embroidery color',
-
-
-      // // HHX - BRODERI Section
-      // 'Broderifarve': 'Embroidery color',
-      // 'Ingen': 'None',
-      // 'Navne broderi': 'Name embroidery',
-      // 'Skolebroderi': 'School embroidery',
-
-      // // HHX - BETRÆK Section
-      // 'BETRÆK Farve': 'Cover color',
-
-      // // HHX - SKYGGE Section
-      // 'Skygge': 'Brim',
-      // 'Skyggegravering Line 1': 'Brim engraving line 1',
-      // 'Skyggegravering Line 2': 'Brim engraving line 2',
-      // 'Skyggegravering Line 3': 'Brim engraving line 3',
-      // 'Skyggegravering': 'Brim engraving',
-      // 'Linje 1': 'Line 1',
-      // 'Linje 2': 'Line 2',
-      // 'Linje 3': 'Line 3',
-
-      // // HHX - FOER Section
-      // 'SatinType': 'Satin type',
-      // 'SilkeType': 'Silk type',
-
-      // // HHX - EKSTRABETRÆK Section
-      // 'Tilvælg': 'Optional',
-
-      // // HHX - TILBEHØR Section
-      // 'Bucketpins': 'Bucket pins',
-      // 'Ekstra korkarde': 'Extra korkarde  ',
-      // 'Ekstra korkarde Text': 'Extra korkarde text',
-      // 'Fløjte': 'Whistle',
-      // 'Huekuglepen': 'Cap pen',
-      // 'Luksus champagneglas': 'Luxury champagne glass',
-      // 'Premium æske': 'Premium box',
-      // 'Store kuglepen': 'Large pen',
-      // 'Trompet': 'Trumpet',
-
-      // // HHX - STØRRELSE Section
-      // 'Millimeter tilpasningssæt': 'Millimeter adjustment set',
-      // 'Vælg størrelse': 'Foam to adjust the size'
-      KOKARDE: "KOKARDE",
-      Emblem: "Emblem",
-      Kokarde: "Kokarde",
-      "Roset farve": "Rosette color",
-      Type: "Type",
-
-      UDDANNELSESBÅND: "Education band",
-      "Broderi farve": "Embroidery color",
-      "Broderi foran": "Front embroidery",
-      Hagerem: "Chin strap",
-      "Hagerem Materiale": "Chin strap material",
-      Huebånd: "Cap band",
-      "Knap farve": "Button color",
-      Materiale: "Material",
-      år: "Year",
-
-      BRODERI: "Embroidery",
-      Broderifarve: "Embroidery color",
-      Ingen: "None",
-      "Navne broderi": "Name embroidery",
-      Skolebroderi: "School embroidery",
-      "Skolebroderi farve": "School embroidery color",
-
-      BETRÆK: "Cover",
-      Farve: "Color",
-      Kantbånd: "Edge band",
-      Stjerner: "Stars",
-      Topkant: "Top edge",
-
-      SKYGGE: "Brim",
-      Materiale: "Material",
-      Skyggebånd: "Brim band",
-      "Skyggegravering Line 1": "Brim engraving line 1",
-      "Skyggegravering Line 2": "Brim engraving line 2",
-      "Skyggegravering Line 3": "Brim engraving line 3",
-      Type: "Type",
-
-      FOER: "Inside of the cap",
-      Farve: "Color",
-      Foer: "Inner band",
-      Sløjfe: "Bow",
-      Svederem: "Sweatband",
-
-      EKSTRABETRÆK: "Extra cover",
-      Tilvælg: "Optional",
-
-      TILBEHØR: "Accessories",
-      Bucketpins: "Bucket pins",
-      "Ekstra korkarde": "Extra Kokarde",
-      "Ekstra korkarde Text": "Extra Kokarde text",
-      Fløjte: "Whistle",
-      Handsker: "Gloves",
-      Huekuglepen: "Cap pen",
-      Hueæske: "Cap box",
-      "Luksus champagneglas": "Luxury champagne glass",
-      Lyskugle: "Light ball",
-      "Premium æske": "Premium box",
-      Silkepude: "Silk pillow",
-      "Smart Tag": "Smart tag",
-      "Store kuglepen": "Large pen",
-      Trompet: "Trumpet",
-
-      STØRRELSE: "Size",
-      "Millimeter tilpasningssæt": "Millimeter fitting set",
-      "Vælg størrelse": "Choosen size ",
-
-      STX: 'bordaux',
-      HTX: 'Navy Blue',
-      HHX: ' Royal Blue',
-      HF: 'Light Blue',
-      EUX: 'Grey',
-      EUD: 'Purple',
-      Sosuassistent: 'Purple',
-      Sosuhjælper: 'Light purple',
-      Frisør: 'Light pink',
-      Kosmetolog: 'Pink',
-      Pædagog: 'Dark purple',
-      PAU: 'Orange',
-      Ernæringsassisten: 'Yellow',
-
-
+  let columns = columnsConfig;
+  if (!columns) {
+    try {
+      columns = await prisma.excelColumnConfig.findMany({
+        where: { isVisible: true },
+        orderBy: { sortOrder: 'asc' }
+      });
+    } catch (err) {
+      console.error("Error fetching excelColumnConfig for factory email:", err);
+      columns = [];
     }
+  }
 
-    return labelMap[label] || label;
-  };
+  const formattedDate = orderDate
+    ? (orderDate instanceof Date ? orderDate.toLocaleDateString() : new Date(orderDate).toLocaleDateString())
+    : new Date().toLocaleDateString();
 
-  const programColorMap = {
-    STX: 'Bordeaux',
-    HTX: 'Navy Blue',
-    HHX: 'Royal Blue',
-    HF: 'Light Blue',
-    EUX: 'Grey',
-    EUD: 'Purple',
-    sosuassistent: 'Purple',
-    sosuhjælper: 'Light Purple',
-    frisør: 'Light Pink',
-    kosmetolog: 'Pink',
-    pædagog: 'Dark Purple',
-    pau: 'Orange',
-    ernæringsassistent: 'Yellow',
-    Sort: 'Black'
-  };
-  const programColor = programColorMap[selectedOptions.UDDANNELSESBÅND?.Huebånd] || program;
-  const formatValue = (value) => {
-    if (typeof value === 'object' && value !== null) {
-      if (value.name) return value.name;
-      if (value.value) return value.value;
-      return JSON.stringify(value);
+  const getCategoryForField = (col) => {
+    const key = (col.fieldKey || '').toLowerCase();
+    const label = (col.headerLabel || '').toLowerCase();
+
+    if (key.includes('uddannelsesbånd') || label.includes('uddannelsesbånd') || label.includes('educational') || key.includes('hagerem') || key.includes('huebånd') || key.includes('knap farve')) {
+      return '1. EDUCATIONAL BAND';
     }
-    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-    if (value === '') return 'Ikke angivet / Ikke valgt';
-    return value;
+    if (key.includes('kokarde') || label.includes('kokarde') || label.includes('cockade') || key.includes('roset') || key.includes('emblem')) {
+      return '2. COCKADE';
+    }
+    if (key.includes('betræk') || label.includes('betræk') || label.includes('cover') || key.includes('kantbånd') || key.includes('topkant') || key.includes('stjerner')) {
+      return '3. CAP COVER';
+    }
+    if (key.includes('foer') || label.includes('foer') || label.includes('lining') || key.includes('satin') || key.includes('silke') || key.includes('svederem') || key.includes('sløjfe')) {
+      return '4. CAP LINING';
+    }
+    if (key.includes('skygge') || label.includes('skygge') || label.includes('brim') || label.includes('visor') || key.includes('engravering')) {
+      return '5. BRIM / VISOR';
+    }
+    if (key.includes('broderi') || label.includes('broderi') || label.includes('embroidery')) {
+      return '6. EMBROIDERY';
+    }
+    if (key.includes('tilbehør') || label.includes('tilbehør') || label.includes('accessories') || key.includes('fløjte') || key.includes('pin') || key.includes('handsker') || key.includes('æske') || key.includes('kuglepen')) {
+      return '7. ACCESSORIES';
+    }
+    if (key.includes('størrelse') || label.includes('størrelse') || label.includes('size') || key.includes('millimeter')) {
+      return '8. CAP SIZE';
+    }
+    if (key.includes('ekstrabetræk') || label.includes('ekstrabetræk') || label.includes('extra cover')) {
+      return '9. EXTRA COVER';
+    }
+    return null;
   };
 
-  const formatOptions = (options) => {
-    return Object.entries(options)
-      .map(([key, value]) => {
-        if (!value || value === '' || value === null || value === false) return '';
+  const sectionsMap = {};
 
-        if (typeof value === 'object' && value !== null) {
-          if (value.name) {
-            return `<tr><td style="padding: 4px 8px;">${formatLabel(key)}:</td><td style="font-weight: bold;">${formatValue(value.name)}</td></tr>`;
-          }
-          return Object.entries(value)
-            .map(([subKey, subValue]) => {
-              if (subValue && subValue !== '' && subValue !== null && subValue !== false) {
-                return `<tr><td style="padding: 4px 8px;">${formatLabel(subKey)}:</td><td style="font-weight: bold;">${formatValue(subValue)}</td></tr>`;
-              }
-              return '';
-            })
-            .join('');
+  if (columns && columns.length > 0) {
+    for (const col of columns) {
+      let val = extractOrderField(orderData, col.fieldKey);
+      if (col.fieldKey === 'program' && typeof val === 'string') {
+        val = translateFactoryValue(val);
+      } else if (!RAW_PASSTHROUGH_FIELDS.has(col.fieldKey) && val !== null && val !== undefined) {
+        val = translateFactoryValue(val);
+      } else if (val === null || val === undefined || val === '') {
+        val = 'Not Chosen';
+      }
+
+      if (typeof val === 'boolean') {
+        val = val ? 'Yes' : 'No';
+      }
+
+      const headerLabel = translateFactoryValue(col.headerLabel || col.fieldKey);
+      const category = getCategoryForField(col);
+
+      if (category) {
+        if (!sectionsMap[category]) {
+          sectionsMap[category] = [];
         }
+        sectionsMap[category].push({
+          label: headerLabel,
+          value: val
+        });
+      }
+    }
+  } else {
+    Object.entries(selectedOptions).forEach(([catKey, catValue]) => {
+      const categoryName = translateFactoryValue(catKey).toUpperCase();
+      if (typeof catValue === 'object' && catValue !== null) {
+        sectionsMap[categoryName] = Object.entries(catValue).map(([subKey, subVal]) => ({
+          label: translateFactoryValue(subKey),
+          value: translateFactoryValue(subVal) || 'Not Chosen'
+        }));
+      }
+    });
+  }
 
-        return `<tr><td style="padding: 4px 8px;">${formatLabel(key)}:</td><td style="font-weight: bold;">${formatValue(value)}</td></tr>`;
-      })
-      .join('');
-  };
+  let sectionsHtml = '';
+  let textSections = '';
 
-  const t = (value) => translateValue(value);
+  const sectionKeys = Object.keys(sectionsMap).sort();
+  for (const catKey of sectionKeys) {
+    const items = sectionsMap[catKey];
+    if (!items || items.length === 0) continue;
+
+    sectionsHtml += `
+      <tr>
+        <td style="padding-bottom:25px;">
+          <table width="100%" border="0" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="font-size:18px; font-weight:bold; color:#333333; padding-bottom:15px;">${catKey}</td>
+            </tr>
+            <tr>
+              <td style="background-color:#f7f8f7; padding:20px;">
+                <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                  ${items.map((item, idx) => `
+                    <tr>
+                      <td style="${idx === items.length - 1 ? 'padding-top:10px;' : 'border-bottom:1px solid #cdcdcd; padding:10px 0;'}">
+                        <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">${item.label}</div>
+                        <div style="font-size:16px;">${item.value}</div>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    `;
+
+    textSections += `\n=== ${catKey} ===\n` + items.map(item => `${item.label}: ${item.value}`).join('\n') + '\n';
+  }
 
   const html = `
 <!DOCTYPE html>
@@ -431,516 +320,42 @@ const factoryOrderEmail = (orderData) => {
             <td style="padding:0 20px;">
 
               <!-- Customer Order Information -->
-              <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px;">Customer Order Information:</td></tr>
-                <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px;">Order Created: ${orderDate.toLocaleDateString()}</td></tr>
-                <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px;">Order No: ${orderNumber}</td></tr>
-                <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px;">Customer Name: ${customerDetails.firstName} ${customerDetails.lastName}</td></tr>
-                <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px;">Email: ${email || customerDetails.email || 'Not Provided'}</td></tr>
-                <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px;">Phone: ${customerDetails.phone || 'Not Provided'}</td></tr>
-                <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px;">School Name: ${customerDetails.Skolenavn}</td></tr>
-                <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px;">Deliver to school: ${customerDetails.deliverToSchool ? "Yes" : "No"}</td></tr>
-                <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px; color:#d97706;">Delivery Type: ${customerDetails.deliveryType === 'express' ? "EKSPRES (3 UGER)" : "Normal"}</td></tr>
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
+                <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px; color:#333333;">Customer Order Information:</td></tr>
+                <tr><td style="font-size:16px; padding-bottom:8px;"><strong>Order Created:</strong> ${formattedDate}</td></tr>
+                <tr><td style="font-size:16px; padding-bottom:8px;"><strong>Order No:</strong> ${orderNumber}</td></tr>
+                <tr><td style="font-size:16px; padding-bottom:8px;"><strong>Customer Name:</strong> ${customerDetails.firstName || ''} ${customerDetails.lastName || ''}</td></tr>
+                <tr><td style="font-size:16px; padding-bottom:8px;"><strong>Email:</strong> ${email || customerDetails.email || 'Not Provided'}</td></tr>
+                <tr><td style="font-size:16px; padding-bottom:8px;"><strong>Phone:</strong> ${customerDetails.phone || 'Not Provided'}</td></tr>
+                <tr><td style="font-size:16px; padding-bottom:8px;"><strong>School Name:</strong> ${customerDetails.Skolenavn || customerDetails.schoolName || 'Not Provided'}</td></tr>
+                <tr><td style="font-size:16px; padding-bottom:8px;"><strong>Deliver to school:</strong> ${customerDetails.deliverToSchool ? "Yes" : "No"}</td></tr>
+                <tr><td style="font-size:16px; padding-bottom:8px; color:#d97706;"><strong>Delivery Type:</strong> ${customerDetails.deliveryType === 'express' ? "EKSPRES (3 UGER)" : "Normal"}</td></tr>
+                <tr><td style="font-size:16px; padding-bottom:8px;"><strong>Program:</strong> ${translateFactoryValue(program || 'Standard')}</td></tr>
               </table>
 
               <!-- Order Details Header -->
               <table width="100%" border="0" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="background-color:#ffffff; padding:30px 20px 10px 20px; font-weight:bold; font-size:18px;">Order Details</td>
+                  <td style="background-color:#ffffff; padding:15px 0 15px 0; font-weight:bold; font-size:18px; color:#333333;">Order Details</td>
                 </tr>
               </table>
 
               <!-- Package Summary -->
-              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#fbfbfb;">
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#fbfbfb; margin-bottom:20px;">
                 <tr>
-                  <td style="padding:30px;">
+                  <td style="padding:20px; border:1px solid #e5e7eb;">
                     <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                      <tr><td style="font-weight:bold; font-size:18px; padding-bottom:10px;">${packageName}</td></tr>
+                      <tr><td style="font-weight:bold; font-size:18px; color:#333333;">${packageName || 'Cap Package'}</td></tr>
                     </table>
                   </td>
                 </tr>
               </table>
 
               <!-- Main Content Area -->
-              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f2f3f2; padding:40px 30px; margin-bottom:30px;">
-
-                <!-- The Cap -->
-                <tr>
-                  <td style="padding-bottom:25px;">
-                    <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="font-size:18px; font-weight:bold; color:#333333; padding-bottom:15px;">The Cap</td>
-                      </tr>
-                      <tr>
-                        <td style="background-color:#f7f8f7; padding:20px;">
-                          <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding-bottom:10px;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Color of the Cap</div>
-                                <div style="font-size:16px;">${programColor}</div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Buttons Color</div>
-                                <div style="font-size:16px;">${t(selectedOptions.UDDANNELSESBÅND?.['Knap farve'])}</div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Material</div>
-                                <div style="font-size:16px;">${t(selectedOptions.UDDANNELSESBÅND?.Materiale)}</div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="padding-top:10px;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Chinstrap</div>
-                                <div style="font-size:16px;">${t(selectedOptions.UDDANNELSESBÅND?.Hagerem)}</div>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <!-- Embroidery on Frontside -->
-                ${!selectedOptions.UDDANNELSESBÅND["Broderi foran"] ? `` : `
-                <tr>
-                  <td style="padding-bottom:25px;">
-                    <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="font-size:18px; font-weight:bold; color:#333333; padding-bottom:15px;">Embroidery on Frontside</td>
-                      </tr>
-                      <tr>
-                        <td style="background-color:#f7f8f7; padding:20px;">
-                          <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding-bottom:10px;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Text Max. 20 Characters</div>
-                                <div style="font-size:16px;">${selectedOptions.UDDANNELSESBÅND["Broderi foran"]}</div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="padding-top:10px;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Embroidery Color</div>
-                                <div style="font-size:16px;">${t(selectedOptions.UDDANNELSESBÅND?.["Broderi farve"])}</div>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>`}
-
-                <!-- Embroidery on the Backside of the Cap -->
-                <tr>
-                  <td style="padding-bottom:25px;">
-                    <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="font-size:18px; font-weight:bold; color:#333333; padding-bottom:15px;">Embroidery on the Backside of the Cap</td>
-                      </tr>
-                      <tr>
-                        <td style="background-color:#f7f8f7; padding:20px;">
-                          <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                            ${!selectedOptions.BRODERI || !selectedOptions.BRODERI["Navne broderi"] ? '' : `
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding-bottom:10px;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Name Embroidery (Text) Max. 26</div>
-                                <div style="font-size:16px;">${selectedOptions.BRODERI["Navne broderi"]}</div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Embroidery Color </div>
-                                <div style="font-size:16px;">${t(selectedOptions.BRODERI?.Broderifarve) || 'Not Chosen'}</div>
-                              </td>
-                            </tr>`}
-                            ${!selectedOptions.BRODERI || !selectedOptions.BRODERI.Skolebroderi ? '' : `
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">School Embroidery (Text) Max. 35</div>
-                                <div style="font-size:16px;">${selectedOptions.BRODERI.Skolebroderi}</div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Embroidery Color </div>
-                                <div style="font-size:16px;">${t(selectedOptions.BRODERI?.['Skolebroderi farve']) || 'Not Chosen'}</div>
-                              </td>
-                            </tr>`}
-                            ${!topEmbroideryVal || topEmbroideryVal === 'Ingen' || topEmbroideryVal === 'INGEN' || topEmbroideryVal === 'Nej' || topEmbroideryVal === 'NONE' ? '' : `
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Top Embroidery</div>
-                                <div style="font-size:16px;">${t(topEmbroideryVal)}</div>
-                              </td>
-                            </tr>`}
-                            <tr>
-                              <td style="padding-top:10px;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Year</div>
-                                <div style="font-size:16px;">${selectedOptions.UDDANNELSESBÅND.år}</div>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <!-- Top Embroidery -->
-                ${!topEmbroideryVal || topEmbroideryVal === 'Ingen' || topEmbroideryVal === 'INGEN' || topEmbroideryVal === 'Nej' || topEmbroideryVal === 'NONE' ? '' : `
-                <tr>
-                  <td style="padding-bottom:25px;">
-                    <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="font-size:18px; font-weight:bold; color:#333333; padding-bottom:15px;">Top Embroidery</td>
-                      </tr>
-                      <tr>
-                        <td style="background-color:#f7f8f7; padding:20px;">
-                          <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                            <tr>
-                              <td style="padding:5px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Top Embroidery Design</div>
-                                <div style="font-size:16px; font-weight:bold;">${t(topEmbroideryVal)}</div>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>`}
-
-                <!-- Brim -->
-                <tr>
-                  <td style="padding-bottom:25px;">
-                    <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="font-size:18px; font-weight:bold; color:#333333; padding-bottom:15px;">Brim</td>
-                      </tr>
-                      <tr>
-                        <td style="background-color:#f7f8f7; padding:20px;">
-                          <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding-bottom:10px;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Type</div>
-                                <div style="font-size:16px;">${t(selectedOptions.SKYGGE?.Type)}</div>
-                              </td>
-                            </tr>
-                            ${selectedOptions.SKYGGE.Type === 'Glimmer' ? '' : `
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Material </div>
-                                <div style="font-size:16px;">${t(selectedOptions.SKYGGE?.Materiale)}</div>
-                              </td>
-                            </tr>`}
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Shadow Band</div>
-                                <div style="font-size:16px;">${t(selectedOptions.SKYGGE?.Skyggebånd)}</div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Line 1</div>
-                                <div style="font-size:16px;">${!selectedOptions.SKYGGE["Skyggegravering Line 1"] ? 'Not Selected' : selectedOptions.SKYGGE["Skyggegravering Line 1"]}</div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Line 2</div>
-                                <div style="font-size:16px;">${!selectedOptions.SKYGGE["Skyggegravering Line 2"] ? 'Not Selected' : selectedOptions.SKYGGE["Skyggegravering Line 2"]}</div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="padding-top:10px;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Line 3</div>
-                                <div style="font-size:16px;">${!selectedOptions.SKYGGE["Skyggegravering Line 3"] ? 'Not Selected' : selectedOptions.SKYGGE["Skyggegravering Line 3"]}</div>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-
-                <!-- Size -->
-                <tr>
-                  <td style="padding-bottom:25px;">
-                    <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="font-size:18px; font-weight:bold; color:#333333; padding-bottom:15px;">Size</td>
-                      </tr>
-                      <tr>
-                        <td style="background-color:#f7f8f7; padding:20px;">
-                          <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding-bottom:10px;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Chosen Size (Size)</div>
-                                <div style="font-size:16px;">${selectedOptions.STØRRELSE["Vælg størrelse"]}</div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="padding-top:10px;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Foam to Adjust the Size</div>
-                                <div style="font-size:16px;">${selectedOptions.STØRRELSE["Millimeter tilpasningssæt"] === 'Ja' ? 'Yes' : 'Not Chosen'}</div>
-                              </td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <!-- Cover -->
-                <tr>
-                  <td style="padding-bottom:25px;">
-                    <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="font-size:18px; font-weight:bold; color:#333333; padding-bottom:15px;">Cover </td>
-                      </tr>
-                      <tr>
-                        <td style="background-color:#f7f8f7; padding:20px;">
-                          <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding-bottom:10px;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Color</div>
-                                <div style="font-size:16px;">${t(selectedOptions.BETRÆK?.Farve)}</div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Top Edging</div>
-                                <div style="font-size:16px;">${selectedOptions.BETRÆK?.Topkant === 'INGEN' ? 'None' : t(selectedOptions.BETRÆK?.Topkant)}</div>
-                              </td>
-                            </tr>
-                            ${!shouldHideSelectors ? `
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Edge Ribbon</div>
-                                <div style="font-size:16px;">${selectedOptions.BETRÆK?.Kantbånd === 'INGEN' ? 'None' : t(selectedOptions.BETRÆK?.Kantbånd)}</div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Stars</div>
-                                <div style="font-size:16px;">${selectedOptions.BETRÆK.Stjerner === 'INGEN' ? 'None' : selectedOptions.BETRÆK.Stjerner}</div>
-                              </td>
-                            </tr>
-                            ${selectedOptions.BETRÆK.Stjerner === 'INGEN' ? '' : `
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Stars Color</div>
-                                <div style="font-size:16px;">${t(selectedOptions.KOKARDE?.Emblem?.name)}</div>
-                              </td>
-                            </tr>`}
-                            <tr>
-                              <td style="padding-top:10px;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Flag Ribbon</div>
-                                <div style="font-size:16px;">${!selectedOptions.BETRÆK.Flagbånd ? 'Not Chosen' : selectedOptions.BETRÆK.Flagbånd == 'Nej' ? 'Not Chosen' : t(selectedOptions.BETRÆK.Flagbånd)}</div>
-                              </td>
-                            </tr>
-                            ` : ''}
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <!-- Inside of the Cap -->
-                <tr>
-                  <td style="padding-bottom:25px;">
-                    <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="font-size:18px; font-weight:bold; color:#333333; padding-bottom:15px;">Inside of the Cap </td>
-                      </tr>
-                      <tr>
-                        <td style="background-color:#f7f8f7; padding:20px;">
-                          <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding-bottom:10px;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Sweatband </div>
-                                <div style="font-size:16px;">${t(selectedOptions.FOER?.Svederem)}</div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Color</div>
-                                <div style="font-size:16px;">${t(selectedOptions.FOER?.Farve)}</div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Bow</div>
-                                <div style="font-size:16px;">${t(selectedOptions.FOER?.Sløjfe)}</div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Inner Band</div>
-                                <div style="font-size:16px;">${t(selectedOptions.FOER?.Foer)}</div>
-                              </td>
-                            </tr>
-                            ${!selectedOptions.FOER || !selectedOptions.FOER['Satin Type'] ? '' : `
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Satin Color</div>
-                                <div style="font-size:16px;">${!selectedOptions.FOER['Satin Type'] ? 'Not Selected' : t(selectedOptions.FOER['Satin Type'])}</div>
-                              </td>
-                            </tr>`}
-                            ${!selectedOptions.FOER || !selectedOptions.FOER['Silk Type'] ? '' : `
-                            <tr>
-                              <td style="padding-top:10px;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Silk Color</div>
-                                <div style="font-size:16px;">${!selectedOptions.FOER['Silk Type'] ? 'Not Selected' : t(selectedOptions.FOER['Silk Type'])}</div>
-                              </td>
-                            </tr>`}
-                            ${!(selectedOptions.FOER?.['Indvendigt foer billede'] || selectedOptions['Indvendigt foer billede']) ? '' : `
-                            <tr>
-                              <td style="padding-top:20px; border-top: 1px dashed #cdcdcd; margin-top:10px;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:10px; font-weight:bold; color: #4338ca;">Custom Inside Lining Photo:</div>
-                                <div style="border: 2px solid #ffffff; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-radius: 12px; overflow: hidden; background-color: #ffffff; padding: 5px;">
-                                  <img src="${selectedOptions.FOER?.['Indvendigt foer billede'] || selectedOptions['Indvendigt foer billede']}" style="width: 100%; max-width: 400px; height: auto; display: block; border-radius: 8px;" alt="Lining Design" />
-                                </div>
-                              </td>
-                            </tr>`}
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <!-- Extra Cover -->
-                <tr>
-                  <td style="padding-bottom:25px;">
-                    <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="font-size:18px; font-weight:bold; color:#333333; padding-bottom:15px;">Extra Cover</td>
-                      </tr>
-                      <tr>
-                        <td style="background-color:#f7f8f7; padding:20px;">
-                          <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding-bottom:10px;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Option</div>
-                                <div style="font-size:16px;">${selectedOptions.EKSTRABETRÆK.Tilvælg === 'Ja' ? 'Yes' : 'Not Chosen'}</div>
-                              </td>
-                            </tr>
-                            ${selectedOptions.EKSTRABETRÆK.Tilvælg === 'Ja' ? `
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Color</div>
-                                <div style="font-size:16px;">${t(selectedOptions.EKSTRABETRÆK?.Farve)}</div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Top Edging</div>
-                                <div style="font-size:16px;">${t(selectedOptions.EKSTRABETRÆK?.Topkant)}</div>
-                              </td>
-                            </tr>
-                            ${!shouldHideSelectors ? `
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Edge Ribbon</div>
-                                <div style="font-size:16px;">${t(selectedOptions.EKSTRABETRÆK?.Kantbånd)}</div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Flag Ribbon</div>
-                                <div style="font-size:16px;">${!selectedOptions.EKSTRABETRÆK.Flagbånd ? 'Not Chosen' : selectedOptions.EKSTRABETRÆK.Flagbånd == 'Nej' ? 'Not Chosen' : t(selectedOptions.EKSTRABETRÆK.Flagbånd)}</div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Stars</div>
-                                <div style="font-size:16px;">${selectedOptions.BETRÆK.Stjerner === 'INGEN' ? 'None' : selectedOptions.BETRÆK.Stjerner}</div>
-                              </td>
-                            </tr>
-                            ${selectedOptions.EKSTRABETRÆK.Stjerner === 'INGEN' ? '' : `
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Stars (Color Matches the Emblem)</div>
-                                <div style="font-size:16px;">${t(selectedOptions.KOKARDE?.Emblem?.name)}</div>
-                              </td>
-                            </tr>`}
-                            ` : ''}
-                            ${!selectedOptions.BRODERI || !selectedOptions.BRODERI.Skolebroderi ? '' : `
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">School Embroidery  </div>
-                                <div style="font-size:16px;">${selectedOptions.BRODERI.Skolebroderi}</div>
-                              </td>
-                            </tr>
-                            <tr>
-                              <td style="padding-top:10px;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">School Embroidery Color</div>
-                                <div style="font-size:16px;">${t(selectedOptions.BRODERI?.['Skolebroderi farve'])}</div>
-                              </td>
-                            </tr>`}
-                            ` : ''}
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
-                <!-- Accessories -->
-                <tr>
-                  <td style="padding-top:20px;">
-                    <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="font-size:18px; font-weight:bold; color:#333333; padding-bottom:15px;">Accessories</td>
-                      </tr>
-                      <tr>
-                        <td style="background-color:#f7f8f7; padding:20px;">
-                          <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding-bottom:10px;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Silk Cushion</div>
-                                <div style="font-size:16px;">${selectedOptions.TILBEHØR.Silkepude === 'Ja' ? 'Yes' : 'Not Chosen'}</div>
-                              </td>
-                            </tr>
-                            ${selectedOptions.TILBEHØR['Flag 1'] ? `
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Flag 1</div>
-                                <div style="font-size:16px;">${selectedOptions.TILBEHØR['Flag 1']}</div>
-                              </td>
-                            </tr>` : ''}
-                            ${selectedOptions.TILBEHØR['Flag 2'] ? `
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Flag 2</div>
-                                <div style="font-size:16px;">${selectedOptions.TILBEHØR['Flag 2']}</div>
-                              </td>
-                            </tr>` : ''}
-                            ${selectedOptions.TILBEHØR['Flag 3'] ? `
-                            <tr>
-                              <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
-                                <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Flag 3</div>
-                                <div style="font-size:16px;">${selectedOptions.TILBEHØR['Flag 3']}</div>
-                              </td>
-                            </tr>` : ''}
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f2f3f2; padding:30px 25px; margin-bottom:30px;">
+                ${sectionsHtml}
               </table>
+
             </td>
           </tr>
         </table>
@@ -950,68 +365,32 @@ const factoryOrderEmail = (orderData) => {
 
 </body>
 </html>
-`;
-
+  `;
 
   const text = `
 Customer Order Information
 ====================================================
 
-Order Created: ${orderDate}
-Order #${orderNumber} — ${customerDetails.firstName} ${customerDetails.lastName}
-School Name: ${customerDetails.Skolenavn || 'Not Specified / Not Selected'}
+Order Created: ${formattedDate}
+Order #${orderNumber} — ${customerDetails.firstName || ''} ${customerDetails.lastName || ''}
+School Name: ${customerDetails.Skolenavn || customerDetails.schoolName || 'Not Specified'}
 Deliver To school: ${customerDetails.deliverToSchool ? "Yes" : "No"}
+Delivery Type: ${customerDetails.deliveryType === 'express' ? "EKSPRES (3 UGER)" : "Normal"}
+Program: ${translateFactoryValue(program || 'Standard')}
 
 Order Details
 ------------------------------
 Package: ${packageName || 'Cap Package'}
-Total Price: ${totalPrice} ${currency}
 
-Information about the Cap
------------------------------------------------
-${Object.entries(selectedOptions)
-      .map(([category, options]) => {
-        const hasOptions = Object.values(options).some(val =>
-          val && val !== '' && val !== null && val !== false &&
-          !(typeof val === 'object' && Object.keys(val).length === 0)
-        );
-        if (!hasOptions) return '';
-
-        const optionsText = Object.entries(options)
-          .map(([key, value]) => {
-            if (!value || value === '' || value === null || value === false) return '';
-
-            if (typeof value === 'object' && value !== null) {
-              if (value.name) {
-                return `${formatLabel(key)}: ${formatValue(value.name)}`;
-              }
-              return Object.entries(value)
-                .map(([subKey, subValue]) => `${formatLabel(subKey)}: ${formatValue(subValue)}`)
-                .join('\n');
-            }
-            return `${formatLabel(key)}: ${formatValue(value)}`;
-          })
-          .join('\n');
-
-        return `${formatLabel(category).toUpperCase()}\n${optionsText}\n`;
-      })
-      .join('\n')}
-
-NOTE TO FACTORY
----------------------------------
-- Verify embroidery text length and colors.
-- Check color consistency with emblem.
-- Confirm size, material, and chinstrap type.
-`;
+${textSections}
+  `;
 
   return {
-    subject: `FACTORY ORDER – #${orderNumber} (${customerDetails.firstName} ${customerDetails.lastName})`,
+    subject: `FACTORY ORDER – #${orderNumber} (${customerDetails.firstName || ''} ${customerDetails.lastName || ''})`,
     html,
     text
   };
 };
-
-
 const capOrderEmail = (orderData) => {
   const {
     customerDetails,
