@@ -235,9 +235,9 @@ const EXACT_TRANSLATIONS = {
   'Nutrition Assistant': 'Yellow',
   'Nutrition Assistant (Yellow)': 'Yellow',
 
-  'STU': 'Colored Band',
-  'stu': 'Colored Band',
-  'STU (Colored Band)': 'Colored Band',
+  'STU': 'Rainbow Color',
+  'stu': 'Rainbow Color',
+  'STU (Rainbow Color)': 'Rainbow Color',
 
   'Landmand': 'Green',
   'landmand': 'Green',
