@@ -180,6 +180,9 @@ const factoryOrderEmail = async (orderData, columnsConfig = null) => {
     const key = (col.fieldKey || '').toLowerCase();
     const label = (col.headerLabel || '').toLowerCase();
 
+    if (key.includes('ekstrabetræk') || key.includes('extra') || label.includes('ekstrabetræk') || label.includes('extra cover') || label.includes('extra ')) {
+      return '9. EXTRA COVER';
+    }
     if (key.includes('uddannelsesbånd') || label.includes('uddannelsesbånd') || label.includes('educational') || key.includes('hagerem') || key.includes('huebånd') || key.includes('knap farve')) {
       return '1. EDUCATIONAL BAND';
     }
@@ -203,9 +206,6 @@ const factoryOrderEmail = async (orderData, columnsConfig = null) => {
     }
     if (key.includes('størrelse') || label.includes('størrelse') || label.includes('size') || key.includes('millimeter')) {
       return '8. CAP SIZE';
-    }
-    if (key.includes('ekstrabetræk') || label.includes('ekstrabetræk') || label.includes('extra cover')) {
-      return '9. EXTRA COVER';
     }
     return null;
   };
