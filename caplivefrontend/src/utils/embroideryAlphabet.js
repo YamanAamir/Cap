@@ -21,8 +21,7 @@ export function sanitizeEmbroideryLetters(text, max = 20) {
         
     temp = temp
         .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-zA-Z0-9\s_]/g, '');
+        .replace(/[\u0300-\u036f]/g, '');
         
     temp = temp
         .replace(/__AE_CAP__/g, 'Æ')
@@ -31,15 +30,16 @@ export function sanitizeEmbroideryLetters(text, max = 20) {
         .replace(/__O_SML__/g, 'ø')
         .replace(/__A_CAP__/g, 'Å')
         .replace(/__A_SML__/g, 'å');
-        
-    return temp.slice(0, max);
+
+    const allowed = Array.from(temp).filter(c => LETTER_CONFIG[c] !== undefined || c === ' ');
+    return allowed.join('').slice(0, max);
 }
 
 
 const LETTER_CONFIG = {
     ' ': { renderW: 15, renderH: 0, baselineFrac: 1.0 },
 
-    // ── CAPITALS (renderH: 95) ────────────────────────────────
+    // ── CAPITALS (renderH: 65) ────────────────────────────────
     A: { folder: 'Capital', renderW: 58, renderH: 65, baselineFrac: 1.0, overlap: 4 },
     B: { folder: 'Capital', renderW: 42, renderH: 65, baselineFrac: 1.0, overlap: 4 },
     C: { folder: 'Capital', renderW: 42, renderH: 62, baselineFrac: 1.0, overlap: 4 },
@@ -104,7 +104,70 @@ const LETTER_CONFIG = {
     p: { folder: 'Small', renderW: 50, renderH: 75, baselineFrac: 0.60, shiftX: -17 },
     q: { folder: 'Small', renderW: 30, renderH: 75, baselineFrac: 0.60 },
     y: { folder: 'Small', renderW: 35, renderH: 75, baselineFrac: 0.60 },
+
+    // ── NUMBERS (0-9) ─────────────────────────────────────────
+    '0': { folder: 'Zero', renderW: 42, renderH: 65, baselineFrac: 1.0, overlap: 4 },
+    '1': { folder: 'One', renderW: 30, renderH: 65, baselineFrac: 1.0, overlap: 4 },
+    '2': { folder: 'Two', renderW: 42, renderH: 65, baselineFrac: 1.0, overlap: 4 },
+    '3': { folder: 'Three', renderW: 42, renderH: 65, baselineFrac: 1.0, overlap: 4 },
+    '4': { folder: 'Four', renderW: 46, renderH: 65, baselineFrac: 1.0, overlap: 4 },
+    '5': { folder: 'Five', renderW: 42, renderH: 65, baselineFrac: 1.0, overlap: 4 },
+    '6': { folder: 'Six', renderW: 42, renderH: 65, baselineFrac: 1.0, overlap: 4 },
+    '7': { folder: 'Seven', renderW: 42, renderH: 65, baselineFrac: 1.0, overlap: 4 },
+    '8': { folder: 'Eight', renderW: 42, renderH: 65, baselineFrac: 1.0, overlap: 4 },
+    '9': { folder: 'Nine', renderW: 42, renderH: 65, baselineFrac: 1.0, overlap: 4 },
+
+    // ── SYMBOLS ───────────────────────────────────────────────
+    '&': { folder: 'Ampersand', renderW: 50, renderH: 65, baselineFrac: 1.0, overlap: 4 },
+    '*': { folder: 'Asterisk', renderW: 30, renderH: 45, baselineFrac: 1.4, overlap: 4 },
+    '@': { folder: 'At', renderW: 55, renderH: 65, baselineFrac: 1.0, overlap: 4 },
+    '\\': { folder: 'Backslash', renderW: 35, renderH: 65, baselineFrac: 1.0, overlap: 4 },
+    '`': { folder: 'Backtick', renderW: 20, renderH: 30, baselineFrac: 2, overlap: 2 },
+    '^': { folder: 'Caret', renderW: 35, renderH: 45, baselineFrac: 1.4, overlap: 4 },
+    ':': { folder: 'Colon', renderW: 20, renderH: 45, baselineFrac: 1.0, overlap: 2 },
+    ',': { folder: 'Comma', renderW: 20, renderH: 35, baselineFrac: 1, overlap: 2 },
+    '$': { folder: 'Dollar', renderW: 45, renderH: 75, baselineFrac: 0.9, overlap: 4 },
+    '.': { folder: 'Dot', renderW: 20, renderH: 20, baselineFrac: 1.0, overlap: 2 },
+    '"': { folder: 'Double-Quote', renderW: 30, renderH: 35, baselineFrac: 2, overlap: 2 },
+    '=': { folder: 'Equals', renderW: 40, renderH: 35, baselineFrac: 1.4, overlap: 4 },
+    '!': { folder: 'Exclamation-Mark', renderW: 22, renderH: 65, baselineFrac: 1.0, overlap: 4 },
+    '/': { folder: 'Forward-Slash', renderW: 35, renderH: 65, baselineFrac: 1.0, overlap: 4 },
+    '>': { folder: 'Greater-Than', renderW: 40, renderH: 45, baselineFrac: 1.3, overlap: 4 },
+    '#': { folder: 'Hash', renderW: 48, renderH: 65, baselineFrac: 1.0, overlap: 4 },
+    '-': { folder: 'Hyphen', renderW: 30, renderH: 25, baselineFrac: 1.8, overlap: 2 },
+    '{': { folder: 'Left-Brace', renderW: 30, renderH: 75, baselineFrac: 0.9, overlap: 4 },
+    '[': { folder: 'Left-Bracket', renderW: 25, renderH: 70, baselineFrac: 1.0, overlap: 4 },
+    '(': { folder: 'Left-Parenthesis', renderW: 25, renderH: 70, baselineFrac: 0.95, overlap: 4 },
+    '<': { folder: 'Less-Than', renderW: 40, renderH: 45, baselineFrac: 1.3, overlap: 4 },
+    '%': { folder: 'Percent', renderW: 55, renderH: 65, baselineFrac: 1.0, overlap: 4 },
+    '+': { folder: 'Plus', renderW: 42, renderH: 45, baselineFrac: 1.2, overlap: 4 },
+    '?': { folder: 'Question-Mark', renderW: 42, renderH: 65, baselineFrac: 1.0, overlap: 4 },
+    '}': { folder: 'Right-Brace', renderW: 30, renderH: 75, baselineFrac: 0.9, overlap: 4 },
+    ']': { folder: 'Right-Bracket', renderW: 25, renderH: 70, baselineFrac: 1.0, overlap: 4 },
+    ')': { folder: 'Right-Parenthesis', renderW: 25, renderH: 70, baselineFrac: 0.95, overlap: 4 },
+    ';': { folder: 'Semicolon', renderW: 22, renderH: 55, baselineFrac: 1.0, overlap: 2 },
+    "'": { folder: 'Single-Quote', renderW: 18, renderH: 30, baselineFrac: 2.2, overlap: 2 },
+    '~': { folder: 'Tilde', renderW: 35, renderH: 25, baselineFrac: 1.7, overlap: 2 },
+    '_': { folder: 'Underscore', renderW: 40, renderH: 20, baselineFrac: 0.5, overlap: 2 },
+    '|': { folder: 'Vertical-Bar', renderW: 20, renderH: 70, baselineFrac: 1.0, overlap: 2 },
 };
+
+function getAssetUrl(base, cfg, char, fileName) {
+    if (cfg.folder === 'Capital' || cfg.folder === 'Small') {
+        const baseNameWithoutExt = fileName.replace(/\.[^/.]+$/, "");
+        return [
+            `${base}/${cfg.folder}/${char}/${fileName}`,
+            `${base}/${cfg.folder}/${char}/${fileName}.png`,
+            `${base}/${cfg.folder}/${char}/${baseNameWithoutExt}.png`
+        ];
+    }
+    const baseNameWithoutExt = fileName.replace(/\.[^/.]+$/, "");
+    return [
+        `${base}/${cfg.folder}/${cfg.folder}_${fileName}.png`,
+        `${base}/${cfg.folder}/${cfg.folder}_${baseNameWithoutExt}.png`,
+        `${base}/${cfg.folder}/${cfg.folder}_${fileName}`
+    ];
+}
 
 // ============================================================
 // UTILITIES & MEMORY MANAGEMENT
@@ -114,16 +177,26 @@ export function preloadAlphabetMaps() {
     // Kept for backward compatibility - memory is preserved dynamically
 }
 
-function loadSingleImage(url) {
-    if (!url) return Promise.resolve(null);
+function loadSingleImage(urlInput) {
+    if (!urlInput) return Promise.resolve(null);
+    const urls = Array.isArray(urlInput) ? urlInput : [urlInput];
     return new Promise((resolve) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => resolve(img);
-        img.onerror = () => {
-            resolve(null);
-        };
-        img.src = url;
+        let index = 0;
+        function tryNext() {
+            if (index >= urls.length) {
+                resolve(null);
+                return;
+            }
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = () => {
+                index++;
+                tryNext();
+            };
+            img.src = urls[index];
+        }
+        tryNext();
     });
 }
 
@@ -241,7 +314,7 @@ export async function generateAllEmbroideryMaps(text) {
         const maskKey = `${item.char}_${item.cfg.folder}_${item._dw}_${item._dh}`;
         if (letterMasks.has(maskKey)) continue;
 
-        const opUrl = `${base}/${item.cfg.folder}/${item.char}/Opacity.jpg`;
+        const opUrl = getAssetUrl(base, item.cfg, item.char, 'Opacity.jpg');
         const opImg = await loadSingleImage(opUrl);
         if (!opImg) continue;
 
@@ -290,7 +363,7 @@ export async function generateAllEmbroideryMaps(text) {
         const uniqueChars = new Map();
         for (const item of sorted) {
             if (item.cfg.folder && !uniqueChars.has(item.char)) {
-                const url = `${base}/${item.cfg.folder}/${item.char}/${fileName}`;
+                const url = getAssetUrl(base, item.cfg, item.char, fileName);
                 uniqueChars.set(item.char, loadSingleImage(url));
             }
         }
