@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { CheckCircle, ShoppingCart, FileText } from "lucide-react";
-import gold from '../assets/Student Life.jpg';
 import { trackEvent } from "../utils/metaPixel";
 import { pushEvent, getOrCreateVisitorId, getApiBaseUrl } from '../lib/tracking';
 
@@ -125,10 +124,6 @@ const SuccessScreen = ({ onContinueConfiguring, handleResetModal, onClose }) => 
   return (
     <div className="min-h-screen flex flex-col justify-center items-center px-6 py-12 bg-white">
       <div className="max-w-xl w-full text-center">
-        {/* Brand Logo */}
-        <div className="flex justify-center mb-6">
-          <img src={gold} alt="Student Life" className="h-14 w-auto object-contain" />
-        </div>
 
         {/* Success Icon */}
         <div className="flex justify-center mb-4">

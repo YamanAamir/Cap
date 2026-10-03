@@ -2865,7 +2865,7 @@ const sendCapEmail = async (req, res) => {
       program: program,
       email: email
     });
-    const emailContentFactory = factoryOrderEmail({
+    const emailContentFactory = await factoryOrderEmail({
       customerDetails,
       selectedOptions,
       totalPrice: totalPrice || '299.00',
