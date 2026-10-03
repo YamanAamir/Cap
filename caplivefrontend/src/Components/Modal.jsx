@@ -440,6 +440,13 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
   const handleConfirmOrder = async () => {
     setIsLoading(true);
 
+    ["preview-iframe", "preview-iframe2"].forEach((id) => {
+      const iframe = document.getElementById(id);
+      if (iframe?.contentWindow) {
+        iframe.contentWindow.postMessage("Tilvælg:no", "*");
+      }
+    });
+
     const orderDate = new Date().toISOString();
     let capImages = {};
     try {

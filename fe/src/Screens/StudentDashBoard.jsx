@@ -496,6 +496,13 @@ const StudentDashboard = () => {
 
   // Function to collect all selected options
   const collectSelectedOptions = useCallback(() => {
+    ["preview-iframe", "preview-iframe2"].forEach((id) => {
+      const iframe = document.getElementById(id);
+      if (iframe?.contentWindow) {
+        console.log("Sending message to iframe on Godkend og Betal:", "Tilvælg:no");
+        iframe.contentWindow.postMessage("Tilvælg:no", "*");
+      }
+    });
     setIsQuoteModalOpen(true);
   }, []);
 

@@ -1714,6 +1714,12 @@ const StudentDashboard = () => {
 
   // Function to collect all selected options
   const collectSelectedOptions = useCallback(() => {
+    ["preview-iframe", "preview-iframe2"].forEach((id) => {
+      const iframe = document.getElementById(id);
+      if (iframe?.contentWindow) {
+        iframe.contentWindow.postMessage("Tilvælg:no", "*");
+      }
+    });
     setIsQuoteModalOpen(true);
   }, []);
 
