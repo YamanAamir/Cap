@@ -919,7 +919,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
             <br />
 
             {/* Express Delivery */}
-            {expressConfig.active && (
+            {/* {expressConfig.active && (
               <>
                 <input
                   type="radio"
@@ -933,7 +933,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
                   Ekspres levering – estimeret leveringstid (3 uger) +{expressConfig.price} DKK
                 </label>
               </>
-            )}
+            )} */}
           </div>
 
 
