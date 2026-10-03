@@ -181,31 +181,31 @@ const factoryOrderEmail = async (orderData, columnsConfig = null) => {
     const label = (col.headerLabel || '').toLowerCase();
 
     if (key.includes('ekstrabetræk') || key.includes('extra') || label.includes('ekstrabetræk') || label.includes('extra cover') || label.includes('extra ')) {
-      return '9. EXTRA COVER';
+      return 'EXTRA COVER';
     }
     if (key.includes('uddannelsesbånd') || label.includes('uddannelsesbånd') || label.includes('educational') || key.includes('hagerem') || key.includes('huebånd') || key.includes('knap farve')) {
-      return '1. EDUCATIONAL BAND';
+      return 'EDUCATIONAL BAND';
     }
     if (key.includes('kokarde') || label.includes('kokarde') || label.includes('cockade') || key.includes('roset') || key.includes('emblem')) {
-      return '2. COCKADE';
+      return 'COCKADE';
     }
     if (key.includes('betræk') || label.includes('betræk') || label.includes('cover') || key.includes('kantbånd') || key.includes('topkant') || key.includes('stjerner')) {
-      return '3. CAP COVER';
+      return 'CAP COVER';
     }
     if (key.includes('foer') || label.includes('foer') || label.includes('lining') || key.includes('satin') || key.includes('silke') || key.includes('svederem') || key.includes('sløjfe')) {
-      return '4. CAP LINING';
+      return 'CAP LINING';
     }
     if (key.includes('skygge') || label.includes('skygge') || label.includes('brim') || label.includes('visor') || key.includes('engravering')) {
-      return '5. BRIM / VISOR';
+      return 'BRIM';
     }
     if (key.includes('broderi') || label.includes('broderi') || label.includes('embroidery')) {
-      return '6. EMBROIDERY';
+      return 'EMBROIDERY';
     }
     if (key.includes('tilbehør') || label.includes('tilbehør') || label.includes('accessories') || key.includes('fløjte') || key.includes('pin') || key.includes('handsker') || key.includes('æske') || key.includes('kuglepen')) {
-      return '7. ACCESSORIES';
+      return 'ACCESSORIES';
     }
     if (key.includes('størrelse') || label.includes('størrelse') || label.includes('size') || key.includes('millimeter')) {
-      return '8. CAP SIZE';
+      return 'CAP SIZE';
     }
     return null;
   };

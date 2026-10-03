@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { translateFactoryValue } from '../../utils/factoryTranslations';
 
 const ConfigBlueprintCards = ({ selectedOptions, productionFilters, isFactoryView }) => {
-  if (!selectedOptions || Object.keys(selectedOptions).length === 0) {
+  if (!selectedOptions || typeof selectedOptions !== 'object') {
     return (
       <div className="p-8 text-center bg-slate-50 border border-slate-200 border-dashed rounded text-slate-500">
         <Settings2 className="w-8 h-8 mx-auto mb-2 opacity-20" />
@@ -72,8 +72,22 @@ const ConfigBlueprintCards = ({ selectedOptions, productionFilters, isFactoryVie
     return null;
   };
 
+  // Collect all category keys from selectedOptions and productionFilters
+  const categoryKeysSet = new Set();
+  if (selectedOptions) {
+    Object.keys(selectedOptions).forEach(k => categoryKeysSet.add(k));
+  }
+  if (productionFilters && !isOldFormat && typeof productionFilters === 'object') {
+    if (Array.isArray(productionFilters.categoriesOrder)) {
+      productionFilters.categoriesOrder.forEach(k => categoryKeysSet.add(k));
+    } else {
+      Object.keys(productionFilters).filter(k => k !== 'categoriesOrder').forEach(k => categoryKeysSet.add(k));
+    }
+  }
+
+  let categoryEntries = Array.from(categoryKeysSet).map(catKey => [catKey, selectedOptions[catKey] || {}]);
+
   // Sort Categories by custom categoriesOrder if available
-  const categoryEntries = Object.entries(selectedOptions);
   if (productionFilters) {
     let customCatOrder = [];
     if (Array.isArray(productionFilters.categoriesOrder)) {
@@ -123,18 +137,81 @@ const ConfigBlueprintCards = ({ selectedOptions, productionFilters, isFactoryVie
         
         if (!isCategoryVisible) return null;
 
-        // Sort fields by custom fieldsOrder if available
-        let fieldEntries = typeof details === 'object' && details !== null ? Object.entries(details) : [];
-        if (catConfig && Array.isArray(catConfig.fieldsOrder) && catConfig.fieldsOrder.length > 0) {
-          const customFieldsOrder = catConfig.fieldsOrder;
-          fieldEntries.sort(([keyA], [keyB]) => {
-            const idxA = customFieldsOrder.findIndex(f => f.toLowerCase() === keyA.toLowerCase());
-            const idxB = customFieldsOrder.findIndex(f => f.toLowerCase() === keyB.toLowerCase());
-            const sortA = idxA !== -1 ? idxA : 999;
-            const sortB = idxB !== -1 ? idxB : 999;
-            return sortA - sortB;
-          });
+        // Collect fields to render for this category
+        let fieldsToRender = [];
+
+        if (catConfig && catConfig.fields && typeof catConfig.fields === 'object') {
+          let orderedKeys = [];
+          if (Array.isArray(catConfig.fieldsOrder) && catConfig.fieldsOrder.length > 0) {
+            orderedKeys = catConfig.fieldsOrder;
+          } else {
+            orderedKeys = Object.keys(catConfig.fields);
+          }
+          
+          fieldsToRender = [...orderedKeys];
+          
+          if (typeof details === 'object' && details !== null) {
+            Object.keys(details).forEach(k => {
+              if (!fieldsToRender.some(rk => rk.toLowerCase() === k.toLowerCase())) {
+                fieldsToRender.push(k);
+              }
+            });
+          }
+        } else if (typeof details === 'object' && details !== null) {
+          fieldsToRender = Object.keys(details);
         }
+
+        const renderedFieldNodes = fieldsToRender.map((key, i) => {
+          let displayKey = key;
+          let isFieldVisible = true;
+          
+          if (catConfig && catConfig.fields) {
+            const fieldMatchKey = Object.keys(catConfig.fields).find(f => f.toLowerCase() === key.toLowerCase());
+            if (fieldMatchKey) {
+              const fieldConfig = catConfig.fields[fieldMatchKey];
+              if (fieldConfig === false || (typeof fieldConfig === 'object' && fieldConfig.visible === false)) {
+                isFieldVisible = false;
+              }
+              if (typeof fieldConfig === 'object' && fieldConfig.label) {
+                displayKey = fieldConfig.label;
+              }
+            }
+          } else if (isOldFormat && productionFilters && productionFilters.length > 0) {
+            const filter = productionFilters.find(f => f.danish?.toLowerCase() === key.toLowerCase());
+            if (filter) {
+              if (filter.visible === false) isFieldVisible = false;
+              if (filter.english || filter.label) displayKey = filter.english || filter.label;
+            }
+          }
+          
+          if (!isFieldVisible) return null;
+
+          // Get value from details
+          let value = undefined;
+          if (typeof details === 'object' && details !== null) {
+            const actualKey = Object.keys(details).find(k => k.toLowerCase() === key.toLowerCase());
+            if (actualKey) {
+              value = details[actualKey];
+            }
+          }
+
+          // Hide huge base64 strings and custom lining uploads
+          if (typeof value === 'string' && value.startsWith('data:image')) return null;
+          if (Array.isArray(value) && value[0]?.url) return null;
+          
+          if (category.toUpperCase() === 'KOKARDE' && details) {
+            const kokardeVal = details.Kokarde || details.kokarde;
+            if (kokardeVal === 'Flag' && (key === 'Type' || key === 'selectedType')) return null;
+            if (kokardeVal !== 'Flag' && (key === 'Flag' || key === 'selectedFlag')) return null;
+          }
+          
+          return (
+            <div key={i} className="flex flex-col">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{displayKey}</span>
+              {renderValue(value)}
+            </div>
+          );
+        }).filter(Boolean);
 
         return (
           <div key={idx} className="bg-white border border-slate-200 rounded overflow-hidden shadow-sm flex flex-col justify-between">
@@ -145,64 +222,13 @@ const ConfigBlueprintCards = ({ selectedOptions, productionFilters, isFactoryVie
               </div>
               
               <div className="p-4 space-y-4">
-                {typeof details === 'object' && details !== null ? (
-                  fieldEntries.map(([key, value], i) => {
-                    // Hide huge base64 strings and custom lining uploads from text specification list
-                    if (typeof value === 'string' && value.startsWith('data:image')) return null;
-                    if (Array.isArray(value) && value[0]?.url) return null;
-                    
-                    if (category.toUpperCase() === 'KOKARDE') {
-                      const kokardeVal = details.Kokarde || details.kokarde;
-                      if (kokardeVal === 'Flag' && (key === 'Type' || key === 'selectedType')) return null;
-                      if (kokardeVal !== 'Flag' && (key === 'Flag' || key === 'selectedFlag')) return null;
-                    }
-
-                    let displayKey = key;
-                    let isFieldVisible = true;
-                    
-                    if (productionFilters) {
-                      if (!isOldFormat && typeof productionFilters === 'object' && Object.keys(productionFilters).length > 0) {
-                        const catMatch = Object.keys(productionFilters).find(k => k.toLowerCase() === category.toLowerCase());
-                        if (catMatch && productionFilters[catMatch]?.fields) {
-                          const fieldMatch = Object.keys(productionFilters[catMatch].fields).find(k => k.toLowerCase() === key.toLowerCase());
-                          if (fieldMatch) {
-                            const fieldConfig = productionFilters[catMatch].fields[fieldMatch];
-                            if (fieldConfig === false || (typeof fieldConfig === 'object' && fieldConfig.visible === false)) {
-                              isFieldVisible = false;
-                            }
-                            if (typeof fieldConfig === 'object' && fieldConfig.label) {
-                              displayKey = fieldConfig.label;
-                            }
-                          } else {
-                            // If field not matched in whitelist/blacklist
-                            isFieldVisible = false;
-                          }
-                        } else {
-                          isFieldVisible = false;
-                        }
-                      } else if (isOldFormat && productionFilters.length > 0) {
-                        const filter = productionFilters.find(f => f.danish?.toLowerCase() === key.toLowerCase());
-                        if (filter) {
-                          if (filter.visible === false) isFieldVisible = false;
-                          if (filter.english || filter.label) displayKey = filter.english || filter.label;
-                        } else {
-                          isFieldVisible = false;
-                        }
-                      }
-                    }
-                    
-                    if (!isFieldVisible) return null;
-                    
-                    return (
-                      <div key={i} className="flex flex-col">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{displayKey}</span>
-                        {renderValue(value)}
-                      </div>
-                    );
-                  })
+                {renderedFieldNodes.length > 0 ? (
+                  renderedFieldNodes
                 ) : (
                   <div className="flex flex-col">
-                    {renderValue(details)}
+                    <span className="text-slate-400 font-bold text-sm">
+                      {isFactoryMode ? 'Not Chosen' : 'Ikke valgt'}
+                    </span>
                   </div>
                 )}
               </div>
