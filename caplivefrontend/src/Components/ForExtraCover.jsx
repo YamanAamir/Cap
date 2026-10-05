@@ -652,11 +652,11 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
     useEffect(() => { forOptionChange('Farve', selectedCoverColor); }, [selectedCoverColor]);
     useEffect(() => {
         const colorMap = {
-            'purple': 'CoverColor:Purple',
-            'hvid med glimmer': 'CoverColor:Hvid med glimmer',
-            'sort med glimmer': 'CoverColor:Sort med glimmer',
-            'hvid': 'CoverColor:Hvid',
-            'sort': 'CoverColor:Sort'
+            'purple': 'ExtraCoverColor:Purple',
+            'hvid med glimmer': 'ExtraCoverColor:Hvid med glimmer',
+            'sort med glimmer': 'ExtraCoverColor:Sort med glimmer',
+            'hvid': 'ExtraCoverColor:Hvid',
+            'sort': 'ExtraCoverColor:Sort'
         };
 
         if (!selectedCoverColor) return;
@@ -684,9 +684,9 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
 
     useEffect(() => {
         const colorMap = {
-            'none': 'Topkant:none',
-            'guld': 'Topkant:Hvid guld',
-            'sølv': 'Topkant:sølv',
+            'none': 'ExtraTopkant:none',
+            'guld': 'ExtraTopkant:Hvid guld',
+            'sølv': 'ExtraTopkant:sølv',
 
         };
 
@@ -710,25 +710,26 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
 
 
 
+
     useEffect(() => { forOptionChange('Kantbånd', selectedKantbandColor); }, [selectedKantbandColor]);
 
     useEffect(() => {
         const colorMap = {
-            'hhx': 'Kantband:HHX',
-            'htx': 'Kantband:HTX',
-            'stx': 'Kantband:STX',
-            'hf': 'Kantband:HF',
-            'eux': 'Kantband:EUX',
-            'eud': 'Kantband:EUD',
-            'purple': 'Kantband:Purple',
-            'none': 'Kantband:NONE',
-            'hvid': 'Kantband:Hvid',
-            'sort': 'Kantband:Sort',
-            'royal blue': 'Kantband:Royal Blue',
-            'bordeaux': 'Kantband:Bordeaux',
-            'green': 'Kantband:Green',
-            'yellow': 'Kantband:Yellow',
-            'pink': 'Kantband:Pink',
+            'hhx': 'ExtraKantband:HHX',
+            'htx': 'ExtraKantband:HTX',
+            'stx': 'ExtraKantband:STX',
+            'hf': 'ExtraKantband:HF',
+            'eux': 'ExtraKantband:EUX',
+            'eud': 'ExtraKantband:EUD',
+            'purple': 'ExtraKantband:Purple',
+            'none': 'ExtraKantband:NONE',
+            'hvid': 'ExtraKantband:Hvid',
+            'sort': 'ExtraKantband:Sort',
+            'royal blue': 'ExtraKantband:Royal Blue',
+            'bordeaux': 'ExtraKantband:Bordeaux',
+            'green': 'ExtraKantband:Green',
+            'yellow': 'ExtraKantband:Yellow',
+            'pink': 'ExtraKantband:Pink',
 
         };
 
@@ -756,13 +757,13 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
 
     useEffect(() => {
         const colorMap = {
-            'none': 'Star:0',
-            '1': 'Star:1',
-            '2': 'Star:2',
-            '3': 'Star:3',
-            '4': 'Star:4',
-            '5': 'Star:5',
-            '6': 'Star:6'
+            'none': 'ExtraStar:0',
+            '1': 'ExtraStar:1',
+            '2': 'ExtraStar:2',
+            '3': 'ExtraStar:3',
+            '4': 'ExtraStar:4',
+            '5': 'ExtraStar:5',
+            '6': 'ExtraStar:6'
         };
 
         if (!selectedStarsStyle) return;
@@ -783,7 +784,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
         sendMessageToActive(message);
 
         if (selectedKantbandColor == "NONE") {
-            sendToActiveIframe('Star:0');
+            sendToActiveIframe('ExtraStar:0');
         }
 
 
@@ -796,8 +797,8 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
             // If user already has a valid selection, keep it
             if (selectedFlagbåndOption && selectedFlagbåndOption !== 'Nej') {
                 forOptionChange('Flagbånd', selectedFlagbåndOption);
-                console.log("Sending message to iframe:", `Flagband:${selectedFlagbåndOption}`);
-                sendToActiveIframe(`Flagband:${selectedFlagbåndOption}`);
+                console.log("Sending message to iframe:", `ExtraFlagband:${selectedFlagbåndOption}`);
+                sendToActiveIframe(`ExtraFlagband:${selectedFlagbåndOption}`);
             }
             // Otherwise, set default to International
             else {
@@ -806,7 +807,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
             }
         } else if (selectedFlagbånd === 'No') {
             forOptionChange('Flagbånd', 'Nej');
-            sendToActiveIframe('Flagband:none');
+            sendToActiveIframe('ExtraFlagband:none');
             if (cameraTriggers.current["flagband_no"]) {
                 sendToActiveIframe("flagband camera");
             } else {
@@ -823,9 +824,9 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
 
     useEffect(() => {
         const colorMap = {
-            'international': 'Flagband:International',
-            'frankrig-spanien-tyskland-uk-danmark': 'Flagband:Frankrig-Spanien-Tyskland-UK-Danmark',
-            'usa-kina-danmark': 'Flagband:Usa-Kina-Danmark'
+            'international': 'ExtraFlagband:International',
+            'frankrig-spanien-tyskland-uk-danmark': 'ExtraFlagband:Frankrig-Spanien-Tyskland-UK-Danmark',
+            'usa-kina-danmark': 'ExtraFlagband:Usa-Kina-Danmark'
         }
 
         if (!selectedFlagbåndOption) return;
@@ -853,13 +854,13 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
     useEffect(() => {
         if (!selectedRosetteColor?.name) return;
         const colorMap = {
-            'royal blå': 'flowerRoyalBlue',
-            'navy blå': 'flowerNavyBlue',
-            'bordeaux': 'flowerMaroon',
-            'light blå': 'flowerSkyBlue',
-            'rød': 'flowerRed',
-            'purple': 'flowerPurple',
-            'sort': 'flowerBlack',
+            'royal blå': 'ExtraflowerRoyalBlue',
+            'navy blå': 'ExtraflowerNavyBlue',
+            'bordeaux': 'ExtraflowerMaroon',
+            'light blå': 'ExtraflowerSkyBlue',
+            'rød': 'ExtraflowerRed',
+            'purple': 'ExtraflowerPurple',
+            'sort': 'ExtraflowerBlack',
         };
         const message = colorMap[selectedRosetteColor.name.toLowerCase()];
         if (!message) return;
@@ -875,9 +876,9 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
     useEffect(() => { forOptionChange('Kokarde', selectedPrestige); }, [selectedPrestige]);
     useEffect(() => {
         const colorMap = {
-            'Signature': 'StandardEmblem',
-            'Prestige': 'PrestigeEmblem',
-            'Stjernetegn': 'StjernetegnEmblem',
+            'Signature': 'ExtraStandardEmblem',
+            'Prestige': 'ExtraPrestigeEmblem',
+            'Stjernetegn': 'ExtraStjernetegnEmblem',
         };
         const message = colorMap[selectedPrestige];
         if (!message) return;
@@ -892,12 +893,12 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
 
     useEffect(() => { forOptionChange('Emblem', selectedEmblem); }, [selectedEmblem]);
     useEffect(() => {
-        const colorMap = { "Guld": "rosetfarveGold", "Sølv": "rosetfarveSilver" };
+        const colorMap = { "Guld": "ExtrarosetfarveGold", "Sølv": "ExtrarosetfarveSilver" };
         const message = colorMap[selectedEmblem.value];
         if (!message) return;
 
         sendToActiveIframe(message);
-        const newEmblemMsg = (selectedEmblem.name === 'Guld' || selectedEmblem.value === 'Guld') ? 'gold new' : 'silver new';
+        const newEmblemMsg = (selectedEmblem.name === 'Guld' || selectedEmblem.value === 'Guld') ? 'Extragold new' : 'Extrasilver new';
         sendToActiveIframe(newEmblemMsg);
         if (cameraTriggers.current["rosetfarve"]) {
             sendToActiveIframe("rosetfarve camera");
@@ -933,11 +934,12 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
 
         const mapPulseForPostMessage = (typeStr) => {
             if (typeof typeStr !== 'string') return typeStr;
-            if (typeStr === 'Pulse Guld') return 'Pulse Guld Guld';
-            if (typeStr === 'Pulse Simli Guld') return 'Pulse Guld Simli Guld';
-            if (typeStr === 'Pulse Sølv') return 'Pulse Sølv Sølv';
-            if (typeStr === 'Pulse Simli Sølv') return 'Pulse Sølv Simli Sølv';
-            return typeStr;
+            const prefixed = typeStr.startsWith('Extra') ? typeStr : 'Extra' + typeStr;
+            if (prefixed === 'ExtraPulse Guld') return 'ExtraPulse Guld Guld';
+            if (prefixed === 'ExtraPulse Simli Guld') return 'ExtraPulse Guld Simli Guld';
+            if (prefixed === 'ExtraPulse Sølv') return 'ExtraPulse Sølv Sølv';
+            if (prefixed === 'ExtraPulse Simli Sølv') return 'ExtraPulse Sølv Simli Sølv';
+            return prefixed;
         };
 
         sendToActiveIframe(mapPulseForPostMessage(message));
@@ -950,7 +952,7 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
 
     useEffect(() => {
         forOptionChange('Extra Top broderi', topEmbroiderySelection);
-        const msg = `topEmbroidery:${topEmbroiderySelection}`;
+        const msg = `ExtratopEmbroidery:${topEmbroiderySelection}`;
         sendToActiveIframe(msg);
     }, [topEmbroiderySelection]);
 
