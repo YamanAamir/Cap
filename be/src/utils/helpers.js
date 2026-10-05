@@ -239,6 +239,10 @@ const extractOrderField = (order, fieldKey) => {
       'options.BRODERI.Navne broderi', 'Navne broderi',
       'options.UDDANNELSESBÅND.Broderi foran', 'Broderi foran',
       'options.BRODERI.Skolebroderi', 'Skolebroderi',
+      'options.EKSTRABETRÆK.Skolebroderi', 'Ekstrabetræk Skolebroderi',
+      'options.EKSTRABETRÆK.Skolebroderi text', 'options.EKSTRABETRÆK.Skolebroderi Text',
+      'Ekstrabetræk Skolebroderi text', 'Ekstrabetræk Skolebroderi Text',
+      'Extra Cover School Embroidery Text', 'EXTRA SCHOOL EMBROIDERY TEXT',
       'options.SKYGGE.Skyggegravering Line 1', 'Skyggegravering Line 1', 'Line 1',
       'options.SKYGGE.Skyggegravering Line 2', 'Skyggegravering Line 2', 'Line 2',
       'options.SKYGGE.Skyggegravering Line 3', 'Skyggegravering Line 3', 'Line 3'

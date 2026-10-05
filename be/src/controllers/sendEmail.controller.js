@@ -141,6 +141,10 @@ const RAW_PASSTHROUGH_FIELDS = new Set([
   'options.BRODERI.Navne broderi', 'Navne broderi',
   'options.UDDANNELSESBÅND.Broderi foran', 'Broderi foran',
   'options.BRODERI.Skolebroderi', 'Skolebroderi',
+  'options.EKSTRABETRÆK.Skolebroderi', 'Ekstrabetræk Skolebroderi',
+  'options.EKSTRABETRÆK.Skolebroderi text', 'options.EKSTRABETRÆK.Skolebroderi Text',
+  'Ekstrabetræk Skolebroderi text', 'Ekstrabetræk Skolebroderi Text',
+  'Extra Cover School Embroidery Text', 'EXTRA SCHOOL EMBROIDERY TEXT',
   'options.SKYGGE.Skyggegravering Line 1', 'Skyggegravering Line 1', 'Line 1',
   'options.SKYGGE.Skyggegravering Line 2', 'Skyggegravering Line 2', 'Line 2',
   'options.SKYGGE.Skyggegravering Line 3', 'Skyggegravering Line 3', 'Line 3'
@@ -244,10 +248,15 @@ const factoryOrderEmail = async (orderData, columnsConfig = null) => {
     Object.entries(selectedOptions).forEach(([catKey, catValue]) => {
       const categoryName = translateFactoryValue(catKey).toUpperCase();
       if (typeof catValue === 'object' && catValue !== null) {
-        sectionsMap[categoryName] = Object.entries(catValue).map(([subKey, subVal]) => ({
-          label: translateFactoryValue(subKey),
-          value: translateFactoryValue(subVal) || 'Not Chosen'
-        }));
+        sectionsMap[categoryName] = Object.entries(catValue).map(([subKey, subVal]) => {
+          const isPassthrough = RAW_PASSTHROUGH_FIELDS.has(subKey) ||
+                                RAW_PASSTHROUGH_FIELDS.has(`${catKey}.${subKey}`) ||
+                                RAW_PASSTHROUGH_FIELDS.has(`options.${catKey}.${subKey}`);
+          return {
+            label: translateFactoryValue(subKey),
+            value: isPassthrough ? (subVal || 'Not Chosen') : (translateFactoryValue(subVal) || 'Not Chosen')
+          };
+        });
       }
     });
   }
@@ -1317,12 +1326,12 @@ const capOrderEmail = (orderData) => {
                               </td>
                             </tr>`}
                             ` : ''}
-                            ${!selectedOptions.BRODERI || !selectedOptions.BRODERI.Skolebroderi ? `` : `
+                            ${!(selectedOptions.EKSTRABETRÆK?.Skolebroderi || selectedOptions.BRODERI?.Skolebroderi) ? `` : `
                             <tr>
                               <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
                                 <table width="100%" border="0" cellpadding="0" cellspacing="0">
                                   <tr><td style="font-size:14px; text-transform:uppercase; padding-bottom:5px;">Skolebroderi</td></tr>
-                                  <tr><td style="font-size:16px;">${selectedOptions.BRODERI.Skolebroderi}</td></tr>
+                                  <tr><td style="font-size:16px;">${selectedOptions.EKSTRABETRÆK?.Skolebroderi || selectedOptions.BRODERI?.Skolebroderi}</td></tr>
                                 </table>
                               </td>
                             </tr>
@@ -1330,7 +1339,7 @@ const capOrderEmail = (orderData) => {
                               <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
                                 <table width="100%" border="0" cellpadding="0" cellspacing="0">
                                   <tr><td style="font-size:14px; text-transform:uppercase; padding-bottom:5px;">Skolebroderi farve</td></tr>
-                                  <tr><td style="font-size:16px;">${selectedOptions.BRODERI['Skolebroderi farve']}</td></tr>
+                                  <tr><td style="font-size:16px;">${selectedOptions.EKSTRABETRÆK?.['Skolebroderi farve'] || selectedOptions.BRODERI?.['Skolebroderi farve']}</td></tr>
                                 </table>
                               </td>
                             </tr>`}
@@ -2508,12 +2517,12 @@ const capOrderAdminEmail = (orderData) => {
                               </td>
                             </tr>`}
                             ` : ''}
-                            ${!selectedOptions.BRODERI || !selectedOptions.BRODERI.Skolebroderi ? `` : `
+                            ${!(selectedOptions.EKSTRABETRÆK?.Skolebroderi || selectedOptions.BRODERI?.Skolebroderi) ? `` : `
                             <tr>
                               <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
                                 <table width="100%" border="0" cellpadding="0" cellspacing="0">
                                   <tr><td style="font-size:14px; text-transform:uppercase; padding-bottom:5px;">Skolebroderi</td></tr>
-                                  <tr><td style="font-size:16px;">${selectedOptions.BRODERI.Skolebroderi}</td></tr>
+                                  <tr><td style="font-size:16px;">${selectedOptions.EKSTRABETRÆK?.Skolebroderi || selectedOptions.BRODERI?.Skolebroderi}</td></tr>
                                 </table>
                               </td>
                             </tr>
@@ -2521,7 +2530,7 @@ const capOrderAdminEmail = (orderData) => {
                               <td style="border-bottom:1px solid #cdcdcd; padding:10px 0;">
                                 <table width="100%" border="0" cellpadding="0" cellspacing="0">
                                   <tr><td style="font-size:14px; text-transform:uppercase; padding-bottom:5px;">Skolebroderi farve</td></tr>
-                                  <tr><td style="font-size:16px;">${selectedOptions.BRODERI['Skolebroderi farve']}</td></tr>
+                                  <tr><td style="font-size:16px;">${selectedOptions.EKSTRABETRÆK?.['Skolebroderi farve'] || selectedOptions.BRODERI?.['Skolebroderi farve']}</td></tr>
                                 </table>
                               </td>
                             </tr>`}

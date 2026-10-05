@@ -17,7 +17,7 @@ const ConfigBlueprintCards = ({ selectedOptions, productionFilters, isFactoryVie
   const isOldFormat = Array.isArray(productionFilters);
 
   // Helper to render values with English translations in factory mode
-  const renderValue = (value) => {
+  const renderValue = (value, fieldKey = '') => {
     if (value === null || value === undefined || value === '') {
       return <span className="text-slate-400 font-bold text-sm">{isFactoryMode ? 'Not Chosen' : 'Ikke valgt'}</span>;
     }
@@ -29,8 +29,15 @@ const ConfigBlueprintCards = ({ selectedOptions, productionFilters, isFactoryVie
       return value ? <Check className="w-4 h-4 text-green-600" /> : <span className="text-slate-400 font-bold text-sm">Nej</span>;
     }
 
+    const isCustomText = String(fieldKey || '').toLowerCase().includes('skolebroderi') ||
+                         String(fieldKey || '').toLowerCase().includes('navne') ||
+                         String(fieldKey || '').toLowerCase().includes('line 1') ||
+                         String(fieldKey || '').toLowerCase().includes('line 2') ||
+                         String(fieldKey || '').toLowerCase().includes('line 3') ||
+                         String(fieldKey || '').toLowerCase().includes('broderi foran');
+
     if (typeof value === 'string' || typeof value === 'number') {
-      const formatted = isFactoryMode ? translateFactoryValue(value) : value;
+      const formatted = (isFactoryMode && !isCustomText) ? translateFactoryValue(value) : value;
       return <span className="font-bold text-slate-800 text-sm break-words">{formatted}</span>;
     }
 
@@ -41,16 +48,16 @@ const ConfigBlueprintCards = ({ selectedOptions, productionFilters, isFactoryVie
       const formattedArray = value.map(item => {
         if (typeof item === 'object' && item !== null) {
           const raw = item.name || item.value || JSON.stringify(item);
-          return isFactoryMode ? translateFactoryValue(raw) : raw;
+          return (isFactoryMode && !isCustomText) ? translateFactoryValue(raw) : raw;
         }
-        return isFactoryMode ? translateFactoryValue(item) : item;
+        return (isFactoryMode && !isCustomText) ? translateFactoryValue(item) : item;
       }).join(', ');
       return <span className="font-bold text-slate-800 text-sm break-words">{formattedArray}</span>;
     }
     
     if (typeof value === 'object' && value !== null) {
       const rawText = value.name || value.value || 'Selected';
-      const displayText = isFactoryMode ? translateFactoryValue(rawText) : rawText;
+      const displayText = (isFactoryMode && !isCustomText) ? translateFactoryValue(rawText) : rawText;
 
       return (
         <div className="flex items-center gap-2 mt-1">
@@ -208,7 +215,7 @@ const ConfigBlueprintCards = ({ selectedOptions, productionFilters, isFactoryVie
           return (
             <div key={i} className="flex flex-col">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{displayKey}</span>
-              {renderValue(value)}
+              {renderValue(value, key)}
             </div>
           );
         }).filter(Boolean);
