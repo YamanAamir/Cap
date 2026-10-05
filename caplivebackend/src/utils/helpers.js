@@ -71,13 +71,20 @@ const extractOrderField = (order, fieldKey) => {
 
   if (fieldKey === 'options.SKYGGE.Laserengravering' || fieldKey === 'Laserengravering') {
     const skygge = selectedOptions.SKYGGE || selectedOptions.skygge || {};
-    const line1 = String(skygge['Skyggegravering Line 1'] || skygge['skyggegravering line 1'] || skygge.line1 || '').trim();
-    const line2 = String(skygge['Skyggegravering Line 2'] || skygge['skyggegravering line 2'] || skygge.line2 || '').trim();
-    const line3 = String(skygge['Skyggegravering Line 3'] || skygge['skyggegravering line 3'] || skygge.line3 || '').trim();
-    if (line1 || line2 || line3) {
+    const rawLaser = String(skygge.Laserengravering || skygge.laserengravering || selectedOptions.Laserengravering || '').trim().toLowerCase();
+    const line1 = String(skygge['Skyggegravering Line 1'] || skygge['skyggegravering line 1'] || skygge.line1 || selectedOptions['Skyggegravering Line 1'] || '').trim();
+    const line2 = String(skygge['Skyggegravering Line 2'] || skygge['skyggegravering line 2'] || skygge.line2 || selectedOptions['Skyggegravering Line 2'] || '').trim();
+    const line3 = String(skygge['Skyggegravering Line 3'] || skygge['skyggegravering line 3'] || skygge.line3 || selectedOptions['Skyggegravering Line 3'] || '').trim();
+
+    const isValidLine = (str) => {
+      const s = str.toLowerCase();
+      return s !== '' && s !== 'x' && s !== 'none' && s !== 'ingen' && s !== 'nej' && s !== 'no';
+    };
+
+    if (rawLaser === 'yes' || rawLaser === 'ja' || rawLaser === 'true' || isValidLine(line1) || isValidLine(line2) || isValidLine(line3)) {
       return 'Yes';
     }
-    return 'x';
+    return 'No';
   }
 
   if (fieldKey === 'options.FOER.Indvendigt foer billede' || fieldKey === 'Foer Billede') {

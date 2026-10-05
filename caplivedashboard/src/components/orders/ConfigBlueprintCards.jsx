@@ -202,6 +202,22 @@ const ConfigBlueprintCards = ({ selectedOptions, productionFilters, isFactoryVie
             }
           }
 
+          if (key.toLowerCase().includes('laserengravering') && typeof details === 'object' && details !== null) {
+            const line1 = String(details['Skyggegravering Line 1'] || details['skyggegravering line 1'] || details.line1 || '').trim();
+            const line2 = String(details['Skyggegravering Line 2'] || details['skyggegravering line 2'] || details.line2 || '').trim();
+            const line3 = String(details['Skyggegravering Line 3'] || details['skyggegravering line 3'] || details.line3 || '').trim();
+            const isValidLine = (str) => {
+              const s = str.toLowerCase();
+              return s !== '' && s !== 'x' && s !== 'none' && s !== 'ingen' && s !== 'nej' && s !== 'no';
+            };
+            const rawLaser = String(value || '').trim().toLowerCase();
+            if (rawLaser === 'yes' || rawLaser === 'ja' || rawLaser === 'true' || isValidLine(line1) || isValidLine(line2) || isValidLine(line3)) {
+              value = isFactoryMode ? 'Yes' : 'Ja';
+            } else if (!value || rawLaser === 'x' || rawLaser === 'no' || rawLaser === 'nej' || rawLaser === 'none' || rawLaser === 'ingen') {
+              value = isFactoryMode ? 'No' : 'Nej';
+            }
+          }
+
           // Hide huge base64 strings and custom lining uploads
           if (typeof value === 'string' && value.startsWith('data:image')) return null;
           if (Array.isArray(value) && value[0]?.url) return null;

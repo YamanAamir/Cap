@@ -249,12 +249,28 @@ const factoryOrderEmail = async (orderData, columnsConfig = null) => {
       const categoryName = translateFactoryValue(catKey).toUpperCase();
       if (typeof catValue === 'object' && catValue !== null) {
         sectionsMap[categoryName] = Object.entries(catValue).map(([subKey, subVal]) => {
+          let valueToUse = subVal;
+          if (subKey.toLowerCase().includes('laserengravering')) {
+            const line1 = String(catValue['Skyggegravering Line 1'] || catValue['skyggegravering line 1'] || catValue.line1 || '').trim();
+            const line2 = String(catValue['Skyggegravering Line 2'] || catValue['skyggegravering line 2'] || catValue.line2 || '').trim();
+            const line3 = String(catValue['Skyggegravering Line 3'] || catValue['skyggegravering line 3'] || catValue.line3 || '').trim();
+            const isValidLine = (str) => {
+              const s = str.toLowerCase();
+              return s !== '' && s !== 'x' && s !== 'none' && s !== 'ingen' && s !== 'nej' && s !== 'no';
+            };
+            const rawLaser = String(subVal || '').trim().toLowerCase();
+            if (rawLaser === 'yes' || rawLaser === 'ja' || rawLaser === 'true' || isValidLine(line1) || isValidLine(line2) || isValidLine(line3)) {
+              valueToUse = 'Yes';
+            } else {
+              valueToUse = 'No';
+            }
+          }
           const isPassthrough = RAW_PASSTHROUGH_FIELDS.has(subKey) ||
                                 RAW_PASSTHROUGH_FIELDS.has(`${catKey}.${subKey}`) ||
                                 RAW_PASSTHROUGH_FIELDS.has(`options.${catKey}.${subKey}`);
           return {
             label: translateFactoryValue(subKey),
-            value: isPassthrough ? (subVal || 'Not Chosen') : (translateFactoryValue(subVal) || 'Not Chosen')
+            value: isPassthrough ? (valueToUse || 'Not Chosen') : (translateFactoryValue(valueToUse) || 'Not Chosen')
           };
         });
       }
