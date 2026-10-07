@@ -215,7 +215,10 @@ const STANDARD_PRICE_CONFIG = {
           "Top broderi 1": 149,
           "Top broderi 2": 149,
           "Top broderi 3": 149,
-          "Top broderi 4": 149
+          "Top broderi 4": 149,
+          "Top broderi 5": 149,
+          "Top broderi 6": 149,
+          "Top broderi 7": 149
         },
         "Broderifarve": {
           "Guld": 0,

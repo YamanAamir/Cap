@@ -104,7 +104,7 @@ const STATIC_FIELD_GROUPS = [
     name: '6. BRODERI (Back & Top Embroidery)',
     categoryKey: 'BRODERI',
     fields: [
-      { label: 'Top broderi (Top Cap Embroidery Design 1-4)', value: 'options.BRODERI.Top broderi', defaultHeader: 'Top broderi' },
+      { label: 'Top broderi (Top Cap Embroidery Design 1-7)', value: 'options.BRODERI.Top broderi', defaultHeader: 'Top broderi' },
       { label: 'Navne broderi (Back Student Name Text)', value: 'options.BRODERI.Navne broderi', defaultHeader: 'Navne broderi' },
       { label: 'Broderifarve (Back Name Color)', value: 'options.BRODERI.Broderifarve', defaultHeader: 'Navne broderifarve' },
       { label: 'Skolebroderi (School Name Embroidery Text)', value: 'options.BRODERI.Skolebroderi', defaultHeader: 'Skolebroderi' },

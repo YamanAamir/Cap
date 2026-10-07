@@ -19,10 +19,16 @@ import topDesign1Gold from '../assets/topDesignImg/1Gold.webp';
 import topDesign2Gold from '../assets/topDesignImg/2Gold.webp';
 import topDesign3Gold from '../assets/topDesignImg/3Gold.webp';
 import topDesign4Gold from '../assets/topDesignImg/4Gold.webp';
+import topDesign5Gold from '../assets/topDesignImg/5Gold.webp';
+import topDesign6Gold from '../assets/topDesignImg/6Gold.webp';
+import topDesign7Gold from '../assets/topDesignImg/7Gold.webp';
 import topDesign1Silver from '../assets/topDesignImg/1Silver.webp';
 import topDesign2Silver from '../assets/topDesignImg/2Silver.webp';
 import topDesign3Silver from '../assets/topDesignImg/3Silver.webp';
 import topDesign4Silver from '../assets/topDesignImg/4Silver.webp';
+import topDesign5Silver from '../assets/topDesignImg/5Silver.webp';
+import topDesign6Silver from '../assets/topDesignImg/6Silver.webp';
+import topDesign7Silver from '../assets/topDesignImg/7Silver.webp';
 
 import international from '../assets/flagbandimages/international.webp';
 import usakinaden from '../assets/flagbandimages/USAKINADEN.webp';
@@ -1123,6 +1129,9 @@ const ForExtraCover = ({ programNew, current, forOptionChange, selectedOptions, 
                         { value: 'Top broderi 2', label: 'Top broderi 2', img: isGoldEmblem ? topDesign3Gold : topDesign3Silver },
                         { value: 'Top broderi 3', label: 'Top broderi 3', img: isGoldEmblem ? topDesign2Gold : topDesign2Silver },
                         { value: 'Top broderi 4', label: 'Top broderi 4', img: isGoldEmblem ? topDesign4Gold : topDesign4Silver },
+                        // { value: 'Top broderi 5', label: 'Top broderi 5', img: isGoldEmblem ? topDesign5Gold : topDesign5Silver },
+                        // { value: 'Top broderi 6', label: 'Top broderi 6', img: isGoldEmblem ? topDesign6Gold : topDesign6Silver },
+                        // { value: 'Top broderi 7', label: 'Top broderi 7', img: isGoldEmblem ? topDesign7Gold : topDesign7Silver },
                     ].map((option) => (
                         <button
                             key={option.value}

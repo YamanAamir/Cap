@@ -447,6 +447,9 @@ const StudentDashboard = () => {
         "Top broderi 2": 149,
         "Top broderi 3": 149,
         "Top broderi 4": 149,
+        "Top broderi 5": 149,
+        "Top broderi 6": 149,
+        "Top broderi 7": 149,
       },
       Broderifarve: {
         Guld: 0,
@@ -909,6 +912,9 @@ const StudentDashboard = () => {
         "Top broderi 2": 149,
         "Top broderi 3": 149,
         "Top broderi 4": 149,
+        "Top broderi 5": 149,
+        "Top broderi 6": 149,
+        "Top broderi 7": 149,
       },
       Broderifarve: {
         Guld: 0,
@@ -1364,6 +1370,9 @@ const StudentDashboard = () => {
         "Top broderi 2": 0,
         "Top broderi 3": 0,
         "Top broderi 4": 0,
+        "Top broderi 5": 0,
+        "Top broderi 6": 0,
+        "Top broderi 7": 0,
       },
       Broderifarve: {
         Guld: 0,

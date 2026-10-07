@@ -13,10 +13,16 @@ import topDesign1Gold from '../assets/topDesignImg/1Gold.webp';
 import topDesign2Gold from '../assets/topDesignImg/2Gold.webp';
 import topDesign3Gold from '../assets/topDesignImg/3Gold.webp';
 import topDesign4Gold from '../assets/topDesignImg/4Gold.webp';
+import topDesign5Gold from '../assets/topDesignImg/5Gold.webp';
+import topDesign6Gold from '../assets/topDesignImg/6Gold.webp';
+import topDesign7Gold from '../assets/topDesignImg/7Gold.webp';
 import topDesign1Silver from '../assets/topDesignImg/1Silver.webp';
 import topDesign2Silver from '../assets/topDesignImg/2Silver.webp';
 import topDesign3Silver from '../assets/topDesignImg/3Silver.webp';
 import topDesign4Silver from '../assets/topDesignImg/4Silver.webp';
+import topDesign5Silver from '../assets/topDesignImg/5Silver.webp';
+import topDesign6Silver from '../assets/topDesignImg/6Silver.webp';
+import topDesign7Silver from '../assets/topDesignImg/7Silver.webp';
 
 const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visibilityConfig = {}, currentEmblem }) => {
     const isGold = (currentEmblem?.name === 'Guld' || currentEmblem?.value === 'Guld' || currentEmblem?.name === 'Gold' || currentEmblem?.value === 'Gold') ?? true;
@@ -501,6 +507,9 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
                         { value: 'Top broderi 2', label: 'Top broderi 2', img: isGold ? topDesign3Gold : topDesign3Silver },
                         { value: 'Top broderi 3', label: 'Top broderi 3', img: isGold ? topDesign2Gold : topDesign2Silver },
                         { value: 'Top broderi 4', label: 'Top broderi 4', img: isGold ? topDesign4Gold : topDesign4Silver },
+                        { value: 'Top broderi 5', label: 'Top broderi 5', img: isGold ? topDesign5Gold : topDesign5Silver },
+                        { value: 'Top broderi 6', label: 'Top broderi 6', img: isGold ? topDesign6Gold : topDesign6Silver },
+                        { value: 'Top broderi 7', label: 'Top broderi 7', img: isGold ? topDesign7Gold : topDesign7Silver },
                     ].filter(opt => isVisible(`Top broderi_${opt.value}`)).map((option) => (
                         <button
                             key={option.value}

@@ -318,6 +318,9 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke }) =>
                         { value: 'Top broderi 2', label: 'Top broderi 2', img: null },
                         { value: 'Top broderi 3', label: 'Top broderi 3', img: null },
                         { value: 'Top broderi 4', label: 'Top broderi 4', img: null },
+                        { value: 'Top broderi 5', label: 'Top broderi 5', img: null },
+                        { value: 'Top broderi 6', label: 'Top broderi 6', img: null },
+                        { value: 'Top broderi 7', label: 'Top broderi 7', img: null },
                     ].map((option) => (
                         <button
                             key={option.value}

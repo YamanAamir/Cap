@@ -123,6 +123,9 @@ const translateValue = (value) => {
     'Top broderi 2': 'Top Embroidery 2',
     'Top broderi 3': 'Top Embroidery 3',
     'Top broderi 4': 'Top Embroidery 4',
+    'Top broderi 5': 'Top Embroidery 5',
+    'Top broderi 6': 'Top Embroidery 6',
+    'Top broderi 7': 'Top Embroidery 7',
     'Top broderi': 'Top Embroidery',
   };
 

@@ -557,6 +557,9 @@ const EXACT_TRANSLATIONS = {
   'Top broderi 2': 'Top Embroidery Design 2',
   'Top broderi 3': 'Top Embroidery Design 3',
   'Top broderi 4': 'Top Embroidery Design 4',
+  'Top broderi 5': 'Top Embroidery Design 5',
+  'Top broderi 6': 'Top Embroidery Design 6',
+  'Top broderi 7': 'Top Embroidery Design 7',
 
   // ==================== STARS ====================
   '1': '1',
