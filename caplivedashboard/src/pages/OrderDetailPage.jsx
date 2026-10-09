@@ -327,8 +327,17 @@ const OrderDetailPage = () => {
                 );
               })()}
               <div className="bg-white rounded p-3 border border-slate-200">
-                <span className="text-[10px] font-bold uppercase text-slate-500 tracking-widest block mb-1">Tier</span>
+                <span className="text-[10px] font-bold uppercase text-slate-500 tracking-widest block mb-1">Customer Tier</span>
                 <p className="font-bold text-sm text-slate-800">{order.packageName || 'Standard Issue'}</p>
+              </div>
+
+              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded p-3 border border-indigo-200">
+                <span className="text-[10px] font-bold uppercase text-indigo-700 tracking-widest block mb-1 flex items-center gap-1">
+                  <Tag className="h-3 w-3 text-indigo-600" /> Supplier Category (Factory)
+                </span>
+                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-600 text-white shadow-sm mt-0.5">
+                  {order.supplierCategory || 'Budget'}
+                </span>
               </div>
 
               {order.installmentDetails && order.installmentDetails.installments && (

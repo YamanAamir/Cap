@@ -13,7 +13,7 @@ const RAW_PASSTHROUGH_FIELDS = new Set([
   'customerId', 'customerName', 'customerEmail', 'customerPhone',
   'customerAddress', 'customerCity', 'customerPostalCode',
   'customerDeliveryCountry', 'schoolName',
-  'totalPrice', 'currency', 'packageName',
+  'totalPrice', 'currency', 'packageName', 'supplierCategory',
   'status', 'paymentStatus', 'paymentIntentId', 'discountCode', 'discountAmount',
   'options.SKYGGE.Laserengravering', 'options.BETRÆK.Stjerner farve',
   'options.BRODERI.Navne broderi', 'Navne broderi',

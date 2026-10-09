@@ -313,9 +313,14 @@ const ProductionFactoryPage = () => {
                       {new Date(order.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex flex-col">
+                      <div className="flex flex-col gap-1">
                         <span className="font-bold text-slate-700">{customerDetails.Skolenavn || order.program || 'N/A'}</span>
-                        <span className="text-xs text-slate-400">{order.packageName || 'Standard'}</span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs text-slate-400">{order.packageName || 'Standard'}</span>
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200" title="Supplier Category based on final design">
+                            {order.supplierCategory || 'Budget'}
+                          </span>
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">

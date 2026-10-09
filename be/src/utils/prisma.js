@@ -30,6 +30,8 @@ function safeParseJson(value) {
   return value;
 }
 
+const { calculateSupplierCategory } = require('./supplierCategory');
+
 const prisma = prismaRaw.$extends({
   result: {
     installmentPlan: {
@@ -67,6 +69,12 @@ const prisma = prismaRaw.$extends({
         needs: { selectedOptions: true },
         compute(order) {
           return safeParseJson(order.selectedOptions);
+        }
+      },
+      supplierCategory: {
+        needs: { selectedOptions: true, packageName: true },
+        compute(order) {
+          return calculateSupplierCategory(order);
         }
       },
       installmentDetails: {

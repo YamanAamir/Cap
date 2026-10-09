@@ -15,6 +15,7 @@ const DEFAULT_ORDER_STATUSES = [
 
 const DEFAULT_EXCEL_COLUMNS = [
   { fieldKey: 'orderNumber', headerLabel: 'Order nr', sortOrder: 1 },
+  { fieldKey: 'supplierCategory', headerLabel: 'Supplier Category', sortOrder: 1.5 },
   { fieldKey: 'static:1', headerLabel: 'PAX', sortOrder: 2 }, // PAX remains static 1
   { fieldKey: 'options.STØRRELSE.Vælg størrelse', headerLabel: 'Size', sortOrder: 3 },
   { fieldKey: 'options.KOKARDE.Roset farve', headerLabel: 'Rosette Color', sortOrder: 4 },

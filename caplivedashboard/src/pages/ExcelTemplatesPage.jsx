@@ -30,6 +30,7 @@ const STATIC_FIELD_GROUPS = [
       { label: 'Total Price', value: 'totalPrice', defaultHeader: 'Total Price' },
       { label: 'Currency (DKK)', value: 'currency', defaultHeader: 'Currency' },
       { label: 'Package Name (Standard, Luksus, Premium)', value: 'packageName', defaultHeader: 'Package' },
+      { label: 'Supplier Category (Factory Agreed: Budget, Budget with Embroidery, Standard, Luxury, Premium)', value: 'supplierCategory', defaultHeader: 'Supplier Category' },
       { label: 'Program (STX, HHX, HTX, etc.)', value: 'program', defaultHeader: 'Program' },
       { label: 'Order Status', value: 'status', defaultHeader: 'Status' },
       { label: 'Payment Status', value: 'paymentStatus', defaultHeader: 'Payment Status' },

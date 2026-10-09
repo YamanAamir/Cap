@@ -40,6 +40,8 @@ const extractOrderField = (order, fieldKey) => {
       ? JSON.parse(order.selectedOptions)
       : order.selectedOptions || {};
 
+const { calculateSupplierCategory } = require('./supplierCategory');
+
   const map = {
     orderId: order.id,
     orderNumber: order.orderNumber,
@@ -59,6 +61,7 @@ const extractOrderField = (order, fieldKey) => {
     totalPrice: order.totalPrice,
     currency: order.currency,
     packageName: order.packageName || '',
+    supplierCategory: order.supplierCategory || calculateSupplierCategory(order),
     program: order.program || '',
     status: order.status,
     paymentStatus: order.paymentStatus || '',

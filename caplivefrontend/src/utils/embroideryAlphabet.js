@@ -134,7 +134,7 @@ const LETTER_CONFIG = {
     '/': { folder: 'Forward-Slash', renderW: 35, renderH: 65, baselineFrac: 1.0, overlap: 4 },
     '>': { folder: 'Greater-Than', renderW: 40, renderH: 45, baselineFrac: 1.3, overlap: 4 },
     '#': { folder: 'Hash', renderW: 48, renderH: 65, baselineFrac: 1.0, overlap: 4 },
-    '-': { folder: 'Hyphen', renderW: 30, renderH: 25, baselineFrac: 1.8, overlap: 2 },
+    '-': { folder: 'Hyphen', renderW: 30, renderH: 14, baselineFrac: 2.6, overlap: 2 },
     '{': { folder: 'Left-Brace', renderW: 30, renderH: 75, baselineFrac: 0.9, overlap: 4 },
     '[': { folder: 'Left-Bracket', renderW: 25, renderH: 70, baselineFrac: 1.0, overlap: 4 },
     '(': { folder: 'Left-Parenthesis', renderW: 25, renderH: 70, baselineFrac: 0.95, overlap: 4 },
