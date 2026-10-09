@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { sendToActiveIframe } from '../utils/iframeMessenger';
+import { translateTextToArabic } from '../utils/arabicTranslator';
 import img1 from '../assets/shadeimages/glimmer.webp';
 import img2 from '../assets/shadeimages/none.webp';
 import img3 from '../assets/shadeimages/shade.webp';
@@ -24,6 +25,49 @@ const Shade = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig
 
     const [engravingLine3, setEngravingLine3] = useState(selectedOptions['Skyggegravering Line 3'] || '');
     const [inputLine3, setInputLine3] = useState(selectedOptions['Skyggegravering Line 3'] || '');
+
+    const [isConvertingLine1Arabic, setIsConvertingLine1Arabic] = useState(false);
+    const [isConvertingLine2Arabic, setIsConvertingLine2Arabic] = useState(false);
+    const [isConvertingLine3Arabic, setIsConvertingLine3Arabic] = useState(false);
+
+    const handleConvertLine1Arabic = async () => {
+        if (isConvertingLine1Arabic || !inputLine1.trim()) return;
+        setIsConvertingLine1Arabic(true);
+        try {
+            const arabic = await translateTextToArabic(inputLine1, 30);
+            if (arabic) setInputLine1(arabic);
+        } catch (err) {
+            console.error('Error converting line 1 to Arabic:', err);
+        } finally {
+            setIsConvertingLine1Arabic(false);
+        }
+    };
+
+    const handleConvertLine2Arabic = async () => {
+        if (isConvertingLine2Arabic || !inputLine2.trim()) return;
+        setIsConvertingLine2Arabic(true);
+        try {
+            const arabic = await translateTextToArabic(inputLine2, 30);
+            if (arabic) setInputLine2(arabic);
+        } catch (err) {
+            console.error('Error converting line 2 to Arabic:', err);
+        } finally {
+            setIsConvertingLine2Arabic(false);
+        }
+    };
+
+    const handleConvertLine3Arabic = async () => {
+        if (isConvertingLine3Arabic || !inputLine3.trim()) return;
+        setIsConvertingLine3Arabic(true);
+        try {
+            const arabic = await translateTextToArabic(inputLine3, 30);
+            if (arabic) setInputLine3(arabic);
+        } catch (err) {
+            console.error('Error converting line 3 to Arabic:', err);
+        } finally {
+            setIsConvertingLine3Arabic(false);
+        }
+    };
 
     useEffect(() => { setInputLine1(selectedOptions['Skyggegravering Line 1'] || ''); }, [selectedOptions['Skyggegravering Line 1']]);
     useEffect(() => { setInputLine2(selectedOptions['Skyggegravering Line 2'] || ''); }, [selectedOptions['Skyggegravering Line 2']]);
@@ -426,69 +470,142 @@ const Shade = ({ selectedOptions = {}, onOptionChange, program, visibilityConfig
             )}
 
             <div className="bg-white/70 border border-white/50 rounded-2xl mt-6">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-3">
                     <div><h4 className="font-semibold text-slate-800">Skyggegravering</h4></div>
+                </div>
+                <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-3 mb-4 flex items-start gap-2 text-xs font-medium text-amber-900 shadow-sm">
+                    <span className="text-base shrink-0">💡</span>
+                    <span>Hvis du konverterer teksten til arabisk, skal du bagefter klikke på “Anvend tekst”, før den vises på huen.</span>
                 </div>
                 <div className="space-y-4">
                     <div className="relative">
                         <span className="inline-flex items-center px-3 pt-2 rounded-full text-xs font-bold">Maks. 30 Tegn</span>
                         <input type="text" value={inputLine1} onChange={(e) => setInputLine1(e.target.value)} onKeyDown={handleKeyPressLine1} placeholder="Linje 1" maxLength={30}
                             className="w-full mt-2 mb-1 px-4 py-4 rounded-2xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 bg-white/80 backdrop-blur-sm text-slate-700 placeholder-slate-400" />
-                        <div className="flex justify-end space-x-4 mb-4 px-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-4 px-1">
                             <button
                                 type="button"
-                                onClick={handleApplyLine1}
-                                className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-all duration-200"
+                                onClick={handleConvertLine1Arabic}
+                                disabled={isConvertingLine1Arabic || !inputLine1.trim()}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95"
                             >
-                                Anvend tekst
+                                {isConvertingLine1Arabic ? (
+                                    <>
+                                        <svg className="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span>Oversætter...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="text-sm">🌐</span>
+                                        <span>Konverter til arabisk</span>
+                                    </>
+                                )}
                             </button>
-                            <button
-                                type="button"
-                                onClick={handleClearLine1}
-                                className="text-sm font-semibold text-red-500 hover:text-red-700 hover:underline transition-all duration-200"
-                            >
-                                Ryd tekst
-                            </button>
+                            <div className="flex items-center space-x-4">
+                                <button
+                                    type="button"
+                                    onClick={handleApplyLine1}
+                                    className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-all duration-200"
+                                >
+                                    Anvend tekst
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleClearLine1}
+                                    className="text-sm font-semibold text-red-500 hover:text-red-700 hover:underline transition-all duration-200"
+                                >
+                                    Ryd tekst
+                                </button>
+                            </div>
                         </div>
 
                         <span className="inline-flex items-center px-3 pt-2 rounded-full text-xs font-bold">Maks. 30 Tegn</span>
                         <input type="text" value={inputLine2} onChange={(e) => setInputLine2(e.target.value)} onKeyDown={handleKeyPressLine2} placeholder="Linje 2" maxLength={30}
                             className="w-full mt-2 mb-1 px-4 py-4 rounded-2xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 bg-white/80 backdrop-blur-sm text-slate-700 placeholder-slate-400" />
-                        <div className="flex justify-end space-x-4 mb-4 px-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-4 px-1">
                             <button
                                 type="button"
-                                onClick={handleApplyLine2}
-                                className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-all duration-200"
+                                onClick={handleConvertLine2Arabic}
+                                disabled={isConvertingLine2Arabic || !inputLine2.trim()}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95"
                             >
-                                Anvend tekst
+                                {isConvertingLine2Arabic ? (
+                                    <>
+                                        <svg className="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span>Oversætter...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="text-sm">🌐</span>
+                                        <span>Konverter til arabisk</span>
+                                    </>
+                                )}
                             </button>
-                            <button
-                                type="button"
-                                onClick={handleClearLine2}
-                                className="text-sm font-semibold text-red-500 hover:text-red-700 hover:underline transition-all duration-200"
-                            >
-                                Ryd tekst
-                            </button>
+                            <div className="flex items-center space-x-4">
+                                <button
+                                    type="button"
+                                    onClick={handleApplyLine2}
+                                    className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-all duration-200"
+                                >
+                                    Anvend tekst
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleClearLine2}
+                                    className="text-sm font-semibold text-red-500 hover:text-red-700 hover:underline transition-all duration-200"
+                                >
+                                    Ryd tekst
+                                </button>
+                            </div>
                         </div>
 
                         <span className="inline-flex items-center px-3 pt-2 rounded-full text-xs font-bold">Maks. 30 Tegn</span>
                         <input type="text" value={inputLine3} onChange={(e) => setInputLine3(e.target.value)} onKeyDown={handleKeyPressLine3} placeholder="Linje 3" maxLength={30}
                             className="w-full mt-2 mb-1 px-4 py-4 rounded-2xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all duration-200 bg-white/80 backdrop-blur-sm text-slate-700 placeholder-slate-400" />
-                        <div className="flex justify-end space-x-4 mb-2 px-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2 px-1">
                             <button
                                 type="button"
-                                onClick={handleApplyLine3}
-                                className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-all duration-200"
+                                onClick={handleConvertLine3Arabic}
+                                disabled={isConvertingLine3Arabic || !inputLine3.trim()}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 active:scale-95"
                             >
-                                Anvend tekst
+                                {isConvertingLine3Arabic ? (
+                                    <>
+                                        <svg className="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span>Oversætter...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="text-sm">🌐</span>
+                                        <span>Konverter til arabisk</span>
+                                    </>
+                                )}
                             </button>
-                            <button
-                                type="button"
-                                onClick={handleClearLine3}
-                                className="text-sm font-semibold text-red-500 hover:text-red-700 hover:underline transition-all duration-200"
-                            >
-                                Ryd tekst
-                            </button>
+                            <div className="flex items-center space-x-4">
+                                <button
+                                    type="button"
+                                    onClick={handleApplyLine3}
+                                    className="text-sm font-semibold text-blue-600 hover:text-blue-800 hover:underline transition-all duration-200"
+                                >
+                                    Anvend tekst
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleClearLine3}
+                                    className="text-sm font-semibold text-red-500 hover:text-red-700 hover:underline transition-all duration-200"
+                                >
+                                    Ryd tekst
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
