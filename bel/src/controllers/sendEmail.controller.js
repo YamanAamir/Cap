@@ -2131,7 +2131,7 @@ const capOrderEmail = (orderData) => {
                     <div style="font-size:18px; font-weight:bold; margin-bottom:5px;">Total: ${totalPrice} DKK</div>
                     <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">Inklusiv moms</div>
                     <hr style="border:none; border-top:1px solid #cdcdcd; margin:15px 0;">
-                    <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">SUM: ${orderSum} DKK</div>
+                    <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">SUM: ${totalPrice} DKK</div>
                     <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">LEVERING: ${handlingFee} DKK</div>
                     <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">MOMS: ${(totalPrice * 0.20).toFixed(2)} DKK</div>
                   </td>
@@ -2252,7 +2252,7 @@ TOTAL
 ------
 Total: ${totalPrice} ${currency}
 Inklusiv moms
-SUM: ${orderSum} DKK
+SUM: ${totalPrice} DKK
 LEVERING: ${handlingFee} DKK
 MOMS: 20% af totalbeløbet
 
@@ -3303,7 +3303,7 @@ const capOrderAdminEmail = (orderData) => {
                             <div style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">Total: ${totalPrice} DKK</div>
                             <div style="font-size: 14px; text-transform: uppercase;">Inklusiv moms</div>
                             <hr style="border: none; border-top: 1px solid #cdcdcd; margin: 15px 0;">
-                            <div style="margin-bottom: 5px; font-size: 14px; text-transform: uppercase;">SUM: ${orderSum} DKK</div>
+                            <div style="margin-bottom: 5px; font-size: 14px; text-transform: uppercase;">SUM: ${totalPrice} DKK</div>
                             <div style="margin-bottom: 5px; font-size: 14px; text-transform: uppercase;">LEVERING: ${handlingFee} DKK</div>
                             <div style="margin-bottom: 5px; font-size: 14px; text-transform: uppercase;">MOMS: ${(totalPrice * 0.20).toFixed(2)} DKK</div>
                         </td>
@@ -3409,7 +3409,7 @@ TOTAL
 Total: ${totalPrice} ${currency}
 Inklusiv moms
 ------
-SUM: ${orderSum} ${currency}
+SUM: ${totalPrice} ${currency}
 LEVERING: ${handlingFee} ${currency}
 Inklusiv moms
 MOMS: 20% of the total price DKK (vat)

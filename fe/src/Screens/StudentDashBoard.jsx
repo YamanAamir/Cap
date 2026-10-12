@@ -25,6 +25,7 @@ import Bows from "../Components/Bows";
 import QuoteModal from "../Components/Modal";
 import { useParams, useSearchParams } from "react-router-dom";
 import { GraduationCap, ChevronUp, ChevronDown, Box, Loader2, AlertCircle } from "lucide-react";
+import { pushEvent } from "../lib/tracking";
 
 import HHX from "../Default/HHX";
 import HTX from "../Default/HTX";
@@ -503,8 +504,22 @@ const StudentDashboard = () => {
         iframe.contentWindow.postMessage("Tilvælg:no", "*");
       }
     });
+    const totalPrice = calculateTotalPrice();
+    pushEvent('add_to_cart', {
+      value: totalPrice,
+      currency: 'DKK',
+      package: packageName || 'standard',
+      program: program,
+      items: [{
+        item_id: packageName || 'gradcap_custom',
+        item_name: `Studenterhue (${packageName || 'Standard'})`,
+        price: totalPrice,
+        quantity: 1
+      }]
+    }, 'gradcap_configurator');
+
     setIsQuoteModalOpen(true);
-  }, []);
+  }, [calculateTotalPrice, packageName, program]);
 
   useEffect(() => {
     if (isIframeLoaded && isAppReady && program) {

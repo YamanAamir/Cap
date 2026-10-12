@@ -531,11 +531,25 @@ const StudentDashboard = () => {
         iframe.contentWindow.postMessage("Tilvælg:no", "*");
       }
     });
+    const totalPrice = calculateTotalPrice();
+    pushEvent('add_to_cart', {
+      value: totalPrice,
+      currency: 'DKK',
+      package: packageName || 'standard',
+      program: program,
+      items: [{
+        item_id: packageName || 'gradcap_custom',
+        item_name: `Studenterhue (${packageName || 'Standard'})`,
+        price: totalPrice,
+        quantity: 1
+      }]
+    }, 'gradcap_configurator');
+
     markCompleted({
-      total_price: calculateTotalPrice(),
+      total_price: totalPrice,
     });
     setIsQuoteModalOpen(true);
-  }, [markCompleted, calculateTotalPrice]);
+  }, [markCompleted, calculateTotalPrice, packageName, program]);
 
   useEffect(() => {
     if (isIframeLoaded && isAppReady && program) {
@@ -956,21 +970,16 @@ const StudentDashboard = () => {
     if (isDesktop) {
       const iframe_desktop = document.getElementById("preview-iframe");
       if (iframe_desktop && (!iframe_desktop.src || !iframe_desktop.src.includes('playcanv.as'))) {
-        ////////DEV Student Life////////
+        ////////Life Student Life////////
         iframe_desktop.src = "https://playcanv.as/e/p/to6gFrqQ/";
 
-        ////////Production Student Life////////
-        // iframe_desktop.src = "https://playcanv.as/e/p/QIG7fh8C/";
       }
     } else {
       const iframe_mobile = document.getElementById("preview-iframe2");
       if (iframe_mobile && (!iframe_mobile.src || !iframe_mobile.src.includes('playcanv.as'))) {
-        ////////DEV Student Life////////
-        iframe_mobile.src = "https://playcanv.as/e/p/d0c53ca1/";
-        // iframe_mobile.src = "https://playcanv.as/e/p/9y9yBbyR/";
-
-        ////////Production Student Life////////
-        // iframe_mobile.src = "https://playcanv.as/e/p/QIG7fh8C/";
+        ////////Life Student Life////////
+        iframe_mobile.src = "https://playcanv.as/e/p/9y9yBbyR/";
+        // iframe_mobile.src = "https://playcanv.as/e/p/d0c53ca1/";
       }
     }
   }, [configLoading, isDesktop]);

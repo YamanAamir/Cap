@@ -46,7 +46,18 @@ const SuccessScreen = ({ onContinueConfiguring, handleResetModal, onClose }) => 
             currency: currencyCode
           });
 
-          // Use direct HTTP POST for guaranteed purchase tracking (socket may not be ready on fresh page load)
+          pushEvent('purchase', {
+            transaction_id: orderId,
+            value: totalValue,
+            currency: currencyCode,
+            items: itemsList,
+            order_ref: orderId,
+            email: data.customer_email || null,
+            consentGiven: false,
+            package: data.metadata?.packageName || undefined
+          }, 'gradcap_configurator');
+
+          // Use direct HTTP POST for guaranteed purchase tracking
           const visitorId = getOrCreateVisitorId();
           const purchasePayload = {
             visitorId,
@@ -72,18 +83,7 @@ const SuccessScreen = ({ onContinueConfiguring, handleResetModal, onClose }) => 
               body: JSON.stringify(purchasePayload),
             });
           } catch (trackErr) {
-            console.warn('[Tracking] HTTP purchase tracking failed, falling back to socket:', trackErr.message);
-            // Fallback to socket-based tracking
-            pushEvent('purchase', {
-              transaction_id: orderId,
-              value: totalValue,
-              currency: currencyCode,
-              items: itemsList,
-              order_ref: orderId,
-              email: data.customer_email || null,
-              consentGiven: false,
-              package: data.metadata?.packageName || undefined
-            }, 'gradcap_configurator');
+            console.warn('[Tracking] HTTP purchase tracking failed:', trackErr.message);
           }
         }
       } catch (err) {

@@ -6,12 +6,20 @@
  * 3. "Standard" (Standard package scope)
  * 4. "Luxury" (Luksus/Luxury package scope)
  * 5. "Premium" (Premium package scope)
+ * 
+ * Rules:
+ * - Determine category based on the final design/configuration regardless of customer's purchased package.
+ * - Standard package with default or standard options evaluates to "Standard" (NOT Luxury).
+ * - Basichue with no embroidery evaluates to "Budget", with embroidery evaluates to "Budget with Embroidery".
+ * - If customer configures Luxury or Premium features (e.g. Top embroidery, Laser engraving, Luxury/Premium box),
+ *   it upgrades to "Luxury" or "Premium" accordingly.
  */
 
 function isNonEmpty(val) {
-  if (!val) return false;
+  if (val === null || val === undefined) return false;
+  if (typeof val === 'boolean') return val;
   if (typeof val === 'object') {
-    const name = val.name || val.value || val.label || '';
+    const name = val.name ?? val.value ?? val.label ?? '';
     val = name;
   }
   const str = String(val).trim().toLowerCase();
@@ -25,8 +33,21 @@ function isNonEmpty(val) {
     str !== 'not chosen' &&
     str !== 'not selected' &&
     str !== 'uden' &&
-    str !== 'false'
+    str !== 'false' &&
+    str !== 'fravalgt' &&
+    str !== 'null' &&
+    str !== 'undefined'
   );
+}
+
+function isYes(val) {
+  if (val === null || val === undefined) return false;
+  if (typeof val === 'boolean') return val;
+  if (typeof val === 'object') {
+    val = val.name ?? val.value ?? val.label ?? '';
+  }
+  const str = String(val).trim().toLowerCase();
+  return str === 'yes' || str === 'ja' || str === 'true' || str === '1';
 }
 
 function calculateSupplierCategory(orderOrSelectedOptions) {
@@ -48,50 +69,121 @@ function calculateSupplierCategory(orderOrSelectedOptions) {
 
   selectedOptions = selectedOptions || {};
 
-  // Extract relevant features from configuration
+  // Extract option sections
   const broderi = selectedOptions.BRODERI || selectedOptions.broderi || {};
   const band = selectedOptions.UDDANNELSESBÅND || selectedOptions.uddannelsesbaand || {};
   const skygge = selectedOptions.SKYGGE || selectedOptions.skygge || {};
   const foer = selectedOptions.FOER || selectedOptions.foer || {};
+  const betraek = selectedOptions.BETRÆK || selectedOptions.betraek || {};
   const ekstra = selectedOptions.EKSTRABETRÆK || selectedOptions.ekstrabetraek || {};
   const tilbehoer = selectedOptions.TILBEHØR || selectedOptions.tilbehoer || {};
 
+  // 1. Embroideries
   const hasBackEmbroidery = isNonEmpty(broderi['Navne broderi'] || broderi['navne broderi'] || selectedOptions['Navne broderi']);
   const hasFrontEmbroidery = isNonEmpty(band['Broderi foran'] || band['broderi foran'] || selectedOptions['Broderi foran']);
   const hasSchoolEmbroidery = isNonEmpty(broderi.Skolebroderi || broderi.skolebroderi || selectedOptions.Skolebroderi);
-  const hasTopEmbroidery = isNonEmpty(broderi['Top broderi'] || broderi['top broderi']);
-  const hasLaserEngraving = isNonEmpty(skygge.Laserengravering) || isNonEmpty(skygge['Skyggegravering Line 1']);
-  const hasExtraCover = isNonEmpty(ekstra.Tilvælg) && (String(ekstra.Tilvælg).toLowerCase() === 'yes' || String(ekstra.Tilvælg).toLowerCase() === 'ja');
-  const hasCustomLiningImage = isNonEmpty(foer['Indvendigt foer billede']);
-  const hasSilkCushion = isNonEmpty(tilbehoer.Silkepude);
+  const hasTopEmbroidery = isNonEmpty(broderi['Top broderi'] || broderi['top broderi'] || ekstra['Extra Top broderi']);
 
-  const totalEmbroideries = [hasBackEmbroidery, hasFrontEmbroidery, hasSchoolEmbroidery, hasTopEmbroidery].filter(Boolean).length;
-  const pkgLower = String(originalPackage).toLowerCase();
+  // 2. Visor Laser Engraving
+  const hasLaserEngraving = isNonEmpty(skygge.Laserengravering) ||
+    isNonEmpty(skygge['Skyggegravering Line 1']) ||
+    isNonEmpty(skygge['Skyggegravering Line 2']) ||
+    isNonEmpty(skygge['Skyggegravering Line 3']);
 
-  // 1. Premium scope
-  if (pkgLower.includes('premium') || hasExtraCover || (hasLaserEngraving && totalEmbroideries >= 2)) {
+  // 3. Extra Cover
+  const hasExtraCover = isYes(ekstra.Tilvælg);
+
+  // 4. Custom Lining Image
+  const hasCustomLiningImage = isNonEmpty(foer['Indvendigt foer billede']) ||
+    isNonEmpty(foer.liningPhoto) ||
+    isNonEmpty(foer.customImage);
+
+  // 5. Box Types
+  const boxName = String(tilbehoer.Hueæske || '').trim().toLowerCase();
+  const isPremiumBox = boxName.includes('premium') || isNonEmpty(tilbehoer['Premium æske']);
+  const isLuxuryBox = boxName.includes('luksus') || boxName.includes('luxury');
+
+  // 6. Cushion and Accessories
+  const hasSilkCushion = isYes(tilbehoer.Silkepude);
+  const hasLuxuryGlass = isYes(tilbehoer['Luksus champagneglas']);
+  const hasSilkLining = String(foer.Foer || '').trim().toLowerCase() === 'silke';
+
+  // Check original package hint if present
+  const pkgLower = String(originalPackage || '').trim().toLowerCase();
+  const isBudgetOriginal = pkgLower.includes('basic') || pkgLower.includes('budget');
+
+  // ==========================================
+  // LEVEL 5: PREMIUM
+  // Factory scope: Laser engraving, Premium box, or explicit Premium package configuration
+  // ==========================================
+  if (isPremiumBox || hasLaserEngraving) {
     return 'Premium';
   }
 
-  // 2. Luxury / Luksus scope
-  if (pkgLower.includes('luksus') || pkgLower.includes('luxury') || hasLaserEngraving || hasCustomLiningImage || hasSilkCushion || totalEmbroideries >= 3) {
+  // ==========================================
+  // LEVEL 4: LUXURY
+  // Factory scope: Luxury box, Top embroidery, Silk cushion, Extra cover, Custom lining image, Silk lining, Luxury champagne glass
+  // ==========================================
+  if (
+    isLuxuryBox ||
+    hasTopEmbroidery ||
+    hasSilkCushion ||
+    hasExtraCover ||
+    hasCustomLiningImage ||
+    hasSilkLining ||
+    hasLuxuryGlass
+  ) {
     return 'Luxury';
   }
 
-  // 3. Standard scope
-  if (pkgLower.includes('standard') || (totalEmbroideries >= 2 && !pkgLower.includes('basic') && !pkgLower.includes('basichue') && !pkgLower.includes('budget'))) {
+  // ==========================================
+  // LEVEL 3: STANDARD vs LEVEL 1 & 2: BUDGET
+  // Check if configuration has non-budget Standard cap features
+  // ==========================================
+  const svederemStr = String(foer.Svederem || '').trim().toLowerCase();
+  const hasLeatherSweatband = svederemStr === 'læder' || svederemStr === 'ruskin' || svederemStr === 'alcantra';
+  const hasLiningBow = isNonEmpty(foer.Sløjfe);
+  const hasNonPolyLining = isNonEmpty(foer.Foer) && String(foer.Foer).trim().toLowerCase() !== 'polyester';
+  const hasTopkant = isNonEmpty(betraek.Topkant);
+  const hasKantband = isNonEmpty(betraek.Kantbånd);
+  const hasStjerner = isNonEmpty(betraek.Stjerner);
+  const hasFlagband = isYes(betraek.Flagbånd);
+  const hasBrimEdge = String(skygge.Materiale || '').trim().toLowerCase() === 'med kant';
+  const hasBrimTape = isNonEmpty(skygge.Skyggebånd);
+  const hasMatBrim = String(skygge.Type || '').trim().toLowerCase() === 'mat';
+  const hasFancyTapeMaterial = ['satin', 'velour'].includes(String(band.Materiale || '').trim().toLowerCase());
+
+  const hasStandardFeatures =
+    hasLeatherSweatband ||
+    hasLiningBow ||
+    hasNonPolyLining ||
+    hasTopkant ||
+    hasKantband ||
+    hasStjerner ||
+    hasFlagband ||
+    hasBrimEdge ||
+    hasBrimTape ||
+    hasMatBrim ||
+    hasFancyTapeMaterial;
+
+  const isStandardScope = (!isBudgetOriginal && (pkgLower.includes('standard') || hasStandardFeatures || pkgLower === '')) || hasStandardFeatures;
+
+  if (isStandardScope && !isBudgetOriginal) {
     return 'Standard';
   }
 
-  // 4 & 5. Basichue / Budget scope (Split into 2 categories based on embroidery)
-  const isBasicHue = pkgLower.includes('basic') || pkgLower.includes('budget') || pkgLower.includes('basichue') || pkgLower.includes('budgethue') || pkgLower === '';
-
-  if (totalEmbroideries > 0) {
-    return 'Budget with Embroidery';
+  // If originally Budget/Basichue and customer configured Standard features, upgrade to Standard:
+  if (isBudgetOriginal && hasStandardFeatures) {
+    return 'Standard';
   }
 
-  if (isBasicHue) {
-    return 'Budget';
+  // ==========================================
+  // LEVEL 1 & 2: BUDGET & BUDGET WITH EMBROIDERY
+  // ==========================================
+  const hasAnyEmbroidery = hasBackEmbroidery || hasFrontEmbroidery || hasSchoolEmbroidery;
+
+  if (hasAnyEmbroidery) {
+    return 'Budget with Embroidery';
   }
 
   return 'Budget';

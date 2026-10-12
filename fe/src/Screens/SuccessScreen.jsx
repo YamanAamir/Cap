@@ -26,17 +26,30 @@ const SuccessScreen = ({ onContinueConfiguring, handleResetModal, onClose }) => 
         setSession(data);
         
         if (data && data.amount_total) {
+          const totalValue = data.amount_total / 100;
+          const currencyCode = data.currency ? data.currency.toUpperCase() : 'DKK';
+          const orderId = data.metadata?.orderNumber || sessionId;
+          const itemsList = data.line_items?.data?.map((item) => ({
+            item_id: item.id || item.description,
+            item_name: item.description,
+            quantity: item.quantity || 1,
+            price: (item.amount_total || item.amount_subtotal || 0) / 100 / (item.quantity || 1)
+          })) || [];
+
           trackEvent('Purchase', {
-            value: data.amount_total / 100,
-            currency: data.currency ? data.currency.toUpperCase() : 'DKK'
+            value: totalValue,
+            currency: currencyCode
           });
-          
-          pushEvent('purchase_completed', {
-            value: data.amount_total / 100,
-            currency: data.currency ? data.currency.toUpperCase() : 'DKK',
-            order_ref: data.metadata?.orderNumber || sessionId,
+
+          pushEvent('purchase', {
+            transaction_id: orderId,
+            value: totalValue,
+            currency: currencyCode,
+            items: itemsList,
+            order_ref: orderId,
             email: data.customer_email || null,
-            consentGiven: false
+            consentGiven: false,
+            package: data.metadata?.packageName || undefined
           }, 'gradcap_configurator');
         }
       } catch (err) {
