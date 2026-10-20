@@ -813,7 +813,7 @@ const capOrderEmail = (orderData) => {
                 <tr>
                   <td style="padding-bottom:10px;">
                     <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                      <tr><td style="font-weight:bold; font-size:15px; padding-bottom:5px;">Levering:</td></tr>
+                      <tr><td style="font-weight:bold; font-size:15px; padding-bottom:5px;">Ordrebemærkninger:</td></tr>
                       <tr><td style="font-size:16px;">${customerDetails.notes}</td></tr>
                     </table>
                   </td>
@@ -1987,7 +1987,7 @@ const capOrderAdminEmail = (orderData) => {
                 <tr>
                   <td style="padding-bottom:10px;">
                     <table width="100%" border="0" cellpadding="0" cellspacing="0">
-                      <tr><td style="font-weight:bold; font-size:15px; padding-bottom:5px;">Levering:</td></tr>
+                      <tr><td style="font-weight:bold; font-size:15px; padding-bottom:5px;">Ordrebemærkninger:</td></tr>
                       <tr><td style="font-size:16px;">${customerDetails.notes}</td></tr>
                     </table>
                   </td>
