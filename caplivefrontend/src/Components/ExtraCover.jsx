@@ -14,6 +14,12 @@ const ExtraCover = ({ selectedOptions = {}, onOptionChange, currentEmblem, progr
         selectedOptions.Tilvælg || getDefaultExtraCoverOption()
     );
 
+    useEffect(() => {
+        if (selectedOptions?.Tilvælg && selectedOptions.Tilvælg !== selectedExtraCoverOption) {
+            setSelectedExtraCoverOption(selectedOptions.Tilvælg);
+        }
+    }, [selectedOptions?.Tilvælg]);
+
     const theProgram = program;
 
     const extraCoverOptions = [

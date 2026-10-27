@@ -921,7 +921,9 @@ const StudentDashboard = () => {
                 <button
                   key={index}
                   onClick={() => {
-                    // console.log(selectedOptions.BETRÆK);
+                    const isExtraCover = item.name === "EKSTRABETRÆK";
+                    const isExtraCoverYes = selectedOptions.EKSTRABETRÆK?.Tilvælg?.toLowerCase() === "yes";
+                    const tilvalgMessage = (isExtraCover && isExtraCoverYes) ? "Tilvælg:yes" : "Tilvælg:no";
 
                     ["preview-iframe", "preview-iframe2"].forEach((id) => {
                       const iframe = document.getElementById(id);
@@ -934,8 +936,8 @@ const StudentDashboard = () => {
                           `Page : ${index + 1}`,
                           "*"
                         );
-                        console.log("Sending message to iframe:", "Tilvælg:no");
-                        iframe.contentWindow.postMessage("Tilvælg:no", "*");
+                        console.log("Sending message to iframe:", tilvalgMessage);
+                        iframe.contentWindow.postMessage(tilvalgMessage, "*");
 
                         console.log("Sending menu selection message to iframe:", item.name);
                         iframe.contentWindow.postMessage(item.name, "*");
@@ -1371,11 +1373,15 @@ const StudentDashboard = () => {
                       <button
                         key={index}
                         onClick={() => {
+                          const isExtraCover = item.name === "EKSTRABETRÆK";
+                          const isExtraCoverYes = selectedOptions.EKSTRABETRÆK?.Tilvælg?.toLowerCase() === "yes";
+                          const tilvalgMessage = (isExtraCover && isExtraCoverYes) ? "Tilvælg:yes" : "Tilvælg:no";
+
                           ["preview-iframe", "preview-iframe2"].forEach((id) => {
                             const iframe = document.getElementById(id);
                             if (iframe?.contentWindow) {
                               iframe.contentWindow.postMessage(`Page : ${index + 1}`, "*");
-                              iframe.contentWindow.postMessage("Tilvælg:no", "*");
+                              iframe.contentWindow.postMessage(tilvalgMessage, "*");
                               iframe.contentWindow.postMessage(`${item.name} camera`, "*");
                               iframe.contentWindow.postMessage(getInnerImagePostMessage(selectedOptions), "*");
                             }

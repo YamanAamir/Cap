@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ForExtraCover from './ForExtraCover';
 
 const ExtraCover = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, priceReset, pakke, visibilityConfig = {} }) => {
@@ -12,6 +12,12 @@ const ExtraCover = ({ selectedOptions = {}, onOptionChange, currentEmblem, progr
     const [selectedExtraCoverOption, setSelectedExtraCoverOption] = useState(
         selectedOptions.Tilvælg || getDefaultExtraCoverOption()
     );
+
+    useEffect(() => {
+        if (selectedOptions?.Tilvælg && selectedOptions.Tilvælg !== selectedExtraCoverOption) {
+            setSelectedExtraCoverOption(selectedOptions.Tilvælg);
+        }
+    }, [selectedOptions?.Tilvælg]);
 
     const theProgram = program;
 

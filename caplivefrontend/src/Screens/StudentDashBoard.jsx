@@ -1023,8 +1023,11 @@ const StudentDashboard = () => {
                     onClick={() => {
                       console.log("Sending message to iframe:", `Page : ${index + 1}`);
                       sendToActiveIframe(`Page : ${index + 1}`);
-                      console.log("Sending message to iframe:", "Tilvælg:no");
-                      sendToActiveIframe("Tilvælg:no");
+                      const isExtraCover = item.name === "EKSTRABETRÆK";
+                      const isExtraCoverYes = selectedOptions.EKSTRABETRÆK?.Tilvælg?.toLowerCase() === "yes";
+                      const tilvalgMessage = (isExtraCover && isExtraCoverYes) ? "Tilvælg:yes" : "Tilvælg:no";
+                      console.log("Sending message to iframe:", tilvalgMessage);
+                      sendToActiveIframe(tilvalgMessage);
                       console.log("Sending menu selection message to iframe:", item.name);
                       sendToActiveIframe(item.name);
                       sendToActiveIframe(`${item.name} camera`);
@@ -1444,7 +1447,10 @@ const StudentDashboard = () => {
                         key={index}
                         onClick={() => {
                           sendToActiveIframe(`Page : ${index + 1}`);
-                          sendToActiveIframe("Tilvælg:no");
+                          const isExtraCover = item.name === "EKSTRABETRÆK";
+                          const isExtraCoverYes = selectedOptions.EKSTRABETRÆK?.Tilvælg?.toLowerCase() === "yes";
+                          const tilvalgMessage = (isExtraCover && isExtraCoverYes) ? "Tilvælg:yes" : "Tilvælg:no";
+                          sendToActiveIframe(tilvalgMessage);
                           sendToActiveIframe(item.name);
                           sendToActiveIframe(`${item.name} camera`);
                           sendToActiveIframe(getInnerImagePostMessage(selectedOptions));
