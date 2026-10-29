@@ -3477,7 +3477,7 @@ const stripePayment = async (req, res) => {
       ],
       mode: "payment",
       locale: "da",
-      success_url: `${clientUrl}/installment-success?order_id=${order.id}&installment_index=${idx}&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${clientUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${clientUrl}/cancel`,
     });
 
@@ -3500,20 +3500,6 @@ const payInstallment = async (req, res) => {
   const { orderId, installmentIndex, frontendUrl } = req.query;
 
   try {
-    let clientUrl = frontendUrl || req.headers.referer || req.headers.origin || process.env.FRONTEND_URL || 'https://studentlife.dk';
-    try {
-      const parsedUrl = new URL(clientUrl);
-      clientUrl = parsedUrl.origin;
-    } catch (e) {
-      clientUrl = 'https://studentlife.dk';
-    }
-    if (clientUrl.endsWith('/')) {
-      clientUrl = clientUrl.slice(0, -1);
-    }
-    if (!clientUrl.includes('/studentlife') && !clientUrl.includes('/devstudentlife')) {
-      clientUrl = `${clientUrl}/studentlife`;
-    }
-
     const order = await prisma.order.findUnique({ where: { id: parseInt(orderId) } });
     if (!order || !order.installmentDetails) {
       return res.status(404).send('Ordrer eller afdragsordning ikke fundet.');
@@ -3529,6 +3515,40 @@ const payInstallment = async (req, res) => {
 
     if (!installment) {
       return res.status(404).send('Rate ikke fundet.');
+    }
+
+    // Determine the exact clientUrl matching non-installment checkout
+    let clientUrl = frontendUrl || (details && details.frontendUrl) || process.env.FRONTEND_URL || process.env.FRONTEND_BASE_URL;
+
+    if (!clientUrl && req.headers.origin) {
+      clientUrl = req.headers.origin;
+    }
+
+    if (!clientUrl && req.headers.referer) {
+      const ref = req.headers.referer;
+      if (!ref.includes('mail.') && !ref.includes('google.') && !ref.includes('outlook.') && !ref.includes('yahoo.')) {
+        try {
+          clientUrl = new URL(ref).origin;
+        } catch (e) {}
+      }
+    }
+
+    if (!clientUrl) {
+      const host = (req.headers['x-forwarded-host'] || req.get('host') || '').toLowerCase();
+      if (host.includes('localhost') || host.includes('127.0.0.1')) {
+        clientUrl = 'http://localhost:5173/devstudentlife';
+      } else if (host.includes('dev')) {
+        clientUrl = 'https://studenterhue.studentlife.dk/devstudentlife';
+      } else {
+        clientUrl = 'https://studenterhue.studentlife.dk/studentlife';
+      }
+    }
+
+    if (clientUrl.endsWith('/')) {
+      clientUrl = clientUrl.slice(0, -1);
+    }
+    if (!clientUrl.includes('/devstudentlife') && !clientUrl.includes('/studentlife')) {
+      clientUrl = `${clientUrl}/devstudentlife`;
     }
 
     if (installment.status === 'Paid') {

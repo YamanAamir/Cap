@@ -372,7 +372,8 @@ const processSingleOrderStatusUpdate = async (id, statusOrId, reqUser, reqHeader
         const rawUrl = process.env.API_BASE_URL || process.env.VITE_API_BASE_URL || `${protocol}://${host}`;
         
         const apiRoot = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl.replace(/\/$/, '')}/api`;
-        const paymentLink = `${apiRoot}/sendEmail/pay-installment?orderId=${updatedOrder.id}&installmentIndex=${idx}`;
+        const frontendParam = (instDetails && instDetails.frontendUrl) ? `&frontendUrl=${encodeURIComponent(instDetails.frontendUrl)}` : '';
+        const paymentLink = `${apiRoot}/sendEmail/pay-installment?orderId=${updatedOrder.id}&installmentIndex=${idx}${frontendParam}`;
         
         let custDetailsObj = updatedOrder.customerDetails;
         if (typeof custDetailsObj === 'string') {
@@ -533,7 +534,12 @@ const updateOrder = async (req, res) => {
           const rawUrl = process.env.API_BASE_URL || process.env.VITE_API_BASE_URL || `${protocol}://${host}`;
           
           const apiRoot = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl.replace(/\/$/, '')}/api`;
-          const paymentLink = `${apiRoot}/sendEmail/pay-installment?orderId=${updatedOrder.id}&installmentIndex=${idx}`;
+          let existingInstDetails = updatedOrder.installmentDetails;
+          if (typeof existingInstDetails === 'string') {
+            try { existingInstDetails = JSON.parse(existingInstDetails); } catch { existingInstDetails = null; }
+          }
+          const frontendParam = (existingInstDetails && existingInstDetails.frontendUrl) ? `&frontendUrl=${encodeURIComponent(existingInstDetails.frontendUrl)}` : '';
+          const paymentLink = `${apiRoot}/sendEmail/pay-installment?orderId=${updatedOrder.id}&installmentIndex=${idx}${frontendParam}`;
           
           const subject = `Din næste rate for ordre ${updatedOrder.orderNumber} er klar til betaling`;
           const body = `
