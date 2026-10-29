@@ -5,6 +5,7 @@ const nodemailer = require("nodemailer");
 const Stripe = require("stripe");
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+const flatpayService = require("../services/flatpay.service");
 
 
 
@@ -2984,6 +2985,183 @@ const sendCapEmail = async (req, res) => {
   }
 };
 
+/**
+ * Reusable helper: Process a successful Cap Configurator Order
+ * Used by Stripe Webhook, Frisbii Webhook, and fail-safe checkout-session retrieval
+ */
+const processSuccessfulCapOrder = async (tempOrderId, orderDataOverride = null) => {
+  try {
+    let orderData = orderDataOverride;
+
+    if (!orderData) {
+      const tempOrders = await prisma.$queryRaw`SELECT * FROM TempOrder WHERE id = ${tempOrderId}`;
+      if (!tempOrders || tempOrders.length === 0) {
+        console.log(`ℹ️ TempOrder ${tempOrderId} not found (it may have already been processed).`);
+        return null;
+      }
+
+      const tempOrder = tempOrders[0];
+      orderData = tempOrder.orderData;
+      if (typeof orderData === 'string') {
+        try { orderData = JSON.parse(orderData); } catch (e) { }
+      }
+    }
+
+    if (!orderData) return null;
+
+    // Guard against duplicate order creation
+    if (orderData.orderNumber) {
+      const existingOrder = await prisma.order.findFirst({
+        where: { orderNumber: orderData.orderNumber }
+      });
+      if (existingOrder) {
+        console.log(`ℹ️ Order ${orderData.orderNumber} already exists in database.`);
+        await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${tempOrderId}`.catch(() => {});
+        return existingOrder;
+      }
+    }
+
+    const paidStatus = await prisma.orderStatus.findUnique({ where: { slug: 'paid' } });
+
+    let finalInstallmentDetails = null;
+    if (orderData.isInstallment && orderData.installmentPlanId) {
+      const plan = await prisma.installmentPlan.findUnique({
+        where: { id: orderData.installmentPlanId }
+      });
+      if (plan) {
+        const downPayment = plan.downPaymentAmount || 399;
+        const remainingAmount = Math.max(0, orderData.finalPrice - downPayment);
+        let installmentRows = plan.installments;
+        if (typeof installmentRows === 'string') {
+          try { installmentRows = JSON.parse(installmentRows); } catch { installmentRows = []; }
+        }
+        if (!Array.isArray(installmentRows)) {
+          installmentRows = [];
+        }
+
+        const installmentCount = installmentRows.length;
+        const installmentAmount = installmentCount > 0 ? (remainingAmount / installmentCount).toFixed(2) : 0;
+
+        const generatedInstallments = [
+          {
+            amount: downPayment,
+            label: "1. betaling (ved bestilling)",
+            status: 'Paid',
+            paidAt: new Date().toISOString()
+          }
+        ];
+
+        for (let i = 0; i < installmentCount; i++) {
+          generatedInstallments.push({
+            amount: parseFloat(installmentAmount),
+            label: installmentRows[i]?.label || `${i + 2}. rate`,
+            status: 'Pending',
+            paidAt: null
+          });
+        }
+
+        finalInstallmentDetails = {
+          downPayment,
+          installments: generatedInstallments
+        };
+      }
+    }
+
+    const order = await prisma.order.create({
+      data: {
+        customerDetails: orderData.customerDetails,
+        selectedOptions: orderData.selectedOptions,
+        totalPrice: orderData.finalPrice,
+        currency: orderData.currency || 'DKK',
+        orderNumber: orderData.orderNumber,
+        orderDate: orderData.orderDate || new Date(),
+        customerEmail: orderData.email,
+        status: paidStatus ? paidStatus.name.toUpperCase().replace(/\s+/g, '_') : 'PAID',
+        statusId: paidStatus?.id || null,
+        packageName: orderData.packageName,
+        program: orderData.program,
+        customerId: orderData.customerId,
+        capImages: orderData.capImages || null,
+        discountCodeId: orderData.discountRecord?.id || null,
+        discountAmount: orderData.discountAmount,
+        installmentDetails: finalInstallmentDetails,
+      },
+    });
+
+    if (orderData.discountRecord) {
+      await prisma.discountCode.update({
+        where: { id: orderData.discountRecord.id },
+        data: { usedAt: new Date(), usedByOrderId: order.id },
+      }).catch(err => console.error("Error updating discount code:", err.message));
+    }
+
+    // Cancel pending marketing SMS campaigns now that order is confirmed
+    if (orderData.customerId) {
+      const { cancelPendingCampaignMessages } = require('../services/sms.service');
+      await cancelPendingCampaignMessages(orderData.customerId).catch(err => {
+        console.error("Failed to cancel pending campaign messages after order creation:", err);
+      });
+    }
+
+    await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${tempOrderId}`.catch(() => {});
+
+    await sendCapEmail(
+      {
+        body: {
+          customerDetails: order.customerDetails,
+          selectedOptions: order.selectedOptions,
+          totalPrice: order.totalPrice,
+          currency: order.currency,
+          orderNumber: order.orderNumber,
+          orderDate: order.orderDate,
+          email: order.customerEmail,
+          packageName: order.packageName,
+          program: order.program,
+          capImages: order.capImages,
+          installmentDetails: order.installmentDetails,
+        }
+      },
+      { status: () => ({ json: () => { } }) }
+    ).catch(err => console.error("❌ Email sending error in processSuccessfulCapOrder:", err.message));
+
+    console.log(`✅ Order ${order.orderNumber} successfully processed and confirmed.`);
+    return order;
+  } catch (err) {
+    console.error("❌ Error in processSuccessfulCapOrder:", err.message);
+    throw err;
+  }
+};
+
+/**
+ * Reusable helper: Process a successful Installment payment
+ */
+const processSuccessfulInstallmentPayment = async (orderId, installmentIndex) => {
+  try {
+    const order = await prisma.order.findUnique({ where: { id: parseInt(orderId) } });
+    if (order && order.installmentDetails) {
+      let details = order.installmentDetails;
+      if (typeof details === 'string') {
+        try { details = JSON.parse(details); } catch (e) { details = {}; }
+      }
+      if (details && Array.isArray(details.installments) && details.installments[installmentIndex]) {
+        details.installments[installmentIndex].status = 'Paid';
+        details.installments[installmentIndex].paidAt = new Date().toISOString();
+
+        await prisma.order.update({
+          where: { id: parseInt(orderId) },
+          data: { installmentDetails: JSON.stringify(details) }
+        });
+        console.log(`✅ Installment ${installmentIndex + 1} paid for order ${orderId}`);
+      }
+    }
+  } catch (err) {
+    console.error("❌ Error updating installment payment:", err.message);
+  }
+};
+
+/**
+ * Create checkout session (Supports both Flatpay/Frisbii and Stripe)
+ */
 const stripePayment = async (req, res) => {
   const {
     customerDetails,
@@ -3001,7 +3179,7 @@ const stripePayment = async (req, res) => {
   } = req.body;
 
   try {
-    const { upsertCustomerFromOrder, applyDiscountCode, getStatusBySlug } = require('../services/core.service');
+    const { upsertCustomerFromOrder, applyDiscountCode } = require('../services/core.service');
 
     const customer = await upsertCustomerFromOrder(customerDetails, email);
 
@@ -3024,7 +3202,7 @@ const stripePayment = async (req, res) => {
       }
     }
 
-    let stripeChargeAmount = finalPrice;
+    let chargeAmount = finalPrice;
     let validatedIsInstallment = false;
 
     if (isInstallment) {
@@ -3037,7 +3215,7 @@ const stripePayment = async (req, res) => {
           const tierMatch = plan.packageTier === 'all' || (plan.packageTier || '').toLowerCase() === (packageName || 'standard').toLowerCase();
           if (progMatch && tierMatch) {
             validatedIsInstallment = true;
-            stripeChargeAmount = plan.downPaymentAmount != null ? plan.downPaymentAmount : 399;
+            chargeAmount = plan.downPaymentAmount != null ? plan.downPaymentAmount : 399;
           }
         }
       }
@@ -3050,7 +3228,9 @@ const stripePayment = async (req, res) => {
     const { v4: uuidv4 } = require('uuid');
     const tempOrderId = uuidv4();
 
-    // Store in temporary table using raw SQL to avoid needing a prisma generate restart
+    const isFlatpay = flatpayService.isFlatpayActive();
+
+    // Store in temporary table
     await prisma.$executeRaw`
       INSERT INTO TempOrder (id, orderData) 
       VALUES (${tempOrderId}, ${JSON.stringify({
@@ -3060,19 +3240,54 @@ const stripePayment = async (req, res) => {
       finalPrice,
       discountRecord,
       discountAmount,
-      installmentPlanId: validatedIsInstallment ? installmentPlanId : null
+      installmentPlanId: validatedIsInstallment ? installmentPlanId : null,
+      gateway: isFlatpay ? 'flatpay' : 'stripe'
     })})
     `;
 
     const { frontendUrl } = req.body;
-    let clientUrl = frontendUrl || req.headers.origin;
+    let clientUrl = frontendUrl || req.headers.origin || 'http://localhost:5173/devstudentlife';
     if (clientUrl.endsWith('/')) {
       clientUrl = clientUrl.slice(0, -1);
     }
-    if (!clientUrl.includes('/devstudentlife')) {
+    if (!clientUrl.includes('/devstudentlife') && !clientUrl.includes('/studentlife')) {
       clientUrl = `${clientUrl}/devstudentlife`;
     }
 
+    // 🌟 FLATPAY / FRISBII GATEWAY
+    if (isFlatpay) {
+      const chargeSession = await flatpayService.createChargeSession({
+        handle: tempOrderId,
+        amount: chargeAmount,
+        currency: currency || 'DKK',
+        customer: {
+          email,
+          firstName: customerDetails?.firstName,
+          lastName: customerDetails?.lastName,
+          phone: customerDetails?.phone
+        },
+        orderLines: [
+          {
+            ordertext: validatedIsInstallment
+              ? `Cap Order (1st Installment) : ${orderNumber}`
+              : `Cap Order : ${orderNumber}`,
+            amount: chargeAmount,
+            quantity: 1
+          }
+        ],
+        acceptUrl: `${clientUrl}/success?session_id=${tempOrderId}&invoice=${tempOrderId}&gateway=flatpay`,
+        cancelUrl: `${clientUrl}/cancel?gateway=flatpay`
+      });
+
+      return res.json({
+        id: chargeSession.id,
+        url: chargeSession.url,
+        sessionId: chargeSession.id,
+        gateway: 'flatpay'
+      });
+    }
+
+    // 🌟 STRIPE GATEWAY
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       customer_email: email,
@@ -3083,11 +3298,11 @@ const stripePayment = async (req, res) => {
       line_items: [
         {
           price_data: {
-            currency: "dkk",
+            currency: (currency || "dkk").toLowerCase(),
             product_data: {
-              name: isInstallment ? `Cap Order (1st Installment) : ${orderNumber}` : `Cap Order : ${orderNumber}`,
+              name: validatedIsInstallment ? `Cap Order (1st Installment) : ${orderNumber}` : `Cap Order : ${orderNumber}`,
             },
-            unit_amount: Math.round(stripeChargeAmount * 100),
+            unit_amount: Math.round(chargeAmount * 100),
           },
           quantity: 1,
         },
@@ -3097,12 +3312,22 @@ const stripePayment = async (req, res) => {
       success_url: `${clientUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${clientUrl}/cancel`,
     });
-    res.json({ id: session.id });
+
+    res.json({
+      id: session.id,
+      url: session.url,
+      sessionId: session.id,
+      gateway: 'stripe'
+    });
   } catch (err) {
+    console.error("Error creating checkout session:", err);
     res.status(500).json({ error: err.message });
   }
 };
 
+/**
+ * Pay installment link
+ */
 const payInstallment = async (req, res) => {
   const { orderId, installmentIndex, frontendUrl } = req.query;
 
@@ -3138,10 +3363,40 @@ const payInstallment = async (req, res) => {
     if (clientUrl.endsWith('/')) {
       clientUrl = clientUrl.slice(0, -1);
     }
-    if (!clientUrl.includes('/studentlife')) {
+    if (!clientUrl.includes('/studentlife') && !clientUrl.includes('/devstudentlife')) {
       clientUrl = `${clientUrl}/studentlife`;
     }
 
+    const isFlatpay = flatpayService.isFlatpayActive();
+
+    // 🌟 FLATPAY / FRISBII INSTALLMENT PAYMENT
+    if (isFlatpay) {
+      const installmentHandle = `inst_${order.id}_${idx}_${Date.now()}`;
+      const chargeSession = await flatpayService.createChargeSession({
+        handle: installmentHandle,
+        amount: parseFloat(installment.amount || 0),
+        currency: order.currency || 'DKK',
+        customer: {
+          email: order.customerEmail,
+          firstName: order.customerDetails?.firstName || '',
+          lastName: order.customerDetails?.lastName || '',
+          phone: order.customerDetails?.phone || ''
+        },
+        orderLines: [
+          {
+            ordertext: `Cap Order : ${order.orderNumber} - ${installment.label}`,
+            amount: parseFloat(installment.amount || 0),
+            quantity: 1
+          }
+        ],
+        acceptUrl: `${clientUrl}/success?session_id=${installmentHandle}&invoice=${installmentHandle}&gateway=flatpay`,
+        cancelUrl: `${clientUrl}/cancel?gateway=flatpay`
+      });
+
+      return res.redirect(303, chargeSession.url);
+    }
+
+    // 🌟 STRIPE INSTALLMENT PAYMENT
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       customer_email: order.customerEmail,
@@ -3154,7 +3409,7 @@ const payInstallment = async (req, res) => {
       line_items: [
         {
           price_data: {
-            currency: "dkk",
+            currency: (order.currency || "dkk").toLowerCase(),
             product_data: {
               name: `Cap Order : ${order.orderNumber} - ${installment.label}`,
             },
@@ -3176,44 +3431,272 @@ const payInstallment = async (req, res) => {
   }
 };
 
-
+/**
+ * Retrieve session details (Supports Stripe session IDs, Frisbii IDs, invoice handles, and TempOrder handles)
+ */
 const getSessionDetails = async (req, res) => {
-  const { session_id } = req.query;
+  const { session_id, invoice, id } = req.query;
+  const targetId = session_id || invoice || id;
+
+  if (!targetId) {
+    return res.status(400).json({ error: "Missing session_id or invoice parameter" });
+  }
 
   try {
-    const session = await stripe.checkout.sessions.retrieve(session_id, {
-      expand: ["line_items", "payment_intent.payment_method"],
+    // 1. Check if targetId is an existing order number or installment handle
+    let existingOrder = await prisma.order.findFirst({
+      where: {
+        OR: [
+          { orderNumber: targetId },
+          ...(targetId.startsWith('inst_') ? [{ id: parseInt(targetId.split('_')[1]) || 0 }] : [])
+        ]
+      }
     });
 
-    res.json(session);
+    // 2. Check if targetId is in TempOrder
+    const tempOrders = await prisma.$queryRaw`SELECT * FROM TempOrder WHERE id = ${targetId}`;
+    let tempOrderData = null;
+    if (tempOrders && tempOrders.length > 0) {
+      try {
+        tempOrderData = typeof tempOrders[0].orderData === 'string'
+          ? JSON.parse(tempOrders[0].orderData)
+          : tempOrders[0].orderData;
+      } catch (e) {}
+    }
+
+    // 3. If it looks like a Stripe checkout session ID (starts with cs_test_ or cs_live_)
+    if (targetId.startsWith('cs_test_') || targetId.startsWith('cs_live_')) {
+      const session = await stripe.checkout.sessions.retrieve(targetId, {
+        expand: ["line_items", "payment_intent.payment_method"],
+      });
+      return res.json(session);
+    }
+
+    // 4. Try looking up in Frisbii API (as invoice or charge handle)
+    const frisbiiInvoice = await flatpayService.getInvoice(targetId);
+    const frisbiiCharge = frisbiiInvoice ? null : await flatpayService.getCharge(targetId);
+    const invoiceData = frisbiiInvoice || frisbiiCharge;
+
+    if (invoiceData) {
+      // If invoice is settled/authorized and order is still in TempOrder, finalize now as a safety net
+      if ((invoiceData.state === 'settled' || invoiceData.state === 'authorized') && tempOrderData) {
+        try {
+          const created = await processSuccessfulCapOrder(targetId, tempOrderData);
+          if (created) existingOrder = created;
+        } catch (finalizeErr) {
+          console.error("Error finalizing order in getSessionDetails:", finalizeErr);
+        }
+      }
+
+      const amountTotal = invoiceData.amount || Math.round((tempOrderData?.finalPrice || 0) * 100);
+      const currency = (invoiceData.currency || tempOrderData?.currency || 'DKK').toLowerCase();
+      const customerEmail = invoiceData.customer?.email || tempOrderData?.email || tempOrderData?.customerDetails?.email || '';
+      const orderNumber = tempOrderData?.orderNumber || targetId;
+
+      return res.json({
+        id: targetId,
+        customer_email: customerEmail,
+        amount_total: amountTotal,
+        currency: currency,
+        metadata: {
+          orderNumber: orderNumber,
+          packageName: tempOrderData?.packageName || 'Standard'
+        },
+        line_items: {
+          data: (invoiceData.order_lines && invoiceData.order_lines.length > 0)
+            ? invoiceData.order_lines.map(line => ({
+                id: line.id || '1',
+                description: line.ordertext || `Cap Order : ${orderNumber}`,
+                quantity: line.quantity || 1,
+                amount_total: line.amount || amountTotal
+              }))
+            : [
+                {
+                  id: '1',
+                  description: `Cap Order : ${orderNumber}`,
+                  quantity: 1,
+                  amount_total: amountTotal
+                }
+              ]
+        }
+      });
+    }
+
+    // 5. Fallback with TempOrder data if found
+    if (tempOrderData) {
+      const orderNumber = tempOrderData.orderNumber || targetId;
+      const amountTotal = Math.round((tempOrderData.finalPrice || 0) * 100);
+      return res.json({
+        id: targetId,
+        customer_email: tempOrderData.email || tempOrderData.customerDetails?.email || '',
+        amount_total: amountTotal,
+        currency: (tempOrderData.currency || 'DKK').toLowerCase(),
+        metadata: {
+          orderNumber: orderNumber,
+          packageName: tempOrderData.packageName || 'Standard'
+        },
+        line_items: {
+          data: [
+            {
+              id: '1',
+              description: `Cap Order : ${orderNumber}`,
+              quantity: 1,
+              amount_total: amountTotal
+            }
+          ]
+        }
+      });
+    }
+
+    // 6. Fallback with Existing Order data if found
+    if (existingOrder) {
+      return res.json({
+        id: targetId,
+        customer_email: existingOrder.customerEmail,
+        amount_total: Math.round(existingOrder.totalPrice * 100),
+        currency: (existingOrder.currency || 'DKK').toLowerCase(),
+        metadata: {
+          orderNumber: existingOrder.orderNumber,
+          packageName: existingOrder.packageName
+        },
+        line_items: {
+          data: [
+            {
+              id: '1',
+              description: `Cap Order : ${existingOrder.orderNumber}`,
+              quantity: 1,
+              amount_total: Math.round(existingOrder.totalPrice * 100)
+            }
+          ]
+        }
+      });
+    }
+
+    // 7. Last resort fallback to Stripe
+    const session = await stripe.checkout.sessions.retrieve(targetId, {
+      expand: ["line_items", "payment_intent.payment_method"],
+    });
+    return res.json(session);
   } catch (err) {
+    console.error("Error in getSessionDetails:", err);
     res.status(500).json({ error: err.message });
   }
 };
 
+/**
+ * Frisbii / Flatpay Webhook Handler
+ */
+const frisbiiWebhook = async (req, res) => {
+  try {
+    const payload = req.body;
+    console.log("🔔 Frisbii webhook received:", payload?.event_type, payload?.id, payload?.invoice);
 
+    if (!payload || !payload.event_type) {
+      return res.status(400).send("Bad Request: Missing payload");
+    }
 
+    const isValid = flatpayService.verifyWebhookSignature(payload);
+    if (!isValid) {
+      console.error("❌ Invalid Frisbii webhook signature");
+      return res.status(400).send("Invalid signature");
+    }
+
+    const { event_type, invoice } = payload;
+
+    if (event_type === "invoice_settled" || event_type === "invoice_authorized") {
+      if (!invoice) {
+        return res.json({ received: true });
+      }
+
+      // Check if this is a Webshop Order
+      if (invoice.startsWith("WS-") || invoice.startsWith("ws_")) {
+        const { handleWebshopCheckoutSuccess } = require('./webshop.controller');
+        const tempOrders = await prisma.$queryRaw`SELECT * FROM TempOrder WHERE id = ${invoice}`;
+        if (tempOrders && tempOrders.length > 0) {
+          const rawData = tempOrders[0].orderData;
+          const orderData = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+
+          await handleWebshopCheckoutSuccess({
+            id: invoice,
+            amount_total: Math.round((orderData.totalAmount || 0) * 100),
+            currency: (orderData.currency || 'dkk').toLowerCase(),
+            customer_details: {
+              email: orderData.customerDetails?.email,
+              name: `${orderData.customerDetails?.firstName || ''} ${orderData.customerDetails?.lastName || ''}`.trim(),
+              phone: orderData.customerDetails?.phone,
+              address: orderData.shippingAddress
+            },
+            metadata: {
+              isWebshop: 'true',
+              orderNumber: orderData.orderNumber || invoice,
+              customerEmail: orderData.customerDetails?.email,
+              customerName: `${orderData.customerDetails?.firstName || ''} ${orderData.customerDetails?.lastName || ''}`.trim(),
+              customerPhone: orderData.customerDetails?.phone,
+              customerAddress: JSON.stringify(orderData.shippingAddress || {}),
+              cartItems: JSON.stringify(orderData.cartItems || [])
+            }
+          });
+
+          await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${invoice}`.catch(() => {});
+        }
+        return res.json({ received: true });
+      }
+
+      // Check if this is an Installment payment
+      if (invoice.startsWith("inst_")) {
+        const parts = invoice.split('_');
+        const orderId = parseInt(parts[1]);
+        const installmentIndex = parseInt(parts[2]);
+        if (!isNaN(orderId) && !isNaN(installmentIndex)) {
+          await processSuccessfulInstallmentPayment(orderId, installmentIndex);
+        }
+        return res.json({ received: true });
+      }
+
+      // Cap Configurator Order
+      await processSuccessfulCapOrder(invoice);
+    }
+
+    return res.json({ received: true });
+  } catch (error) {
+    console.error("❌ Error in Frisbii webhook handler:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Stripe Webhook Handler (Preserved, with automatic Frisbii routing fallback)
+ */
 const stripeWebhook = async (req, res) => {
   const sig = req.headers["stripe-signature"];
 
-  let event;
+  // If no stripe-signature header, check if it's a Frisbii webhook sent to /api/webhook
+  if (!sig) {
+    let bodyJson = null;
+    try {
+      const raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : req.body;
+      bodyJson = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    } catch (e) {}
+    if (bodyJson && (bodyJson.event_type || bodyJson.signature)) {
+      req.body = bodyJson;
+      return frisbiiWebhook(req, res);
+    }
+    return res.status(400).send("Webhook Error: Missing signature");
+  }
 
+  let event;
   try {
-    // ✅ RAW BODY use ho rahi hai
     event = stripe.webhooks.constructEvent(
-      req.body, // ⚠️ RAW buffer
+      req.body,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
-
-    console.log("✅ Webhook verified");
-
+    console.log("✅ Stripe Webhook verified");
   } catch (err) {
-    console.error("❌ Webhook error:", err.message);
+    console.error("❌ Stripe Webhook error:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // ✅ handle event
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
 
@@ -3223,163 +3706,24 @@ const stripeWebhook = async (req, res) => {
       return res.json({ received: true });
     }
 
-    if (session.metadata.type === 'installment_payment') {
-      try {
-        const orderId = parseInt(session.metadata.orderId);
-        const installmentIndex = parseInt(session.metadata.installmentIndex);
-
-        const order = await prisma.order.findUnique({ where: { id: orderId } });
-        if (order && order.installmentDetails) {
-          let details = order.installmentDetails;
-          if (typeof details === 'string') {
-            try { details = JSON.parse(details); } catch (e) { details = {}; }
-          }
-          if (details && Array.isArray(details.installments) && details.installments[installmentIndex]) {
-            details.installments[installmentIndex].status = 'Paid';
-            details.installments[installmentIndex].paidAt = new Date().toISOString();
-
-            await prisma.order.update({
-              where: { id: orderId },
-              data: { installmentDetails: JSON.stringify(details) }
-            });
-            console.log(`✅ Installment ${installmentIndex + 1} paid for order ${orderId}`);
-          }
-        }
-      } catch (err) {
-        console.error("❌ Error updating installment payment:", err.message);
+    if (session.metadata?.type === 'installment_payment') {
+      const orderId = parseInt(session.metadata.orderId);
+      const installmentIndex = parseInt(session.metadata.installmentIndex);
+      if (!isNaN(orderId) && !isNaN(installmentIndex)) {
+        await processSuccessfulInstallmentPayment(orderId, installmentIndex);
       }
       return res.json({ received: true });
     }
 
-    const tempOrderId = session.metadata.tempOrderId;
-
+    const tempOrderId = session.metadata?.tempOrderId;
     if (tempOrderId) {
-      try {
-        const tempOrders = await prisma.$queryRaw`SELECT * FROM TempOrder WHERE id = ${tempOrderId}`;
-        if (!tempOrders || tempOrders.length === 0) {
-          console.log("❌ TempOrder not found");
-          return res.json({ received: true });
-        }
-
-        const tempOrder = tempOrders[0];
-        let orderData = tempOrder.orderData;
-        if (typeof orderData === 'string') {
-          orderData = JSON.parse(orderData);
-        }
-
-        const paidStatus = await prisma.orderStatus.findUnique({ where: { slug: 'paid' } });
-
-        let finalInstallmentDetails = null;
-        if (orderData.isInstallment && orderData.installmentPlanId) {
-          const plan = await prisma.installmentPlan.findUnique({
-            where: { id: orderData.installmentPlanId }
-          });
-          if (plan) {
-            const downPayment = plan.downPaymentAmount || 399;
-            const remainingAmount = Math.max(0, orderData.finalPrice - downPayment);
-            let installmentRows = plan.installments;
-            if (typeof installmentRows === 'string') {
-              try { installmentRows = JSON.parse(installmentRows); } catch { installmentRows = []; }
-            }
-            if (!Array.isArray(installmentRows)) {
-              installmentRows = [];
-            }
-
-            const installmentCount = installmentRows.length;
-            const installmentAmount = installmentCount > 0 ? (remainingAmount / installmentCount).toFixed(2) : 0;
-
-            const generatedInstallments = [
-              {
-                amount: downPayment,
-                label: "1. betaling (ved bestilling)",
-                status: 'Paid',
-                paidAt: new Date().toISOString()
-              }
-            ];
-
-            for (let i = 0; i < installmentCount; i++) {
-              generatedInstallments.push({
-                amount: parseFloat(installmentAmount),
-                label: installmentRows[i]?.label || `${i + 2}. rate`,
-                status: 'Pending',
-                paidAt: null
-              });
-            }
-
-            finalInstallmentDetails = {
-              downPayment,
-              installments: generatedInstallments
-            };
-          }
-        }
-
-        const order = await prisma.order.create({
-          data: {
-            customerDetails: orderData.customerDetails,
-            selectedOptions: orderData.selectedOptions,
-            totalPrice: orderData.finalPrice,
-            currency: orderData.currency,
-            orderNumber: orderData.orderNumber,
-            orderDate: orderData.orderDate,
-            customerEmail: orderData.email,
-            status: paidStatus ? paidStatus.name.toUpperCase().replace(/\s+/g, '_') : 'PAID',
-            statusId: paidStatus?.id || null,
-            packageName: orderData.packageName,
-            program: orderData.program,
-            customerId: orderData.customerId,
-            capImages: orderData.capImages || null,
-            discountCodeId: orderData.discountRecord?.id || null,
-            discountAmount: orderData.discountAmount,
-            installmentDetails: finalInstallmentDetails,
-          },
-        });
-
-        if (orderData.discountRecord) {
-          await prisma.discountCode.update({
-            where: { id: orderData.discountRecord.id },
-            data: { usedAt: new Date(), usedByOrderId: order.id },
-          });
-        }
-
-        // Cancel pending marketing SMS campaigns now that order is confirmed
-        if (orderData.customerId) {
-          const { cancelPendingCampaignMessages } = require('../services/sms.service');
-          await cancelPendingCampaignMessages(orderData.customerId).catch(err => {
-            console.error("Failed to cancel pending campaign messages after order creation:", err);
-          });
-        }
-
-        await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${tempOrderId}`;
-
-        await sendCapEmail(
-          {
-            body: {
-              customerDetails: order.customerDetails,
-              selectedOptions: order.selectedOptions,
-              totalPrice: order.totalPrice,
-              currency: order.currency,
-              orderNumber: order.orderNumber,
-              orderDate: order.orderDate,
-              email: order.customerEmail,
-              packageName: order.packageName,
-              program: order.program,
-              capImages: order.capImages,
-              installmentDetails: order.installmentDetails,
-            }
-          },
-          { status: () => ({ json: () => { } }) }
-        );
-
-        console.log("✅ Email sent");
-
-      } catch (err) {
-        console.error("❌ Email error:", err.message);
-      }
+      await processSuccessfulCapOrder(tempOrderId);
     }
   }
 
   res.json({ received: true });
 };
+
 
 const emailTester = async (req, res) => {
   const {
@@ -3534,6 +3878,6 @@ const createInstallmentOrder = async (req, res) => {
 };
 
 module.exports = {
-  workflowStatusChange, sendCapEmail, stripePayment, getSessionDetails, stripeWebhook, emailTester, createInstallmentOrder, payInstallment,
+  workflowStatusChange, sendCapEmail, stripePayment, getSessionDetails, stripeWebhook, frisbiiWebhook, processSuccessfulCapOrder, processSuccessfulInstallmentPayment, emailTester, createInstallmentOrder, payInstallment,
   capOrderEmail, capOrderAdminEmail, factoryOrderEmail, createEmailTransporter
 };

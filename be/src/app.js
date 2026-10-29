@@ -14,11 +14,24 @@ const cookieParser = require('cookie-parser');
 
 const app = express();
 
-// ✅ STRIPE WEBHOOK (MUST BE FIRST, NO JSON HERE)
+// ✅ WEBHOOKS (Stripe, Frisbii / Flatpay)
+// Stripe requires raw body for HMAC verification; Frisbii fallback also supported on /api/webhook
 app.post(
   "/api/webhook",
   express.raw({ type: "application/json" }),
   webhookController.stripeWebhook
+);
+
+// Dedicated endpoints for Frisbii / Flatpay Webhooks
+app.post(
+  "/api/webhook/frisbii",
+  express.json({ limit: "10mb" }),
+  webhookController.frisbiiWebhook
+);
+app.post(
+  "/api/webhook/flatpay",
+  express.json({ limit: "10mb" }),
+  webhookController.frisbiiWebhook
 );
 
 app.use(express.json({ limit: "50mb" }));

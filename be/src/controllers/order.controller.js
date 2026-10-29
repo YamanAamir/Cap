@@ -382,7 +382,7 @@ const processSingleOrderStatusUpdate = async (id, statusOrId, reqUser, reqHeader
         const body = `
           <h2>Hej ${custDetailsObj?.firstName || ''},</h2>
           <p>Din næste rate (<strong>${installment.label}</strong>) på <strong>${installment.amount} DKK</strong> er nu klar til at blive betalt.</p>
-          <p>Klik på linket nedenfor for at fuldføre betalingen sikkert via Stripe:</p>
+          <p>Klik på linket nedenfor for at fuldføre betalingen sikkert:</p>
           <p><a href="${paymentLink}" style="display:inline-block; padding:10px 20px; background-color:#16a34a; color:#fff; text-decoration:none; border-radius:5px; font-weight:bold;">Betal nu</a></p>
           <p>Tak fordi du handler hos os!</p>
         `;
@@ -539,7 +539,7 @@ const updateOrder = async (req, res) => {
           const body = `
             <h2>Hej ${updatedOrder.customerDetails?.firstName || ''},</h2>
             <p>Din næste rate (<strong>${installment.label}</strong>) på <strong>${installment.amount} DKK</strong> er nu klar til at blive betalt.</p>
-            <p>Klik på linket nedenfor for at fuldføre betalingen sikkert via Stripe:</p>
+            <p>Klik på linket nedenfor for at fuldføre betalingen sikkert:</p>
             <p><a href="${paymentLink}" style="display:inline-block; padding:10px 20px; background-color:#16a34a; color:#fff; text-decoration:none; border-radius:5px; font-weight:bold;">Betal nu</a></p>
             <p>Tak fordi du handler hos os!</p>
           `;

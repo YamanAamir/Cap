@@ -3,6 +3,7 @@ const Stripe = require('stripe');
 const nodemailer = require('nodemailer');
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+const flatpayService = require('../services/flatpay.service');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -314,6 +315,53 @@ exports.createCheckoutSession = async (req, res) => {
       cartItems: JSON.stringify(verifiedCartItems),
     };
 
+    const isFlatpay = flatpayService.isFlatpayActive();
+    const totalAmount = line_items.reduce((sum, item) => sum + (item.price_data.unit_amount * item.quantity), 0) / 100;
+
+    // 🌟 FLATPAY / FRISBII GATEWAY FOR WEBSHOP
+    if (isFlatpay) {
+      await prisma.$executeRaw`
+        INSERT INTO TempOrder (id, orderData) 
+        VALUES (${orderNumber}, ${JSON.stringify({
+          isWebshop: true,
+          orderNumber,
+          customerDetails,
+          cartItems: verifiedCartItems,
+          shippingAddress: customerDetails.address || '',
+          totalAmount,
+          currency: 'DKK',
+          gateway: 'flatpay'
+        })})
+      `;
+
+      const chargeSession = await flatpayService.createChargeSession({
+        handle: orderNumber,
+        amount: totalAmount,
+        currency: 'DKK',
+        customer: {
+          email: customerDetails.email,
+          firstName: customerDetails.firstName,
+          lastName: customerDetails.lastName,
+          phone: customerDetails.phone
+        },
+        orderLines: verifiedCartItems.map(item => ({
+          ordertext: item.title,
+          amount: parseFloat(item.price) || 0,
+          quantity: item.quantity || 1
+        })),
+        acceptUrl: `${clientOrigin}/webshop-betaling?payment=success&session_id=${orderNumber}&invoice=${orderNumber}&gateway=flatpay`,
+        cancelUrl: `${clientOrigin}/webshop-betaling-annullere?payment=cancelled&gateway=flatpay`
+      });
+
+      return res.status(200).json({
+        success: true,
+        url: chargeSession.url,
+        sessionId: chargeSession.id,
+        gateway: 'flatpay'
+      });
+    }
+
+    // 🌟 STRIPE GATEWAY FOR WEBSHOP
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items,
@@ -324,7 +372,12 @@ exports.createCheckoutSession = async (req, res) => {
       cancel_url: `${clientOrigin}/webshop-betaling-annullere?payment=cancelled`,
     });
 
-    return res.status(200).json({ success: true, url: session.url, sessionId: session.id });
+    return res.status(200).json({
+      success: true,
+      url: session.url,
+      sessionId: session.id,
+      gateway: 'stripe'
+    });
   } catch (error) {
     console.error('Error creating webshop checkout session:', error);
     return res.status(500).json({ success: false, message: 'Failed to initiate checkout', error: error.message });

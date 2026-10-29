@@ -11,7 +11,7 @@ const SuccessScreen = ({ onContinueConfiguring, handleResetModal, onClose }) => 
 
   useEffect(() => {
     const fetchSession = async () => {
-      const sessionId = searchParams.get("session_id");
+      const sessionId = searchParams.get("session_id") || searchParams.get("id") || searchParams.get("invoice");
       if (!sessionId) return;
 
       const rawUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL;
