@@ -3156,6 +3156,136 @@ const processSuccessfulCapOrder = async (tempOrderId, orderDataOverride = null) 
 /**
  * Reusable helper: Process a successful Installment payment
  */
+
+/**
+ * Send an email confirming that an installment rate has been successfully paid
+ */
+const sendInstallmentConfirmationEmail = async ({ order, installment, installmentIndex, details }) => {
+  try {
+    const transporter = createEmailTransporter();
+
+    let custDetails = order.customerDetails;
+    if (typeof custDetails === 'string') {
+      try { custDetails = JSON.parse(custDetails); } catch (e) { custDetails = {}; }
+    }
+    const customerName = custDetails?.firstName
+      ? `${custDetails.firstName} ${custDetails.lastName || ''}`.trim()
+      : 'Kunde';
+
+    const installments = details.installments || [];
+    let totalPaid = 0;
+    installments.forEach(inst => {
+      if (inst.status === 'Paid') {
+        totalPaid += parseFloat(inst.amount || 0);
+      }
+    });
+    const totalPrice = parseFloat(order.totalPrice || 0);
+    const remainingAmount = Math.max(0, totalPrice - totalPaid);
+
+    const installmentRowsHtml = installments.map((inst, index) => {
+      const isPaid = inst.status === 'Paid';
+      const statusBadge = isPaid
+        ? '<span style="color: #16a34a; font-weight: bold; background: #dcfce7; padding: 3px 8px; border-radius: 4px; font-size: 12px;">✓ Betalt</span>'
+        : '<span style="color: #ca8a04; font-weight: bold; background: #fef9c3; padding: 3px 8px; border-radius: 4px; font-size: 12px;">Afventer</span>';
+
+      const paidDateStr = inst.paidAt
+        ? `<div style="font-size: 11px; color: #6b7280;">${new Date(inst.paidAt).toLocaleDateString('da-DK')}</div>`
+        : '';
+
+      return `
+        <tr style="border-bottom: 1px solid #e5e7eb;">
+          <td style="padding: 10px 12px; font-size: 14px; color: #111827;">
+            <strong>${inst.label || `${index + 1}. rate`}</strong>
+            ${paidDateStr}
+          </td>
+          <td style="padding: 10px 12px; font-size: 14px; text-align: right; color: #111827;">
+            ${inst.amount} DKK
+          </td>
+          <td style="padding: 10px 12px; text-align: right;">
+            ${statusBadge}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937; line-height: 1.6; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+        <div style="background-color: #111827; padding: 24px; text-align: center;">
+          <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Student Life</h1>
+          <p style="color: #9ca3af; margin: 6px 0 0; font-size: 14px;">Bekræftelse på ratebetaling</p>
+        </div>
+        
+        <div style="padding: 24px;">
+          <h2 style="color: #111827; margin-top: 0; font-size: 18px;">Hej ${customerName},</h2>
+          <p style="font-size: 15px; color: #374151;">
+            Mange tak for din betaling! Vi bekræfter hermed, at din ratebetaling for ordre <strong>${order.orderNumber}</strong> er gennemført.
+          </p>
+
+          <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+            <div style="font-size: 12px; color: #166534; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Betaling gennemført</div>
+            <div style="font-size: 22px; font-weight: bold; color: #15803d; margin: 4px 0;">${installment.amount} DKK</div>
+            <div style="font-size: 14px; color: #166534;">${installment.label}</div>
+          </div>
+
+          <h3 style="color: #111827; margin-top: 24px; margin-bottom: 12px; font-size: 16px; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px;">
+            Status på din afdragsordning
+          </h3>
+
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
+            <thead>
+              <tr style="background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                <th style="padding: 8px 12px; text-align: left; font-size: 12px; color: #6b7280; text-transform: uppercase;">Rate</th>
+                <th style="padding: 8px 12px; text-align: right; font-size: 12px; color: #6b7280; text-transform: uppercase;">Beløb</th>
+                <th style="padding: 8px 12px; text-align: right; font-size: 12px; color: #6b7280; text-transform: uppercase;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${installmentRowsHtml}
+            </tbody>
+          </table>
+
+          <div style="background-color: #f9fafb; border-radius: 6px; padding: 12px 16px; margin-top: 16px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px;">
+              <span>Samlet ordrepris:</span>
+              <strong>${totalPrice} DKK</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; color: #16a34a;">
+              <span>Samlet betalt:</span>
+              <strong>${totalPaid} DKK</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: bold; border-top: 1px solid #e5e7eb; padding-top: 6px;">
+              <span>Resterende beløb:</span>
+              <span style="color: ${remainingAmount > 0 ? '#111827' : '#16a34a'};">${remainingAmount > 0 ? remainingAmount + ' DKK' : 'Færdigbetalt! 🎉'}</span>
+            </div>
+          </div>
+
+          <p style="font-size: 13px; color: #6b7280; margin-top: 24px;">
+            Har du spørgsmål til din ordre eller betaling, er du altid velkommen til at kontakte os på <a href="mailto:salg@studentlife.dk" style="color: #2563eb; text-decoration: underline;">salg@studentlife.dk</a>.
+          </p>
+
+          <p style="font-size: 14px; color: #374151; margin-top: 20px; font-weight: 500;">
+            Med venlig hilsen,<br>
+            Student Life
+          </p>
+        </div>
+      </div>
+    `;
+
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'salg@studentlife.dk',
+      to: order.customerEmail,
+      subject: `Bekræftelse: Din ${installment.label} for ordre ${order.orderNumber} er betalt`,
+      html: html,
+      text: `Hej ${customerName},\n\nMange tak for din betaling! Vi bekræfter hermed, at din ratebetaling (${installment.label}) på ${installment.amount} DKK for ordre ${order.orderNumber} er gennemført.\n\nSamlet betalt: ${totalPaid} DKK\nResterende beløb: ${remainingAmount} DKK\n\nMed venlig hilsen,\nStudent Life`
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`✅ Installment confirmation email sent to ${order.customerEmail}`);
+  } catch (err) {
+    console.error("❌ Failed to send installment confirmation email:", err.message);
+  }
+};
+
 const processSuccessfulInstallmentPayment = async (orderId, installmentIndex) => {
   try {
     const order = await prisma.order.findUnique({ where: { id: parseInt(orderId) } });
@@ -3164,15 +3294,32 @@ const processSuccessfulInstallmentPayment = async (orderId, installmentIndex) =>
       if (typeof details === 'string') {
         try { details = JSON.parse(details); } catch (e) { details = {}; }
       }
-      if (details && Array.isArray(details.installments) && details.installments[installmentIndex]) {
-        details.installments[installmentIndex].status = 'Paid';
-        details.installments[installmentIndex].paidAt = new Date().toISOString();
+      const idx = parseInt(installmentIndex);
+      if (details && Array.isArray(details.installments) && details.installments[idx]) {
+        const targetInstallment = details.installments[idx];
+
+        // Idempotency guard: Don't send duplicate emails if already marked Paid
+        if (targetInstallment.status === 'Paid') {
+          console.log(`ℹ️ Installment ${idx + 1} for order ${orderId} is already Paid. Skipping.`);
+          return;
+        }
+
+        targetInstallment.status = 'Paid';
+        targetInstallment.paidAt = new Date().toISOString();
 
         await prisma.order.update({
           where: { id: parseInt(orderId) },
           data: { installmentDetails: JSON.stringify(details) }
         });
-        console.log(`✅ Installment ${installmentIndex + 1} paid for order ${orderId}`);
+        console.log(`✅ Installment ${idx + 1} paid for order ${orderId}`);
+
+        // Send confirmation email with full overview to the user
+        await sendInstallmentConfirmationEmail({
+          order,
+          installment: targetInstallment,
+          installmentIndex: idx,
+          details
+        }).catch(err => console.error("Error sending installment confirmation email:", err));
       }
     }
   } catch (err) {
@@ -3330,7 +3477,7 @@ const stripePayment = async (req, res) => {
       ],
       mode: "payment",
       locale: "da",
-      success_url: `${clientUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${clientUrl}/installment-success?order_id=${order.id}&installment_index=${idx}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${clientUrl}/cancel`,
     });
 
@@ -3353,6 +3500,20 @@ const payInstallment = async (req, res) => {
   const { orderId, installmentIndex, frontendUrl } = req.query;
 
   try {
+    let clientUrl = frontendUrl || req.headers.referer || req.headers.origin || process.env.FRONTEND_URL || 'https://studentlife.dk';
+    try {
+      const parsedUrl = new URL(clientUrl);
+      clientUrl = parsedUrl.origin;
+    } catch (e) {
+      clientUrl = 'https://studentlife.dk';
+    }
+    if (clientUrl.endsWith('/')) {
+      clientUrl = clientUrl.slice(0, -1);
+    }
+    if (!clientUrl.includes('/studentlife') && !clientUrl.includes('/devstudentlife')) {
+      clientUrl = `${clientUrl}/studentlife`;
+    }
+
     const order = await prisma.order.findUnique({ where: { id: parseInt(orderId) } });
     if (!order || !order.installmentDetails) {
       return res.status(404).send('Ordrer eller afdragsordning ikke fundet.');
@@ -3371,21 +3532,7 @@ const payInstallment = async (req, res) => {
     }
 
     if (installment.status === 'Paid') {
-      return res.status(400).send('Denne rate er allerede betalt.');
-    }
-
-    let clientUrl = frontendUrl || req.headers.referer || req.headers.origin || process.env.FRONTEND_URL || 'https://studentlife.dk';
-    try {
-      const parsedUrl = new URL(clientUrl);
-      clientUrl = parsedUrl.origin;
-    } catch (e) {
-      clientUrl = 'https://studentlife.dk';
-    }
-    if (clientUrl.endsWith('/')) {
-      clientUrl = clientUrl.slice(0, -1);
-    }
-    if (!clientUrl.includes('/studentlife') && !clientUrl.includes('/devstudentlife')) {
-      clientUrl = `${clientUrl}/studentlife`;
+      return res.redirect(303, `${clientUrl}/installment-success?order_id=${order.id}&installment_index=${idx}&status=already_paid`);
     }
 
     const isFlatpay = flatpayService.isFlatpayActive();
@@ -3410,7 +3557,7 @@ const payInstallment = async (req, res) => {
             quantity: 1
           }
         ],
-        acceptUrl: `${clientUrl}/success?session_id=${installmentHandle}&invoice=${installmentHandle}&gateway=flatpay`,
+        acceptUrl: `${clientUrl}/installment-success?order_id=${order.id}&installment_index=${idx}&session_id=${installmentHandle}&gateway=flatpay`,
         cancelUrl: `${clientUrl}/cancel?gateway=flatpay`
       });
 
@@ -3441,7 +3588,7 @@ const payInstallment = async (req, res) => {
       ],
       mode: "payment",
       locale: "da",
-      success_url: `${clientUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${clientUrl}/installment-success?order_id=${order.id}&installment_index=${idx}&session_id={CHECKOUT_SESSION_ID}&gateway=stripe`,
       cancel_url: `${clientUrl}/cancel`,
     });
 
@@ -3913,7 +4060,86 @@ const createInstallmentOrder = async (req, res) => {
   }
 };
 
+
+/**
+ * Retrieve installment status & history for an order (Used by InstallmentSuccessScreen)
+ */
+const getInstallmentStatus = async (req, res) => {
+  const { order_id, orderId, installment_index, installmentIndex, session_id } = req.query;
+  const targetOrderId = order_id || orderId;
+  const targetIndex = installment_index !== undefined ? installment_index : installmentIndex;
+
+  try {
+    let order = null;
+
+    if (targetOrderId) {
+      order = await prisma.order.findUnique({
+        where: { id: parseInt(targetOrderId) }
+      });
+    } else if (session_id && session_id.startsWith('inst_')) {
+      const parts = session_id.split('_');
+      const parsedId = parseInt(parts[1]);
+      if (!isNaN(parsedId)) {
+        order = await prisma.order.findUnique({
+          where: { id: parsedId }
+        });
+      }
+    }
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Ordren blev ikke fundet" });
+    }
+
+    let details = order.installmentDetails;
+    if (typeof details === 'string') {
+      try { details = JSON.parse(details); } catch (e) { details = {}; }
+    }
+
+    let custDetails = order.customerDetails;
+    if (typeof custDetails === 'string') {
+      try { custDetails = JSON.parse(custDetails); } catch (e) { custDetails = {}; }
+    }
+
+    const customerName = custDetails?.firstName
+      ? `${custDetails.firstName} ${custDetails.lastName || ''}`.trim()
+      : 'Kunde';
+
+    const installments = (details && Array.isArray(details.installments)) ? details.installments : [];
+    const idx = parseInt(targetIndex);
+    const currentInstallment = !isNaN(idx) && installments[idx] ? installments[idx] : null;
+
+    let totalPaid = 0;
+    installments.forEach(inst => {
+      if (inst.status === 'Paid') {
+        totalPaid += parseFloat(inst.amount || 0);
+      }
+    });
+
+    const totalPrice = parseFloat(order.totalPrice || 0);
+    const remainingAmount = Math.max(0, totalPrice - totalPaid);
+
+    return res.json({
+      success: true,
+      orderNumber: order.orderNumber,
+      orderId: order.id,
+      customerEmail: order.customerEmail,
+      customerName,
+      totalPrice,
+      currency: order.currency || 'DKK',
+      currentInstallment,
+      installmentIndex: idx,
+      totalPaid,
+      remainingAmount,
+      installments
+    });
+  } catch (err) {
+    console.error("Error in getInstallmentStatus:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+
 module.exports = {
-  workflowStatusChange, sendCapEmail, stripePayment, getSessionDetails, stripeWebhook, frisbiiWebhook, processSuccessfulCapOrder, processSuccessfulInstallmentPayment, emailTester, createInstallmentOrder, payInstallment,
+  workflowStatusChange, sendCapEmail, stripePayment, getSessionDetails, stripeWebhook, frisbiiWebhook, processSuccessfulCapOrder, processSuccessfulInstallmentPayment, getInstallmentStatus, emailTester, createInstallmentOrder, payInstallment,
   capOrderEmail, capOrderAdminEmail, factoryOrderEmail, createEmailTransporter
 };

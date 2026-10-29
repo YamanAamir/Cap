@@ -3,6 +3,7 @@ import './App.css'
 import { Routes, Route } from 'react-router-dom'
 import StudentDashboard from './Screens/StudentDashBoard'
 import SuccessScreen from './Screens/SuccessScreen'
+import InstallmentSuccessScreen from './Screens/InstallmentSuccessScreen'
 import CancelScreen from './Screens/CancelScreen'
 import AdminFlags from './Screens/AdminFlags'
 import SmsSignupScreen from './Screens/SmsSignupScreen'
@@ -47,6 +48,7 @@ function App() {
     <Routes>
       <Route path="/" element={<StudentDashboard />} />
       <Route path="/success" element={<SuccessScreen />} />
+      <Route path="/installment-success" element={<InstallmentSuccessScreen />} />
       <Route path="/cancel" element={<CancelScreen />} />
       <Route path="/sms-signup/:slug" element={<SmsSignupScreen />} />
       <Route path="/admin/flags" element={<AdminFlags />} />
@@ -55,6 +57,3 @@ function App() {
 }
 
 export default App
-
-
-

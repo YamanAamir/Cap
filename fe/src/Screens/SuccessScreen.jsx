@@ -14,6 +14,12 @@ const SuccessScreen = ({ onContinueConfiguring, handleResetModal, onClose }) => 
       const sessionId = searchParams.get("session_id") || searchParams.get("id") || searchParams.get("invoice");
       if (!sessionId) return;
 
+      // If this is an installment payment session, route to the dedicated installment success screen
+      if (sessionId.startsWith("inst_") || searchParams.get("installment_index") !== null) {
+        window.location.replace(`${window.location.pathname.replace(/\/success$/, '')}/installment-success?${searchParams.toString()}`);
+        return;
+      }
+
       const rawUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL;
       const apiRoot = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl.replace(/\/$/, '')}/api`;
 
