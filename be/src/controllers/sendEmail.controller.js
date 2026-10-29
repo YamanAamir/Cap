@@ -2985,18 +2985,36 @@ const sendCapEmail = async (req, res) => {
   }
 };
 
+// Concurrency lock sets to prevent duplicate order creations and double emails
+const processingOrders = new Set();
+const processedWebhookEventIds = new Set();
+
 /**
  * Reusable helper: Process a successful Cap Configurator Order
  * Used by Stripe Webhook, Frisbii Webhook, and fail-safe checkout-session retrieval
  */
 const processSuccessfulCapOrder = async (tempOrderId, orderDataOverride = null) => {
+  if (!tempOrderId) return null;
+
+  // 1. In-memory Mutex: Drop any duplicate call while an order is currently being processed
+  if (processingOrders.has(tempOrderId)) {
+    console.log(`⚠️ Order ${tempOrderId} is already being processed. Dropping duplicate call.`);
+    return null;
+  }
+  processingOrders.add(tempOrderId);
+
+  // Retain lock for 60 seconds so near-simultaneous duplicate webhooks or page refreshes are dropped
+  setTimeout(() => {
+    processingOrders.delete(tempOrderId);
+  }, 60000);
+
   try {
     let orderData = orderDataOverride;
 
     if (!orderData) {
       const tempOrders = await prisma.$queryRaw`SELECT * FROM TempOrder WHERE id = ${tempOrderId}`;
       if (!tempOrders || tempOrders.length === 0) {
-        console.log(`ℹ️ TempOrder ${tempOrderId} not found (it may have already been processed).`);
+        console.log(`ℹ️ TempOrder ${tempOrderId} not found (it may have already been claimed and processed).`);
         return null;
       }
 
@@ -3009,14 +3027,18 @@ const processSuccessfulCapOrder = async (tempOrderId, orderDataOverride = null) 
 
     if (!orderData) return null;
 
-    // Guard against duplicate order creation
+    // 2. ATOMIC CLAIM: Delete from TempOrder immediately BEFORE doing DB create or sending emails!
+    // This guarantees that any concurrent webhook or redirect thread that reaches this point
+    // will find 0 rows in TempOrder and cannot re-process!
+    await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${tempOrderId}`.catch(() => {});
+
+    // 3. Guard against duplicate order creation if already exists in DB
     if (orderData.orderNumber) {
       const existingOrder = await prisma.order.findFirst({
         where: { orderNumber: orderData.orderNumber }
       });
       if (existingOrder) {
-        console.log(`ℹ️ Order ${orderData.orderNumber} already exists in database.`);
-        await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${tempOrderId}`.catch(() => {});
+        console.log(`ℹ️ Order ${orderData.orderNumber} already exists in database. Skipping duplicate creation.`);
         return existingOrder;
       }
     }
@@ -3103,8 +3125,6 @@ const processSuccessfulCapOrder = async (tempOrderId, orderDataOverride = null) 
       });
     }
 
-    await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${tempOrderId}`.catch(() => {});
-
     await sendCapEmail(
       {
         body: {
@@ -3131,6 +3151,7 @@ const processSuccessfulCapOrder = async (tempOrderId, orderDataOverride = null) 
     throw err;
   }
 };
+
 
 /**
  * Reusable helper: Process a successful Installment payment
@@ -3589,6 +3610,21 @@ const getSessionDetails = async (req, res) => {
 const frisbiiWebhook = async (req, res) => {
   try {
     const payload = req.body;
+    console.log("🔔 Frisbii webhook received:", payload?.event_type, payload?.id, payload?.invoice);
+
+    if (!payload || !payload.event_type) {
+      return res.status(400).send("Bad Request: Missing payload");
+    }
+
+    // Deduplicate identical webhook delivery attempts
+    if (payload.id) {
+      if (processedWebhookEventIds.has(payload.id)) {
+        console.log(`ℹ️ Frisbii event ${payload.id} already processed. Skipping duplicate.`);
+        return res.json({ received: true });
+      }
+      processedWebhookEventIds.add(payload.id);
+      setTimeout(() => processedWebhookEventIds.delete(payload.id), 60000);
+    }
     console.log("🔔 Frisbii webhook received:", payload?.event_type, payload?.id, payload?.invoice);
 
     if (!payload || !payload.event_type) {
