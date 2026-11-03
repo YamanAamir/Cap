@@ -8,11 +8,11 @@ import ConfirmModal from '../components/common/ConfirmModal';
 const MASTER_TEMPLATE = {
   KOKARDE: ['Emblem', 'Kokarde', 'Roset farve', 'Type'],
   'UDDANNELSESBÅND': ['Broderi farve', 'Broderi foran', 'Hagerem', 'Huebånd', 'Knap farve', 'Materiale', 'År'],
-  BRODERI: ['Broderifarve', 'Navne broderi', 'Skolebroderi', 'Skolebroderi farve', 'Top broderi'],
+  BRODERI: ['Broderifarve', 'Navne broderi', 'Skolebroderi', 'Skolebroderi farve', 'Top broderi', 'Top broderi farve'],
   BETRÆK: ['Farve', 'Kantbånd', 'Stjerner', 'Stjerner farve', 'Topkant', 'Flagbånd'],
   SKYGGE: ['Materiale', 'Skyggebånd', 'Laserengravering', 'Skyggegravering Line 1', 'Skyggegravering Line 2', 'Skyggegravering Line 3', 'Type'],
   FOER: ['Farve', 'Foer', 'Sløjfe', 'Svederem', 'Silk Type', 'Satin Type', 'Indvendigt foer billede'],
-  EKSTRABETRÆK: ['Tilvælg', 'Farve', 'Topkant', 'Kantbånd', 'Stjerner', 'Flagbånd', 'Roset farve', 'Kokarde', 'Emblem', 'Type', 'Extra Top broderi'],
+  EKSTRABETRÆK: ['Tilvælg', 'Farve', 'Topkant', 'Kantbånd', 'Stjerner', 'Stjerner farve', 'Flagbånd', 'Roset farve', 'Kokarde', 'Emblem', 'Type', 'Extra Top broderi', 'Extra Top broderi farve', 'Skolebroderi', 'Skolebroderi farve'],
   TILBEHØR: ['Bucketpins', 'Ekstra korkarde', 'Ekstra korkarde Text', 'Flag 1', 'Flag 2', 'Flag 3', 'Fløjte', 'Handsker', 'Huekuglepen', 'Hueæske', 'Luksus champagneglas', 'Lyskugle', 'Premium æske', 'Silkepude', 'Smart Tag', 'Store kuglepen', 'Trompet'],
   STØRRELSE: ['Vælg størrelse', 'Millimeter tilpasningssæt']
 };

@@ -106,6 +106,7 @@ const STATIC_FIELD_GROUPS = [
     categoryKey: 'BRODERI',
     fields: [
       { label: 'Top broderi (Top Cap Embroidery Design 1-7)', value: 'options.BRODERI.Top broderi', defaultHeader: 'Top broderi' },
+      { label: 'Top broderi farve (Top Embroidery Color: Gold / Silver from Emblem)', value: 'options.BRODERI.Top broderi farve', defaultHeader: 'Top broderi farve' },
       { label: 'Navne broderi (Back Student Name Text)', value: 'options.BRODERI.Navne broderi', defaultHeader: 'Navne broderi' },
       { label: 'Broderifarve (Back Name Color)', value: 'options.BRODERI.Broderifarve', defaultHeader: 'Navne broderifarve' },
       { label: 'Skolebroderi (School Name Embroidery Text)', value: 'options.BRODERI.Skolebroderi', defaultHeader: 'Skolebroderi' },
@@ -162,6 +163,7 @@ const STATIC_FIELD_GROUPS = [
       { label: 'Type (Extra Cover Emblem Design)', value: 'options.EKSTRABETRÆK.Type', defaultHeader: 'Ekstrabetræk Emblem Type' },
       { label: 'Flag (Extra Cover Flag)', value: 'options.EKSTRABETRÆK.Flag', defaultHeader: 'Ekstrabetræk Flag' },
       { label: 'Extra Top broderi (Top Embroidery on Extra Cover)', value: 'options.EKSTRABETRÆK.Extra Top broderi', defaultHeader: 'Ekstrabetræk Top Broderi' },
+      { label: 'Extra Top broderi farve (Extra Cover Top Embroidery Color: Gold / Silver from Emblem)', value: 'options.EKSTRABETRÆK.Extra Top broderi farve', defaultHeader: 'Ekstrabetræk Top broderi farve' },
       { label: 'Skolebroderi (Extra Cover School Embroidery Text)', value: 'options.EKSTRABETRÆK.Skolebroderi', defaultHeader: 'Ekstrabetræk Skolebroderi' },
       { label: 'Skolebroderi farve (Extra Cover School Embroidery Color)', value: 'options.EKSTRABETRÆK.Skolebroderi farve', defaultHeader: 'Ekstrabetræk Skolebroderi Farve' },
     ]

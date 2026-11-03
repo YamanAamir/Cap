@@ -151,6 +151,74 @@ const { calculateSupplierCategory } = require('./supplierCategory');
     return translateFactoryValue(emblemVal);
   }
 
+
+  if (
+    fieldKey === 'options.BRODERI.Top broderi farve' ||
+    fieldKey === 'Top broderi farve' ||
+    fieldKey === 'options.BRODERI.Top broderifarve' ||
+    fieldKey === 'Top broderifarve'
+  ) {
+    const broderi = selectedOptions.BRODERI || selectedOptions.broderi || {};
+    let topVal = broderi['Top broderi'] ?? broderi.topbroderi ?? selectedOptions['Top broderi'] ?? selectedOptions.topbroderi;
+    if (typeof topVal === 'object' && topVal !== null) {
+      topVal = topVal.name || topVal.value || topVal.label || '';
+    }
+    const topStr = String(topVal || '').trim().toUpperCase();
+    const noTop = !topStr || topStr === 'NONE' || topStr === 'INGEN' || topStr === '0' || topStr === 'X' || topStr === 'NO' || topStr === 'NEJ' || topStr === 'FALSE';
+
+    if (noTop) {
+      return 'x';
+    }
+
+    const kokarde = selectedOptions.KOKARDE || selectedOptions.kokarde || {};
+    let emblemVal = kokarde.Emblem ?? kokarde.emblem ?? selectedOptions.Emblem ?? selectedOptions.emblem;
+    if (typeof emblemVal === 'object' && emblemVal !== null) {
+      emblemVal = emblemVal.name || emblemVal.value || emblemVal.label || '';
+    }
+    if (!emblemVal || emblemVal === 'x' || emblemVal === 'NONE') {
+      return 'x';
+    }
+    return translateFactoryValue(emblemVal);
+  }
+
+  if (
+    fieldKey === 'options.EKSTRABETRÆK.Extra Top broderi farve' ||
+    fieldKey === 'options.EKSTRABETRÆK.Extra Top broderifarve' ||
+    fieldKey === 'options.EKSTRABETRÆK.Top broderi farve' ||
+    fieldKey === 'Extra Top broderi farve' ||
+    fieldKey === 'Ekstrabetræk Top broderi farve' ||
+    fieldKey === 'Ekstrabetræk Top broderifarve'
+  ) {
+    const ekstra = selectedOptions.EKSTRABETRÆK || selectedOptions.ekstrabetraek || {};
+    const tilvaelg = String(ekstra.Tilvælg ?? ekstra.tilvaelg ?? '').trim().toLowerCase();
+    if (tilvaelg !== 'yes' && tilvaelg !== 'ja') {
+      return 'x';
+    }
+    let topVal = ekstra['Extra Top broderi'] ?? ekstra['Top broderi'] ?? ekstra.extratopbroderi ?? ekstra.topbroderi;
+    if (typeof topVal === 'object' && topVal !== null) {
+      topVal = topVal.name || topVal.value || topVal.label || '';
+    }
+    const topStr = String(topVal || '').trim().toUpperCase();
+    const noTop = !topStr || topStr === 'NONE' || topStr === 'INGEN' || topStr === '0' || topStr === 'X' || topStr === 'NO' || topStr === 'NEJ' || topStr === 'FALSE';
+
+    if (noTop) {
+      return 'x';
+    }
+
+    let emblemVal = ekstra.Emblem ?? ekstra.emblem;
+    if (!emblemVal) {
+      const kokarde = selectedOptions.KOKARDE || selectedOptions.kokarde || {};
+      emblemVal = kokarde.Emblem ?? kokarde.emblem ?? selectedOptions.Emblem ?? selectedOptions.emblem;
+    }
+    if (typeof emblemVal === 'object' && emblemVal !== null) {
+      emblemVal = emblemVal.name || emblemVal.value || emblemVal.label || '';
+    }
+    if (!emblemVal || emblemVal === 'x' || emblemVal === 'NONE') {
+      return 'x';
+    }
+    return translateFactoryValue(emblemVal);
+  }
+
   if (fieldKey === 'options.BRODERI.Skolebroderi farve' || fieldKey === 'Skolebroderi farve') {
     const broderi = selectedOptions.BRODERI || selectedOptions.broderi || {};
     const text = String(broderi.Skolebroderi ?? broderi.skolebroderi ?? selectedOptions.Skolebroderi ?? '').trim();

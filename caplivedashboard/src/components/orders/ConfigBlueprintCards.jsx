@@ -218,6 +218,43 @@ const ConfigBlueprintCards = ({ selectedOptions, productionFilters, isFactoryVie
             }
           }
 
+          
+          if (category.toUpperCase() === 'BRODERI' && (key.toLowerCase() === 'top broderi farve' || key.toLowerCase() === 'top broderifarve')) {
+            const topVal = details['Top broderi'] || details.topbroderi;
+            const topStr = String((typeof topVal === 'object' && topVal ? (topVal.name || topVal.value) : topVal) || '').trim().toUpperCase();
+            const noTop = !topStr || topStr === 'NONE' || topStr === 'INGEN' || topStr === '0' || topStr === 'X' || topStr === 'NO' || topStr === 'NEJ';
+            if (noTop) {
+              value = isFactoryMode ? 'None' : 'Ingen';
+            } else {
+              const kokarde = selectedOptions.KOKARDE || selectedOptions.kokarde || {};
+              const emblemVal = kokarde.Emblem ?? kokarde.emblem;
+              const embStr = (typeof emblemVal === 'object' && emblemVal ? (emblemVal.name || emblemVal.value) : emblemVal) || '';
+              value = embStr || (isFactoryMode ? 'None' : 'Ingen');
+            }
+          }
+
+          if (category.toUpperCase() === 'EKSTRABETRÆK' && (key.toLowerCase() === 'extra top broderi farve' || key.toLowerCase() === 'top broderi farve')) {
+            const tilvaelg = String(details.Tilvælg || details.tilvaelg || '').trim().toLowerCase();
+            if (tilvaelg !== 'yes' && tilvaelg !== 'ja') {
+              value = isFactoryMode ? 'None' : 'Ingen';
+            } else {
+              const topVal = details['Extra Top broderi'] || details['Top broderi'];
+              const topStr = String((typeof topVal === 'object' && topVal ? (topVal.name || topVal.value) : topVal) || '').trim().toUpperCase();
+              const noTop = !topStr || topStr === 'NONE' || topStr === 'INGEN' || topStr === '0' || topStr === 'X' || topStr === 'NO' || topStr === 'NEJ';
+              if (noTop) {
+                value = isFactoryMode ? 'None' : 'Ingen';
+              } else {
+                let emblemVal = details.Emblem || details.emblem;
+                if (!emblemVal) {
+                  const kokarde = selectedOptions.KOKARDE || selectedOptions.kokarde || {};
+                  emblemVal = kokarde.Emblem || kokarde.emblem;
+                }
+                const embStr = (typeof emblemVal === 'object' && emblemVal ? (emblemVal.name || emblemVal.value) : emblemVal) || '';
+                value = embStr || (isFactoryMode ? 'None' : 'Ingen');
+              }
+            }
+          }
+
           // Hide huge base64 strings and custom lining uploads
           if (typeof value === 'string' && value.startsWith('data:image')) return null;
           if (Array.isArray(value) && value[0]?.url) return null;

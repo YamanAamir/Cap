@@ -14,13 +14,13 @@ const safeParseJSON = (jsonString) => {
 };
 
 const ProductionFactoryPage = () => {
-  const [data, setData] = useState({ orders: [], pagination: {} });
+  const [data, setData] = useState({ orders: [], pagination: {}, statusCounts: {}, totalAllOrders: 0 });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(100);
+  const [limit, setLimit] = useState(50);
   const [debounceSearch, setDebounceSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all'); // 'all' | 'today' | 'month' | 'custom'
   const [customDates, setCustomDates] = useState({ startDate: '', endDate: '' });
   const [statuses, setStatuses] = useState([]);
@@ -33,9 +33,6 @@ const ProductionFactoryPage = () => {
       // Only production-visible statuses
       const prodStatuses = res.filter(s => s.isVisibleToProduction);
       setStatuses(prodStatuses);
-      if (prodStatuses.length > 0) {
-        setStatusFilter(String(prodStatuses[0].id));
-      }
     }).catch(console.error);
   }, []);
 
@@ -44,14 +41,19 @@ const ProductionFactoryPage = () => {
     return () => clearTimeout(timer);
   }, [search]);
 
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [debounceSearch, statusFilter, dateFilter, customDates.startDate, customDates.endDate, limit]);
+
   const fetchOrders = async () => {
     setLoading(true);
     try {
       const response = await getOrders({
-        page: 1,
+        page,
         search: debounceSearch,
         limit,
-        statusId: 'all',
+        statusId: statusFilter || 'all',
         isVisibleToProduction: 'true',
         dateFilter,
         startDate: customDates.startDate,
@@ -68,7 +70,7 @@ const ProductionFactoryPage = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [debounceSearch, limit, dateFilter, customDates.startDate, customDates.endDate]);
+  }, [page, statusFilter, debounceSearch, limit, dateFilter, customDates.startDate, customDates.endDate]);
 
   const handleStatusUpdate = async () => {
     if (!confirmModal.orderId || !confirmModal.statusId) return;
@@ -85,15 +87,10 @@ const ProductionFactoryPage = () => {
     }
   };
 
-  const allOrders = data.orders || [];
-
-  const displayedOrders = statusFilter === 'all'
-    ? allOrders
-    : allOrders.filter(o => String(o.statusId) === String(statusFilter));
-
+  const displayedOrders = data.orders || [];
   const selectedStatus = statuses.find(s => String(s.id) === String(statusFilter));
 
-  if (loading && !data.orders.length) {
+  if (loading && !data.orders?.length) {
     return (
       <div className="flex h-[50vh] items-center justify-center">
         <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
@@ -121,7 +118,10 @@ const ProductionFactoryPage = () => {
       <div className="flex items-center gap-2 border-b border-slate-200 mb-6 bg-slate-50/70 p-1.5 rounded-lg border border-slate-200/80 overflow-x-auto custom-scrollbar">
         <button
           type="button"
-          onClick={() => setStatusFilter('all')}
+          onClick={() => {
+            setStatusFilter('all');
+            setPage(1);
+          }}
           className={cn(
             "flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-bold rounded-md transition-all cursor-pointer whitespace-nowrap shrink-0",
             statusFilter === 'all'
@@ -135,12 +135,12 @@ const ProductionFactoryPage = () => {
             "px-2 py-0.5 text-[11px] rounded-full font-extrabold ml-1",
             statusFilter === 'all' ? "bg-slate-900 text-white" : "bg-slate-200 text-slate-700"
           )}>
-            {allOrders.length}
+            {data.totalAllOrders !== undefined ? data.totalAllOrders : (statusFilter === 'all' ? (data.pagination?.totalCount || 0) : (data.orders?.length || 0))}
           </span>
         </button>
 
         {statuses.map(s => {
-          const count = allOrders.filter(o => String(o.statusId) === String(s.id)).length;
+          const count = data.statusCounts?.[s.id] ?? 0;
           const isSelected = String(statusFilter) === String(s.id);
           const statusColor = s.color || '#6366f1';
 
@@ -148,7 +148,10 @@ const ProductionFactoryPage = () => {
             <button
               key={s.id}
               type="button"
-              onClick={() => setStatusFilter(String(s.id))}
+              onClick={() => {
+                setStatusFilter(String(s.id));
+                setPage(1);
+              }}
               className={cn(
                 "flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-bold rounded-md transition-all cursor-pointer whitespace-nowrap shrink-0",
                 isSelected
@@ -258,7 +261,10 @@ const ProductionFactoryPage = () => {
             <Filter className="absolute left-3 top-2.5 h-4 w-4 text-slate-400 pointer-events-none" />
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
               className="w-full sm:w-48 pl-9 pr-4 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 bg-white cursor-pointer"
             >
               <option value="all">All Visible Statuses</option>
@@ -268,7 +274,10 @@ const ProductionFactoryPage = () => {
             </select>
           </div>
           <button 
-            onClick={fetchOrders}
+            onClick={() => {
+              setPage(1);
+              fetchOrders();
+            }}
             className={cn("flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 h-9 w-9 rounded border border-slate-200 transition-colors cursor-pointer", loading && "opacity-50")}
             title="Refresh orders"
           >
@@ -354,11 +363,87 @@ const ProductionFactoryPage = () => {
         </table>
       </div>
 
-      {/* Footer info */}
+      {/* Pagination Footer */}
       <div className="mt-4 px-5 py-4 bg-slate-50 border border-slate-200 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4 text-sm shrink-0">
-        <div className="text-slate-500 font-medium text-xs">
-          Showing <span className="font-bold text-slate-800">{displayedOrders.length}</span> orders in {statusFilter === 'all' ? 'All Visible Statuses' : `"${selectedStatus?.name || 'Selected Status'}"`}
+        {/* Entries display limit selector */}
+        <div className="flex items-center gap-2 text-slate-600 text-xs sm:text-sm">
+          <span>Show</span>
+          <select
+            value={limit}
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setPage(1);
+            }}
+            className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:border-blue-500 bg-white font-bold"
+          >
+            {[25, 50, 100, 200].map(size => (
+              <option key={size} value={size}>{size}</option>
+            ))}
+          </select>
+          <span>entries</span>
         </div>
+
+        {/* Showing entries info */}
+        <div className="text-slate-500 font-medium text-xs sm:text-sm">
+          {(data.pagination?.totalCount || 0) > 0 ? (
+            <>
+              Showing <span className="font-bold text-slate-800">{((page - 1) * limit) + 1}</span> to{' '}
+              <span className="font-bold text-slate-800">{Math.min(page * limit, data.pagination.totalCount || 0)}</span> of{' '}
+              <span className="font-bold text-slate-800">{data.pagination.totalCount || 0}</span> orders
+              {statusFilter !== 'all' && selectedStatus && (
+                <span className="text-slate-400 ml-1 font-normal">in &ldquo;{selectedStatus.name}&rdquo;</span>
+              )}
+            </>
+          ) : (
+            'No orders to display'
+          )}
+        </div>
+
+        {/* Pagination controls */}
+        {data.pagination?.totalPages > 1 && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+              disabled={page === 1}
+              className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            
+            {/* Page numbers list */}
+            {Array.from({ length: data.pagination.totalPages }, (_, i) => i + 1)
+              .filter(p => {
+                return p === 1 || p === data.pagination.totalPages || Math.abs(p - page) <= 1;
+              })
+              .map((p, index, array) => {
+                const showEllipsis = index > 0 && p - array[index - 1] > 1;
+                return (
+                  <React.Fragment key={p}>
+                    {showEllipsis && <span className="px-2 text-slate-400">...</span>}
+                    <button
+                      onClick={() => setPage(p)}
+                      className={cn(
+                        "px-3 py-1.5 rounded text-xs font-bold transition-all",
+                        page === p
+                          ? "bg-blue-600 text-white shadow-sm"
+                          : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                      )}
+                    >
+                      {p}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+
+            <button
+              onClick={() => setPage(prev => Math.min(prev + 1, data.pagination.totalPages))}
+              disabled={page === data.pagination.totalPages}
+              className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       <ConfirmModal

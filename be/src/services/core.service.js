@@ -30,6 +30,7 @@ const DEFAULT_EXCEL_COLUMNS = [
   { fieldKey: 'options.BRODERI.Skolebroderi farve', headerLabel: 'School Embroidery Color', sortOrder: 13 },
   { fieldKey: 'options.BETRÆK.Farve', headerLabel: 'Cover Color', sortOrder: 14 },
   { fieldKey: 'options.BRODERI.Top broderi', headerLabel: 'Top Embroidery', sortOrder: 15 },
+  { fieldKey: 'options.BRODERI.Top broderi farve', headerLabel: 'Top Embroidery Color', sortOrder: 15.5 },
   { fieldKey: 'options.BETRÆK.Topkant', headerLabel: 'Top Edging', sortOrder: 16 },
   { fieldKey: 'options.BETRÆK.Kantbånd', headerLabel: 'Edge Ribbon', sortOrder: 17 },
   { fieldKey: 'options.BETRÆK.Stjerner', headerLabel: 'Stars', sortOrder: 18 },
