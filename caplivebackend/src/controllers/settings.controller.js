@@ -569,6 +569,33 @@ const DEFAULT_CONFIG = {
   }
 };
 
+const cleanEmblemKeys = (targetObj) => {
+  if (!targetObj || typeof targetObj !== 'object') return;
+
+  const keyMap = {
+    'Pulse Guld Guld': 'Pulse Guld',
+    'Pulse Guld Simli Guld': 'Pulse Simli Guld',
+    'Pulse Sølv Sølv': 'Pulse Sølv',
+    'Pulse Sølv Simli Sølv': 'Pulse Simli Sølv',
+    'Pulse Guld Simili': 'Pulse Simli Guld',
+    'Pulse Sølv Simili': 'Pulse Simli Sølv'
+  };
+
+  for (const key of Object.keys(targetObj)) {
+    const val = targetObj[key];
+    if (val && typeof val === 'object' && !Array.isArray(val)) {
+      cleanEmblemKeys(val);
+    }
+    if (keyMap[key]) {
+      const cleanKey = keyMap[key];
+      if (targetObj[cleanKey] === undefined) {
+        targetObj[cleanKey] = val;
+      }
+      delete targetObj[key];
+    }
+  }
+};
+
 exports.getConfiguratorSettings = async (req, res) => {
   try {
     let setting = await prisma.systemSetting.findUnique({
@@ -641,7 +668,20 @@ exports.getConfiguratorSettings = async (req, res) => {
         }
       }
       
-      if (migrated) {
+            // Ensure Luksus top embroidery (Top broderi 1-7) is 149 DKK (paid add-on)
+      if (val.priceConfig && val.priceConfig.luksus && val.priceConfig.luksus.BRODERI && val.priceConfig.luksus.BRODERI['Top broderi']) {
+        const topBroderi = val.priceConfig.luksus.BRODERI['Top broderi'];
+        let updatedTop = false;
+        ['Top broderi 1', 'Top broderi 2', 'Top broderi 3', 'Top broderi 4', 'Top broderi 5', 'Top broderi 6', 'Top broderi 7'].forEach(key => {
+          if (topBroderi[key] === 0 || topBroderi[key] === undefined) {
+            topBroderi[key] = 149;
+            updatedTop = true;
+          }
+        });
+        if (updatedTop) migrated = true;
+      }
+
+if (migrated) {
         await prisma.systemSetting.update({
           where: { key: 'configurator_settings' },
           data: { value: JSON.stringify(val) }
@@ -649,33 +689,6 @@ exports.getConfiguratorSettings = async (req, res) => {
         setting.value = val;
       }
     }
-
-const cleanEmblemKeys = (targetObj) => {
-  if (!targetObj || typeof targetObj !== 'object') return;
-
-  const keyMap = {
-    'Pulse Guld Guld': 'Pulse Guld',
-    'Pulse Guld Simli Guld': 'Pulse Simli Guld',
-    'Pulse Sølv Sølv': 'Pulse Sølv',
-    'Pulse Sølv Simli Sølv': 'Pulse Simli Sølv',
-    'Pulse Guld Simili': 'Pulse Simli Guld',
-    'Pulse Sølv Simili': 'Pulse Simli Sølv'
-  };
-
-  for (const key of Object.keys(targetObj)) {
-    const val = targetObj[key];
-    if (val && typeof val === 'object' && !Array.isArray(val)) {
-      cleanEmblemKeys(val);
-    }
-    if (keyMap[key]) {
-      const cleanKey = keyMap[key];
-      if (targetObj[cleanKey] === undefined) {
-        targetObj[cleanKey] = val;
-      }
-      delete targetObj[key];
-    }
-  }
-};
 
     let finalValue = { ...DEFAULT_CONFIG, ...(setting.value || {}) };
     cleanEmblemKeys(finalValue);

@@ -446,7 +446,7 @@ const Embroidery = ({ selectedOptions = {}, onOptionChange, program, pakke, visi
                 <div>
                     <label className="text-sm font-semibold text-slate-700">Top broderi</label>
                     <div className="flex items-center gap-2 mt-1">
-                        {pakke?.toLowerCase() === 'luksus' || pakke?.toLowerCase() === 'premium' ? (
+                        {pakke?.toLowerCase() === 'premium' ? (
                             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-amber-100 to-yellow-200 text-amber-800">
                                 Inkluderet i pakken
                             </span>
