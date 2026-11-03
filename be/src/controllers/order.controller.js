@@ -202,7 +202,11 @@ const getOrders = async (req, res) => {
     const orderBy = {};
     orderBy[sortBy] = order;
 
-    const [rawOrders, totalCount] = await prisma.$transaction([
+    const baseWhere = { ...where };
+    delete baseWhere.status;
+    delete baseWhere.statusId;
+
+    const [rawOrders, totalCount, statusCountsRaw, totalAllOrders] = await prisma.$transaction([
       prisma.order.findMany({
         where,
         skip,
@@ -214,15 +218,29 @@ const getOrders = async (req, res) => {
           discountCode: true,
           installmentPlan: true,
         },
-
       }),
       prisma.order.count({ where }),
+      prisma.order.groupBy({
+        by: ['statusId'],
+        where: baseWhere,
+        _count: { id: true },
+      }),
+      prisma.order.count({ where: baseWhere }),
     ]);
 
     const orders = await Promise.all(rawOrders.map(fixCorruptedInstallments));
 
+    const statusCounts = {};
+    statusCountsRaw.forEach(sc => {
+      if (sc.statusId !== null && sc.statusId !== undefined) {
+        statusCounts[sc.statusId] = sc._count.id;
+      }
+    });
+
     res.status(200).json({
       orders,
+      statusCounts,
+      totalAllOrders,
       pagination: {
         totalCount,
         totalPages: Math.ceil(totalCount / take),

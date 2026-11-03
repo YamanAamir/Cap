@@ -16,7 +16,7 @@ const OrdersPage = () => {
   const [sortBy, setSortBy] = useState('createdAt');
   const [order, setOrder] = useState('desc');
   const [debounceSearch, setDebounceSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [installmentFilter, setInstallmentFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all'); // 'all' | 'today' | 'month' | 'custom'
   const [customDates, setCustomDates] = useState({ startDate: '', endDate: '' });
@@ -40,12 +40,6 @@ const OrdersPage = () => {
   useEffect(() => {
     getOrderStatuses().then(res => {
       setStatuses(res);
-      const activeStatuses = res.filter(s => s.isActive);
-      if (activeStatuses.length > 0) {
-        setStatusFilter(String(activeStatuses[0].id));
-      } else if (res.length > 0) {
-        setStatusFilter(String(res[0].id));
-      }
     }).catch(console.error);
   }, []);
 
@@ -58,12 +52,12 @@ const OrdersPage = () => {
     setLoading(true);
     try {
       const response = await getOrders({
-        page: 1,
+        page,
         search: debounceSearch,
         sortBy,
         order,
         limit,
-        statusId: 'all',
+        statusId: statusFilter || 'all',
         installment: installmentFilter,
         dateFilter,
         startDate: customDates.startDate,
@@ -78,9 +72,15 @@ const OrdersPage = () => {
     }
   };
 
+  // Reset page when search, filter or limit changes
+  useEffect(() => {
+    setPage(1);
+    setSelectedOrderIds([]);
+  }, [debounceSearch, installmentFilter, dateFilter, customDates.startDate, customDates.endDate, limit]);
+
   useEffect(() => {
     fetchOrders();
-  }, [debounceSearch, sortBy, order, installmentFilter, limit, dateFilter, customDates.startDate, customDates.endDate]);
+  }, [page, statusFilter, debounceSearch, sortBy, order, installmentFilter, limit, dateFilter, customDates.startDate, customDates.endDate]);
 
   const handleSort = (field) => {
     if (sortBy === field) {
@@ -125,11 +125,13 @@ const OrdersPage = () => {
     }
   };
 
-  const allOrders = data.orders || [];
+  const handleStatusFilterChange = (newStatus) => {
+    setStatusFilter(newStatus);
+    setPage(1);
+    setSelectedOrderIds([]);
+  };
 
-  const displayedOrders = statusFilter === 'all'
-    ? allOrders
-    : allOrders.filter(o => String(o.statusId) === String(statusFilter));
+  const displayedOrders = data.orders || [];
 
   const selectedStatus = statuses.find(s => String(s.id) === String(statusFilter));
 
@@ -205,7 +207,7 @@ const OrdersPage = () => {
       <div className="flex items-center gap-2 border-b border-slate-200 mb-6 bg-slate-50/70 p-1.5 rounded-lg border border-slate-200/80 overflow-x-auto custom-scrollbar">
         <button
           type="button"
-          onClick={() => setStatusFilter('all')}
+          onClick={() => handleStatusFilterChange('all')}
           className={cn(
             "flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-bold rounded-md transition-all cursor-pointer whitespace-nowrap shrink-0",
             statusFilter === 'all'
@@ -219,12 +221,12 @@ const OrdersPage = () => {
             "px-2 py-0.5 text-[11px] rounded-full font-extrabold ml-1",
             statusFilter === 'all' ? "bg-slate-900 text-white" : "bg-slate-200 text-slate-700"
           )}>
-            {allOrders.length}
+            {data.totalAllOrders !== undefined ? data.totalAllOrders : (statusFilter === 'all' ? (data.pagination?.totalCount || 0) : (data.orders?.length || 0))}
           </span>
         </button>
 
         {statuses.filter(s => s.isActive).map(s => {
-          const count = allOrders.filter(o => String(o.statusId) === String(s.id)).length;
+          const count = data.statusCounts?.[s.id] ?? 0;
           const isSelected = String(statusFilter) === String(s.id);
           const statusColor = s.color || '#6366f1';
 
@@ -232,7 +234,7 @@ const OrdersPage = () => {
             <button
               key={s.id}
               type="button"
-              onClick={() => setStatusFilter(String(s.id))}
+              onClick={() => handleStatusFilterChange(String(s.id))}
               className={cn(
                 "flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-bold rounded-md transition-all cursor-pointer whitespace-nowrap shrink-0",
                 isSelected
@@ -550,11 +552,87 @@ const OrdersPage = () => {
         </table>
       </div>
 
-      {/* Footer Info */}
+      {/* Pagination Footer */}
       <div className="mt-4 px-5 py-4 bg-slate-50 border border-slate-200 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4 text-sm shrink-0">
-        <div className="text-slate-500 font-medium text-xs">
-          Showing <span className="font-bold text-slate-800">{displayedOrders.length}</span> orders in {statusFilter === 'all' ? 'All Statuses' : `"${selectedStatus?.name || 'Selected Status'}"`}
+        {/* Entries display limit selector */}
+        <div className="flex items-center gap-2 text-slate-600 text-xs sm:text-sm">
+          <span>Show</span>
+          <select
+            value={limit}
+            onChange={(e) => {
+              setLimit(Number(e.target.value));
+              setPage(1);
+            }}
+            className="px-2 py-1 text-xs border border-slate-200 rounded focus:outline-none focus:border-blue-500 bg-white font-bold"
+          >
+            {[25, 50, 100, 200].map(size => (
+              <option key={size} value={size}>{size}</option>
+            ))}
+          </select>
+          <span>entries</span>
         </div>
+
+        {/* Showing entries info */}
+        <div className="text-slate-500 font-medium text-xs sm:text-sm">
+          {(data.pagination?.totalCount || 0) > 0 ? (
+            <>
+              Showing <span className="font-bold text-slate-800">{((page - 1) * limit) + 1}</span> to{' '}
+              <span className="font-bold text-slate-800">{Math.min(page * limit, data.pagination.totalCount || 0)}</span> of{' '}
+              <span className="font-bold text-slate-800">{data.pagination.totalCount || 0}</span> orders
+              {statusFilter !== 'all' && selectedStatus && (
+                <span className="text-slate-400 ml-1 font-normal">in &ldquo;{selectedStatus.name}&rdquo;</span>
+              )}
+            </>
+          ) : (
+            'No orders to display'
+          )}
+        </div>
+
+        {/* Pagination controls */}
+        {data.pagination?.totalPages > 1 && (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+              disabled={page === 1}
+              className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            
+            {/* Page numbers list */}
+            {Array.from({ length: data.pagination.totalPages }, (_, i) => i + 1)
+              .filter(p => {
+                return p === 1 || p === data.pagination.totalPages || Math.abs(p - page) <= 1;
+              })
+              .map((p, index, array) => {
+                const showEllipsis = index > 0 && p - array[index - 1] > 1;
+                return (
+                  <React.Fragment key={p}>
+                    {showEllipsis && <span className="px-2 text-slate-400">...</span>}
+                    <button
+                      onClick={() => setPage(p)}
+                      className={cn(
+                        "px-3 py-1.5 rounded text-xs font-bold transition-all",
+                        page === p
+                          ? "bg-blue-600 text-white shadow-sm"
+                          : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                      )}
+                    >
+                      {p}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+
+            <button
+              onClick={() => setPage(prev => Math.min(prev + 1, data.pagination.totalPages))}
+              disabled={page === data.pagination.totalPages}
+              className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-xs font-bold hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:hover:bg-white disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       <ConfirmModal
