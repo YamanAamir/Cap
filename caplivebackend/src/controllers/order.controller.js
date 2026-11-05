@@ -390,17 +390,31 @@ const processSingleOrderStatusUpdate = async (id, statusOrId, reqUser, reqHeader
         const rawUrl = process.env.API_BASE_URL || process.env.VITE_API_BASE_URL || `${protocol}://${host}`;
         
         const apiRoot = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl.replace(/\/$/, '')}/api`;
-        const paymentLink = `${apiRoot}/sendEmail/pay-installment?orderId=${updatedOrder.id}&installmentIndex=${idx}`;
+        const frontendParam = (instDetails && instDetails.frontendUrl) ? `&frontendUrl=${encodeURIComponent(instDetails.frontendUrl)}` : '';
+        const paymentLink = `${apiRoot}/sendEmail/pay-installment?orderId=${updatedOrder.id}&installmentIndex=${idx}${frontendParam}`;
         
         let custDetailsObj = updatedOrder.customerDetails;
         if (typeof custDetailsObj === 'string') {
           try { custDetailsObj = JSON.parse(custDetailsObj); } catch { custDetailsObj = {}; }
         }
-        const subject = `Din næste rate for ordre ${updatedOrder.orderNumber} er klar til betaling`;
-        const body = `
+        let emailData = null;
+        try {
+          const { buildInstallmentPaymentRequestEmail } = require('./sendEmail.controller');
+          emailData = buildInstallmentPaymentRequestEmail({
+            order: updatedOrder,
+            installment,
+            installmentIndex: idx,
+            paymentLink
+          });
+        } catch (genErr) {
+          console.error('Error generating branded installment email:', genErr);
+        }
+
+        const subject = emailData ? emailData.subject : `Din næste rate for ordre ${updatedOrder.orderNumber} er klar til betaling`;
+        const body = emailData ? emailData.html : `
           <h2>Hej ${custDetailsObj?.firstName || ''},</h2>
           <p>Din næste rate (<strong>${installment.label}</strong>) på <strong>${installment.amount} DKK</strong> er nu klar til at blive betalt.</p>
-          <p>Klik på linket nedenfor for at fuldføre betalingen sikkert via Stripe:</p>
+          <p>Klik på linket nedenfor for at fuldføre betalingen sikkert:</p>
           <p><a href="${paymentLink}" style="display:inline-block; padding:10px 20px; background-color:#16a34a; color:#fff; text-decoration:none; border-radius:5px; font-weight:bold;">Betal nu</a></p>
           <p>Tak fordi du handler hos os!</p>
         `;
@@ -551,13 +565,31 @@ const updateOrder = async (req, res) => {
           const rawUrl = process.env.API_BASE_URL || process.env.VITE_API_BASE_URL || `${protocol}://${host}`;
           
           const apiRoot = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl.replace(/\/$/, '')}/api`;
-          const paymentLink = `${apiRoot}/sendEmail/pay-installment?orderId=${updatedOrder.id}&installmentIndex=${idx}`;
+          let existingInstDetails = updatedOrder.installmentDetails;
+          if (typeof existingInstDetails === 'string') {
+            try { existingInstDetails = JSON.parse(existingInstDetails); } catch { existingInstDetails = null; }
+          }
+          const frontendParam = (existingInstDetails && existingInstDetails.frontendUrl) ? `&frontendUrl=${encodeURIComponent(existingInstDetails.frontendUrl)}` : '';
+          const paymentLink = `${apiRoot}/sendEmail/pay-installment?orderId=${updatedOrder.id}&installmentIndex=${idx}${frontendParam}`;
           
-          const subject = `Din næste rate for ordre ${updatedOrder.orderNumber} er klar til betaling`;
-          const body = `
+          let emailData = null;
+          try {
+            const { buildInstallmentPaymentRequestEmail } = require('./sendEmail.controller');
+            emailData = buildInstallmentPaymentRequestEmail({
+              order: updatedOrder,
+              installment,
+              installmentIndex: idx,
+              paymentLink
+            });
+          } catch (genErr) {
+            console.error('Error generating branded installment email:', genErr);
+          }
+
+          const subject = emailData ? emailData.subject : `Din næste rate for ordre ${updatedOrder.orderNumber} er klar til betaling`;
+          const body = emailData ? emailData.html : `
             <h2>Hej ${updatedOrder.customerDetails?.firstName || ''},</h2>
             <p>Din næste rate (<strong>${installment.label}</strong>) på <strong>${installment.amount} DKK</strong> er nu klar til at blive betalt.</p>
-            <p>Klik på linket nedenfor for at fuldføre betalingen sikkert via Stripe:</p>
+            <p>Klik på linket nedenfor for at fuldføre betalingen sikkert:</p>
             <p><a href="${paymentLink}" style="display:inline-block; padding:10px 20px; background-color:#16a34a; color:#fff; text-decoration:none; border-radius:5px; font-weight:bold;">Betal nu</a></p>
             <p>Tak fordi du handler hos os!</p>
           `;

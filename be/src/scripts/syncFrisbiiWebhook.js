@@ -2,7 +2,7 @@ require('dotenv').config();
 const flatpayService = require('../services/flatpay.service');
 
 async function syncWebhook() {
-  const targetUrl = process.argv[2] || process.env.FLATPAY_WEBHOOK_URL;
+  const targetUrl = (process.argv[2] || process.env.FLATPAY_WEBHOOK_URL || '').trim();
   if (!targetUrl) {
     console.log("Usage: node src/scripts/syncFrisbiiWebhook.js <WEBHOOK_URL>");
     console.log("Example: node src/scripts/syncFrisbiiWebhook.js https://yourdomain.com/api/webhook/frisbii");
@@ -23,7 +23,8 @@ async function syncWebhook() {
     const currentSettings = await getRes.json();
     console.log("Current Frisbii Webhook URLs:", currentSettings.urls);
 
-    const urls = new Set(currentSettings.urls || []);
+    const cleanExisting = (currentSettings.urls || []).map(u => (u || '').trim()).filter(Boolean);
+    const urls = new Set(cleanExisting);
     urls.add(targetUrl);
 
     const updatePayload = {

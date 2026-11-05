@@ -435,7 +435,8 @@ const capOrderEmail = (orderData) => {
     orderDate,
     packageName,
     program,
-    email
+    email,
+    installmentDetails
   } = orderData;
 
   const shippingPrices = {
@@ -612,6 +613,39 @@ const capOrderEmail = (orderData) => {
   };
   const programColor = programColorMap[program] || program;
 
+  let instDetails = installmentDetails;
+  if (typeof instDetails === 'string') {
+    try { instDetails = JSON.parse(instDetails); } catch (e) { instDetails = null; }
+  }
+
+  const isInstallment = !!instDetails && Array.isArray(instDetails.installments) && instDetails.installments.length > 0;
+  const downPayment = isInstallment ? parseFloat(instDetails.downPayment || instDetails.installments[0]?.amount || 399) : 0;
+  let totalPaidAmount = 0;
+  if (isInstallment) {
+    instDetails.installments.forEach((inst, idx) => {
+      if (inst.status === 'Paid' || idx === 0) {
+        totalPaidAmount += parseFloat(inst.amount || 0);
+      }
+    });
+  }
+  const remainingInstallmentBalance = Math.max(0, parseFloat(totalPrice) - totalPaidAmount);
+
+  const installmentScheduleRowsHtml = isInstallment ? instDetails.installments.map((inst, idx) => {
+    const isPaid = inst.status === 'Paid' || idx === 0;
+    const badge = isPaid
+      ? '<span style="color:#166534; font-weight:bold; background:#dcfce7; padding:2px 6px; border-radius:4px; font-size:11px;">✓ Betalt i dag</span>'
+      : '<span style="color:#854d0e; font-weight:bold; background:#fef9c3; padding:2px 6px; border-radius:4px; font-size:11px;">Afventer</span>';
+    const dueStr = inst.dueDate ? new Date(inst.dueDate).toLocaleDateString('da-DK') : '-';
+    return `
+      <tr style="border-bottom:1px solid #e5e7eb;">
+        <td style="padding:6px 8px; color:#111827; font-weight:600;">${inst.label || (idx + 1) + '. rate'}</td>
+        <td style="padding:6px 8px; color:#4b5563;">${dueStr}</td>
+        <td style="padding:6px 8px; text-align:right; font-weight:bold; color:#111827;">${inst.amount} DKK</td>
+        <td style="padding:6px 8px; text-align:right;">${badge}</td>
+      </tr>
+    `;
+  }).join('') : '';
+
   const html = `
 
 <!DOCTYPE html>
@@ -680,7 +714,7 @@ const capOrderEmail = (orderData) => {
               <table width="100%" border="0" cellpadding="0" cellspacing="0">
                 <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px;">Kære: ${customerDetails.firstName} ${customerDetails.lastName},</td></tr>
                 <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px;">Tak for din bestilling hos Studentlife.</td></tr>
-                <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px;">Din bestilling med ordre nummer: ${orderNumber} er nu betalt.</td></tr>
+                <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px;">${isInstallment ? `Din bestilling med ordrenummer: ${orderNumber} er bekræftet (1. rate / udbetaling på ${downPayment} DKK er betalt).` : `Din bestilling med ordre nummer: ${orderNumber} er nu betalt.`}</td></tr>
                 <tr><td style="font-size:16px; padding-bottom:15px;">Husk at tjekke alle detaljer er korrekte, herunder også leveringstid ${dayNumber}/${monthNumber}/${year}, skolens logo samt skolebroderi.</td></tr>
                 <tr><td style="font-size:16px; padding-bottom:15px;">Vi håber at du kommer til at elske din studenterhue.</td></tr>
               </table>
@@ -714,6 +748,14 @@ const capOrderEmail = (orderData) => {
               <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f2f3f2; padding:30px 25px;">
                 <tr>
                   <td style="font-size:19px; font-weight:bold; padding-bottom:15px;">Betalingsoplysninger</td>
+                </tr>
+                <tr>
+                  <td style="padding-bottom:10px;">
+                    <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                      <tr><td style="font-weight:bold; font-size:15px; padding-bottom:5px;">Betalingsmetode:</td></tr>
+                      <tr><td style="font-size:16px;">${isInstallment ? `Delbetaling / Rater (${downPayment} DKK betalt i dag)` : 'Fuld betaling'}</td></tr>
+                    </table>
+                  </td>
                 </tr>
                 <tr>
                   <td style="padding-bottom:10px;">
@@ -1543,6 +1585,29 @@ const capOrderEmail = (orderData) => {
                     <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">SUM: ${totalPrice} DKK</div>
                     <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">LEVERING: ${handlingFee} DKK</div>
                     <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">MOMS: ${(totalPrice * 0.20).toFixed(2)} DKK</div>
+
+                    ${isInstallment ? `
+                    <hr style="border:none; border-top:1px solid #cdcdcd; margin:15px 0;">
+                    <div style="font-size:15px; font-weight:bold; color:#111827; margin-bottom:8px;">BETALINGSPLAN (DELBETALING)</div>
+                    <table width="100%" border="0" cellpadding="6" cellspacing="0" style="background:#ffffff; border-radius:6px; border:1px solid #e5e7eb; margin-bottom:12px; font-size:13px; border-collapse:collapse;">
+                      <thead>
+                        <tr style="background:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold; color:#4b5563;">
+                          <th align="left" style="padding:6px 8px;">Rate</th>
+                          <th align="right" style="padding:6px 8px;">Beløb</th>
+                          <th align="right" style="padding:6px 8px;">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${installmentScheduleRowsHtml}
+                      </tbody>
+                    </table>
+                    <div style="font-size:14px; color:#166534; font-weight:bold; margin-bottom:4px;">
+                      ✓ Betalt i dag (1. rate): ${downPayment} DKK
+                    </div>
+                    <div style="font-size:14px; color:#b45309; font-weight:bold;">
+                      Resterende beløb til betaling: ${remainingInstallmentBalance.toFixed(2)} DKK
+                    </div>
+                    ` : ''}
                   </td>
                 </tr>
               </table>
@@ -1687,7 +1752,8 @@ const capOrderAdminEmail = (orderData) => {
     orderDate,
     packageName,
     program,
-    email
+    email,
+    installmentDetails
   } = orderData;
 
   const shippingPrices = {
@@ -1833,6 +1899,39 @@ const capOrderAdminEmail = (orderData) => {
     return value;
   };
 
+  let instDetails = installmentDetails;
+  if (typeof instDetails === 'string') {
+    try { instDetails = JSON.parse(instDetails); } catch (e) { instDetails = null; }
+  }
+
+  const isInstallment = !!instDetails && Array.isArray(instDetails.installments) && instDetails.installments.length > 0;
+  const downPayment = isInstallment ? parseFloat(instDetails.downPayment || instDetails.installments[0]?.amount || 399) : 0;
+  let totalPaidAmount = 0;
+  if (isInstallment) {
+    instDetails.installments.forEach((inst, idx) => {
+      if (inst.status === 'Paid' || idx === 0) {
+        totalPaidAmount += parseFloat(inst.amount || 0);
+      }
+    });
+  }
+  const remainingInstallmentBalance = Math.max(0, parseFloat(totalPrice) - totalPaidAmount);
+
+  const installmentScheduleRowsHtml = isInstallment ? instDetails.installments.map((inst, idx) => {
+    const isPaid = inst.status === 'Paid' || idx === 0;
+    const badge = isPaid
+      ? '<span style="color:#166534; font-weight:bold; background:#dcfce7; padding:2px 6px; border-radius:4px; font-size:11px;">✓ Betalt i dag</span>'
+      : '<span style="color:#854d0e; font-weight:bold; background:#fef9c3; padding:2px 6px; border-radius:4px; font-size:11px;">Afventer</span>';
+    const dueStr = inst.dueDate ? new Date(inst.dueDate).toLocaleDateString('da-DK') : '-';
+    return `
+      <tr style="border-bottom:1px solid #e5e7eb;">
+        <td style="padding:6px 8px; color:#111827; font-weight:600;">${inst.label || (idx + 1) + '. rate'}</td>
+        <td style="padding:6px 8px; color:#4b5563;">${dueStr}</td>
+        <td style="padding:6px 8px; text-align:right; font-weight:bold; color:#111827;">${inst.amount} DKK</td>
+        <td style="padding:6px 8px; text-align:right;">${badge}</td>
+      </tr>
+    `;
+  }).join('') : '';
+
   const html = `
 <!DOCTYPE html>
 <html lang="da">
@@ -1871,7 +1970,7 @@ const capOrderAdminEmail = (orderData) => {
                   <td style="font-size:18px; font-weight:bold; padding-bottom:15px; color:#333333;">Kunde ordre oplysninger:</td>
                 </tr>
                 <tr>
-                  <td style="font-size:16px; padding-bottom:15px;">Ordren er oprettet: ${orderDate.toLocaleDateString()}</td>
+                  <td style="font-size:16px; padding-bottom:15px;">Ordren er oprettet: ${new Date(orderDate).toLocaleDateString("da-DK")}</td>
                 </tr>
                 <tr>
                   <td style="background-color:#f2f3f2; padding:15px; font-weight:bold; font-size:15px; text-align:center;">Order nr: ${orderNumber}</td>
@@ -1888,6 +1987,14 @@ const capOrderAdminEmail = (orderData) => {
               <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f2f3f2; padding:30px 25px;">
                 <tr>
                   <td style="font-size:19px; font-weight:bold; padding-bottom:15px;">Betalingsoplysninger</td>
+                </tr>
+                <tr>
+                  <td style="padding-bottom:10px;">
+                    <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                      <tr><td style="font-weight:bold; font-size:15px; padding-bottom:5px;">Betalingsmetode:</td></tr>
+                      <tr><td style="font-size:16px;">${isInstallment ? `Delbetaling / Rater (${downPayment} DKK betalt i dag)` : 'Fuld betaling'}</td></tr>
+                    </table>
+                  </td>
                 </tr>
                 <tr>
                   <td style="padding-bottom:10px;">
@@ -2715,6 +2822,29 @@ const capOrderAdminEmail = (orderData) => {
                             <div style="margin-bottom: 5px; font-size: 14px; text-transform: uppercase;">SUM: ${totalPrice} DKK</div>
                             <div style="margin-bottom: 5px; font-size: 14px; text-transform: uppercase;">LEVERING: ${handlingFee} DKK</div>
                             <div style="margin-bottom: 5px; font-size: 14px; text-transform: uppercase;">MOMS: ${(totalPrice * 0.20).toFixed(2)} DKK</div>
+
+                            ${isInstallment ? `
+                            <hr style="border: none; border-top: 1px solid #cdcdcd; margin: 15px 0;">
+                            <div style="font-size: 15px; font-weight: bold; color: #111827; margin-bottom: 8px;">BETALINGSPLAN (DELBETALING)</div>
+                            <table width="100%" border="0" cellpadding="6" cellspacing="0" style="background: #ffffff; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 12px; font-size: 13px; border-collapse: collapse;">
+                              <thead>
+                                <tr style="background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #4b5563;">
+                                  <th align="left" style="padding: 6px 8px;">Rate</th>
+                                  <th align="right" style="padding: 6px 8px;">Beløb</th>
+                                  <th align="right" style="padding: 6px 8px;">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                ${installmentScheduleRowsHtml}
+                              </tbody>
+                            </table>
+                            <div style="font-size: 14px; color: #166534; font-weight: bold; margin-bottom: 4px;">
+                              ✓ Betalt i dag (1. rate): ${downPayment} DKK
+                            </div>
+                            <div style="font-size: 14px; color: #b45309; font-weight: bold;">
+                              Resterende beløb til betaling: ${remainingInstallmentBalance.toFixed(2)} DKK
+                            </div>
+                            ` : ''}
                         </td>
                     </tr>
               </table>
@@ -2848,7 +2978,21 @@ const sendCapEmail = async (req, res) => {
       packageName,
       program,
       capImages,
+      installmentDetails,
     } = req.body;
+
+    let finalInstallmentDetails = installmentDetails;
+    if (!finalInstallmentDetails && orderNumber) {
+      try {
+        const dbOrder = await prisma.order.findUnique({
+          where: { orderNumber },
+          select: { installmentDetails: true }
+        });
+        if (dbOrder?.installmentDetails) {
+          finalInstallmentDetails = dbOrder.installmentDetails;
+        }
+      } catch (e) {}
+    }
 
     const buildCapAttachments = (images) => {
       if (!images) return [];
@@ -2885,7 +3029,8 @@ const sendCapEmail = async (req, res) => {
       orderDate: orderDate || new Date().toISOString(),
       packageName: packageName,
       program: program,
-      email: email
+      email: email,
+      installmentDetails: finalInstallmentDetails
     });
     const emailContentAdmin = capOrderAdminEmail({
       customerDetails,
@@ -2896,7 +3041,8 @@ const sendCapEmail = async (req, res) => {
       orderDate: orderDate || new Date().toISOString(),
       packageName: packageName,
       program: program,
-      email: email
+      email: email,
+      installmentDetails: finalInstallmentDetails
     });
     const emailContentFactory = await factoryOrderEmail({
       customerDetails,
@@ -3162,7 +3308,239 @@ const processSuccessfulCapOrder = async (tempOrderId, orderDataOverride = null) 
  */
 
 /**
- * Send an email confirming that an installment rate has been successfully paid
+ * Helper: Render a beautiful branded HTML status / error page
+ */
+const renderStyledMessagePage = ({ title, heading, message, buttonText = 'Tilbage til butikken', buttonUrl = 'https://studentlife.dk', isSuccess = true }) => {
+  return `
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title} - Studentlife</title>
+</head>
+<body style="margin:0; padding:40px 15px; font-family:Arial, sans-serif; background-color:#f8fafc; color:#1e293b; text-align:center;">
+  <div style="max-width:520px; margin:0 auto; background:#ffffff; border-radius:12px; padding:36px 24px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05); border:1px solid #e2e8f0;">
+    <div style="margin-bottom:24px;">
+      <img src="https://elipsestudio.com/student/01.png" alt="Studentlife" style="max-height:55px;">
+    </div>
+    <div style="display:inline-block; width:56px; height:56px; line-height:56px; border-radius:50%; background:${isSuccess ? '#dcfce7' : '#fee2e2'}; color:${isSuccess ? '#166534' : '#ef4444'}; font-size:26px; margin-bottom:16px;">
+      ${isSuccess ? '✓' : '!'}
+    </div>
+    <h2 style="margin:0 0 10px 0; font-size:20px; color:#0f172a;">${heading}</h2>
+    <p style="margin:0 0 28px 0; font-size:14px; color:#64748b; line-height:1.6;">
+      ${message}
+    </p>
+    <a href="${buttonUrl}" style="display:inline-block; padding:12px 28px; background:#0f172a; color:#ffffff; text-decoration:none; border-radius:8px; font-size:14px; font-weight:600;">
+      ${buttonText}
+    </a>
+  </div>
+</body>
+</html>
+  `;
+};
+
+/**
+ * Branded Installment Payment Request Email (when next rate is due)
+ */
+const buildInstallmentPaymentRequestEmail = ({ order, installment, installmentIndex, paymentLink }) => {
+  let custDetails = order.customerDetails;
+  if (typeof custDetails === 'string') {
+    try { custDetails = JSON.parse(custDetails); } catch (e) { custDetails = {}; }
+  }
+  const customerName = custDetails?.firstName
+    ? `${custDetails.firstName} ${custDetails.lastName || ''}`.trim()
+    : 'Kunde';
+
+  let details = order.installmentDetails;
+  if (typeof details === 'string') {
+    try { details = JSON.parse(details); } catch (e) { details = {}; }
+  }
+
+  const installments = (details && Array.isArray(details.installments)) ? details.installments : [];
+  let totalPaid = 0;
+  installments.forEach((inst) => {
+    if (inst.status === 'Paid') {
+      totalPaid += parseFloat(inst.amount || 0);
+    }
+  });
+
+  const totalPrice = parseFloat(order.totalPrice || 0);
+  const remainingAmount = Math.max(0, totalPrice - totalPaid);
+
+  const installmentRowsHtml = installments.map((inst, idx) => {
+    const isPaid = inst.status === 'Paid';
+    const isCurrent = idx === parseInt(installmentIndex);
+
+    let statusBadge = '';
+    let rowBg = '#ffffff';
+
+    if (isPaid) {
+      statusBadge = '<span style="color:#166534; font-weight:bold; background:#dcfce7; padding:3px 8px; border-radius:4px; font-size:12px;">✓ Betalt</span>';
+    } else if (isCurrent) {
+      statusBadge = '<span style="color:#1d4ed8; font-weight:bold; background:#dbeafe; padding:3px 8px; border-radius:4px; font-size:12px;">Klar til betaling</span>';
+      rowBg = '#eff6ff';
+    } else {
+      statusBadge = '<span style="color:#854d0e; font-weight:bold; background:#fef9c3; padding:3px 8px; border-radius:4px; font-size:12px;">Afventer</span>';
+    }
+
+    const dueDateText = inst.dueDate ? new Date(inst.dueDate).toLocaleDateString('da-DK') : '-';
+
+    return `
+      <tr style="background-color: ${rowBg}; border-bottom: 1px solid #e5e7eb;">
+        <td style="padding: 10px 12px; font-size: 14px; color: #111827;">
+          <strong>${inst.label || `${idx + 1}. rate`}</strong>
+        </td>
+        <td style="padding: 10px 12px; font-size: 14px; color: #4b5563;">
+          ${dueDateText}
+        </td>
+        <td style="padding: 10px 12px; font-size: 14px; text-align: right; color: #111827; font-weight: bold;">
+          ${inst.amount} DKK
+        </td>
+        <td style="padding: 10px 12px; text-align: right;">
+          ${statusBadge}
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  const dueDateFormatted = installment.dueDate ? new Date(installment.dueDate).toLocaleDateString('da-DK') : '';
+
+  const html = `
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klar til betaling af næste rate - Studentlife</title>
+</head>
+<body style="margin:0; padding:0; background-color:#ffffff; font-family:Arial, sans-serif; color:#333333; line-height:1.4;">
+  <div style="text-align: center; padding: 20px 5px;">
+    <img src="https://elipsestudio.com/student/01.png" alt="Studentlife" style="max-width: 100%; height: auto;">
+  </div>
+
+  <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#ffffff;">
+    <tr>
+      <td align="center">
+        <table width="700" border="0" cellpadding="0" cellspacing="0" style="max-width:700px; width:100%;">
+          <tr>
+            <td style="padding:0 20px;">
+              
+              <!-- Banner -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f9fafb; border-top:1px solid #e5e7eb; border-bottom:1px solid #e5e7eb;">
+                <tr>
+                  <td align="center" style="padding:15px 0;">
+                    <table border="0" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="font-size:15px; font-weight:bold; color:#111827; padding:0 15px;">✓ Sikker betaling</td>
+                        <td style="font-size:15px; font-weight:bold; color:#111827; padding:0 15px;">✓ Automatisk bekræftelse</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                <tr><td style="height:20px;">&nbsp;</td></tr>
+              </table>
+
+              <!-- Greeting Section -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                <tr><td style="font-size:18px; font-weight:bold; padding-bottom:12px;">Kære ${customerName},</td></tr>
+                <tr>
+                  <td style="font-size:16px; padding-bottom:15px; line-height:1.5; color:#374151;">
+                    Din næste rate for din studenterhueordre (<strong>${order.orderNumber}</strong>) er nu klar til betaling.
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Order & Rate Callout Box -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:24px; margin-bottom:20px;">
+                <tr>
+                  <td>
+                    <div style="font-size:12px; font-weight:bold; text-transform:uppercase; color:#64748b; letter-spacing:0.5px;">Forfalden rate</div>
+                    <div style="font-size:24px; font-weight:bold; color:#0f172a; margin:6px 0 2px 0;">${installment.amount} DKK</div>
+                    <div style="font-size:15px; color:#334155; font-weight:bold; margin-bottom:12px;">${installment.label || `${parseInt(installmentIndex) + 1}. rate`}</div>
+
+                    <table border="0" cellpadding="0" cellspacing="0" style="margin-top:10px;">
+                      <tr>
+                        <td align="center" style="border-radius:6px; background-color:#16a34a;">
+                          <a href="${paymentLink}" target="_blank" style="display:inline-block; padding:14px 28px; font-size:16px; font-weight:bold; color:#ffffff; text-decoration:none; border-radius:6px; background-color:#16a34a;">
+                            Betal din rate nu (${installment.amount} DKK) →
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Schedule Table -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-top:20px; margin-bottom:20px;">
+                <tr>
+                  <td style="font-size:17px; font-weight:bold; padding-bottom:10px; color:#111827;">
+                    Status på din afdragsordning
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e5e7eb; border-radius:6px; overflow:hidden;">
+                      <thead>
+                        <tr style="background-color:#f9fafb; border-bottom:1px solid #e5e7eb;">
+                          <th style="padding:10px 12px; text-align:left; font-size:13px; color:#4b5563;">Rate</th>
+                          <th style="padding:10px 12px; text-align:right; font-size:13px; color:#4b5563;">Beløb</th>
+                          <th style="padding:10px 12px; text-align:right; font-size:13px; color:#4b5563;">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${installmentRowsHtml}
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Summary Totals -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f2f3f2; padding:20px; border-radius:6px; margin-bottom:25px;">
+                <tr>
+                  <td>
+                    <div style="font-size:15px; font-weight:bold; color:#111827; margin-bottom:6px;">Samlet ordre: ${totalPrice} DKK</div>
+                    <div style="font-size:14px; color:#166534; font-weight:bold; margin-bottom:4px;">✓ Allerede betalt: ${totalPaid} DKK</div>
+                    <div style="font-size:14px; color:#b45309; font-weight:bold;">Resterende beløb: ${remainingAmount.toFixed(2)} DKK</div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Footer Signature -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border-top:1px solid #cdcdcd; padding-top:15px;">
+                <tr>
+                  <td style="font-size:14px; color:#6b7280; line-height:1.5;">
+                    <p style="margin:0 0 10px 0;">Er du i tvivl om noget? Kundeservice er altid klar til at hjælpe dig på <a href="mailto:info@studentlife.dk" style="color:#111827; font-weight:bold; text-decoration:none;">info@studentlife.dk</a>.</p>
+                    <p style="margin:0 0 10px 0;">Vi ønsker dig en dejlig dag,</p>
+                    <p style="margin:0; font-weight:bold; color:#111827;">Studentlife 😊</p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  return {
+    subject: `Din næste rate for ordre ${order.orderNumber} er klar til betaling`,
+    html,
+    text: `Kære ${customerName},\n\nDin næste rate (${installment.label}) på ${installment.amount} DKK for ordre ${order.orderNumber} er klar til betaling.\n\nBetal her: ${paymentLink}\n\nMed venlig hilsen,\nStudentlife`
+  };
+};
+
+/**
+ * Branded Installment Confirmation Email (sent when customer pays a rate)
  */
 const sendInstallmentConfirmationEmail = async ({ order, installment, installmentIndex, details }) => {
   try {
@@ -3176,7 +3554,7 @@ const sendInstallmentConfirmationEmail = async ({ order, installment, installmen
       ? `${custDetails.firstName} ${custDetails.lastName || ''}`.trim()
       : 'Kunde';
 
-    const installments = details.installments || [];
+    const installments = (details && Array.isArray(details.installments)) ? details.installments : [];
     let totalPaid = 0;
     installments.forEach(inst => {
       if (inst.status === 'Paid') {
@@ -3185,16 +3563,17 @@ const sendInstallmentConfirmationEmail = async ({ order, installment, installmen
     });
     const totalPrice = parseFloat(order.totalPrice || 0);
     const remainingAmount = Math.max(0, totalPrice - totalPaid);
+    const isFullyPaid = remainingAmount <= 0;
 
     const installmentRowsHtml = installments.map((inst, index) => {
       const isPaid = inst.status === 'Paid';
       const statusBadge = isPaid
-        ? '<span style="color: #16a34a; font-weight: bold; background: #dcfce7; padding: 3px 8px; border-radius: 4px; font-size: 12px;">✓ Betalt</span>'
-        : '<span style="color: #ca8a04; font-weight: bold; background: #fef9c3; padding: 3px 8px; border-radius: 4px; font-size: 12px;">Afventer</span>';
+        ? '<span style="color: #166534; font-weight: bold; background: #dcfce7; padding: 3px 8px; border-radius: 4px; font-size: 12px;">✓ Betalt</span>'
+        : '<span style="color: #854d0e; font-weight: bold; background: #fef9c3; padding: 3px 8px; border-radius: 4px; font-size: 12px;">Afventer</span>';
 
       const paidDateStr = inst.paidAt
-        ? `<div style="font-size: 11px; color: #6b7280;">${new Date(inst.paidAt).toLocaleDateString('da-DK')}</div>`
-        : '';
+        ? `<div style="font-size: 11px; color: #6b7280;">Betalt: ${new Date(inst.paidAt).toLocaleDateString('da-DK')}</div>`
+        : (inst.dueDate ? `<div style="font-size: 11px; color: #9ca3af;">Forfald: ${new Date(inst.dueDate).toLocaleDateString('da-DK')}</div>` : '');
 
       return `
         <tr style="border-bottom: 1px solid #e5e7eb;">
@@ -3202,7 +3581,7 @@ const sendInstallmentConfirmationEmail = async ({ order, installment, installmen
             <strong>${inst.label || `${index + 1}. rate`}</strong>
             ${paidDateStr}
           </td>
-          <td style="padding: 10px 12px; font-size: 14px; text-align: right; color: #111827;">
+          <td style="padding: 10px 12px; font-size: 14px; text-align: right; color: #111827; font-weight: bold;">
             ${inst.amount} DKK
           </td>
           <td style="padding: 10px 12px; text-align: right;">
@@ -3213,80 +3592,145 @@ const sendInstallmentConfirmationEmail = async ({ order, installment, installmen
     }).join('');
 
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937; line-height: 1.6; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
-        <div style="background-color: #111827; padding: 24px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 22px;">Student Life</h1>
-          <p style="color: #9ca3af; margin: 6px 0 0; font-size: 14px;">Bekræftelse på ratebetaling</p>
-        </div>
-        
-        <div style="padding: 24px;">
-          <h2 style="color: #111827; margin-top: 0; font-size: 18px;">Hej ${customerName},</h2>
-          <p style="font-size: 15px; color: #374151;">
-            Mange tak for din betaling! Vi bekræfter hermed, at din ratebetaling for ordre <strong>${order.orderNumber}</strong> er gennemført.
-          </p>
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bekræftelse på ratebetaling - Studentlife</title>
+</head>
+<body style="margin:0; padding:0; background-color:#ffffff; font-family:Arial, sans-serif; color:#333333; line-height:1.4;">
+  <div style="text-align: center; padding: 20px 5px;">
+    <img src="https://elipsestudio.com/student/01.png" alt="Studentlife" style="max-width: 100%; height: auto;">
+  </div>
 
-          <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 20px 0;">
-            <div style="font-size: 12px; color: #166534; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Betaling gennemført</div>
-            <div style="font-size: 22px; font-weight: bold; color: #15803d; margin: 4px 0;">${installment.amount} DKK</div>
-            <div style="font-size: 14px; color: #166534;">${installment.label}</div>
-          </div>
+  <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#ffffff;">
+    <tr>
+      <td align="center">
+        <table width="700" border="0" cellpadding="0" cellspacing="0" style="max-width:700px; width:100%;">
+          <tr>
+            <td style="padding:0 20px;">
+              
+              <!-- Banner -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f9fafb; border-top:1px solid #e5e7eb; border-bottom:1px solid #e5e7eb;">
+                <tr>
+                  <td align="center" style="padding:15px 0;">
+                    <table border="0" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="font-size:15px; font-weight:bold; color:#111827; padding:0 15px;">✓ Betaling modtaget</td>
+                        <td style="font-size:15px; font-weight:bold; color:#111827; padding:0 15px;">✓ Opdateret oversigt</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
 
-          <h3 style="color: #111827; margin-top: 24px; margin-bottom: 12px; font-size: 16px; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px;">
-            Status på din afdragsordning
-          </h3>
+              <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                <tr><td style="height:20px;">&nbsp;</td></tr>
+              </table>
 
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
-            <thead>
-              <tr style="background-color: #f9fafb; border-bottom: 1px solid #e5e7eb;">
-                <th style="padding: 8px 12px; text-align: left; font-size: 12px; color: #6b7280; text-transform: uppercase;">Rate</th>
-                <th style="padding: 8px 12px; text-align: right; font-size: 12px; color: #6b7280; text-transform: uppercase;">Beløb</th>
-                <th style="padding: 8px 12px; text-align: right; font-size: 12px; color: #6b7280; text-transform: uppercase;">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${installmentRowsHtml}
-            </tbody>
-          </table>
+              <!-- Greeting Section -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                <tr><td style="font-size:18px; font-weight:bold; padding-bottom:12px;">Kære ${customerName},</td></tr>
+                <tr>
+                  <td style="font-size:16px; padding-bottom:15px; line-height:1.5; color:#374151;">
+                    Mange tak for din betaling! Vi bekræfter hermed, at din ratebetaling for ordre <strong>${order.orderNumber}</strong> er gennemført.
+                  </td>
+                </tr>
+              </table>
 
-          <div style="background-color: #f9fafb; border-radius: 6px; padding: 12px 16px; margin-top: 16px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px;">
-              <span>Samlet ordrepris:</span>
-              <strong>${totalPrice} DKK</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; color: #16a34a;">
-              <span>Samlet betalt:</span>
-              <strong>${totalPaid} DKK</strong>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: bold; border-top: 1px solid #e5e7eb; padding-top: 6px;">
-              <span>Resterende beløb:</span>
-              <span style="color: ${remainingAmount > 0 ? '#111827' : '#16a34a'};">${remainingAmount > 0 ? remainingAmount + ' DKK' : 'Færdigbetalt! 🎉'}</span>
-            </div>
-          </div>
+              <!-- Success Card -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:24px; margin-bottom:20px;">
+                <tr>
+                  <td>
+                    <div style="font-size:12px; color:#166534; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px;">✓ Betaling gennemført</div>
+                    <div style="font-size:24px; font-weight:bold; color:#15803d; margin:6px 0 2px 0;">${installment.amount} DKK</div>
+                    <div style="font-size:15px; color:#166534; font-weight:bold;">${installment.label || 'Rate'}</div>
+                    <div style="font-size:13px; color:#15803d; margin-top:4px;">Dato: ${new Date().toLocaleDateString('da-DK')}</div>
+                  </td>
+                </tr>
+              </table>
 
-          <p style="font-size: 13px; color: #6b7280; margin-top: 24px;">
-            Har du spørgsmål til din ordre eller betaling, er du altid velkommen til at kontakte os på <a href="mailto:salg@studentlife.dk" style="color: #2563eb; text-decoration: underline;">salg@studentlife.dk</a>.
-          </p>
+              ${isFullyPaid ? `
+              <!-- Fully Paid Celebration Card -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:16px; margin-bottom:20px;">
+                <tr>
+                  <td style="text-align:center;">
+                    <div style="font-size:18px; font-weight:bold; color:#1e40af; margin-bottom:4px;">🎉 Tillykke! Alle rater er nu betalt!</div>
+                    <div style="font-size:14px; color:#3b82f6;">Din ordre er nu fuldt betalt og klar til levering.</div>
+                  </td>
+                </tr>
+              </table>
+              ` : ''}
 
-          <p style="font-size: 14px; color: #374151; margin-top: 20px; font-weight: 500;">
-            Med venlig hilsen,<br>
-            Student Life
-          </p>
-        </div>
-      </div>
+              <!-- Schedule Table -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-top:10px; margin-bottom:20px;">
+                <tr>
+                  <td style="font-size:17px; font-weight:bold; padding-bottom:10px; color:#111827;">
+                    Status på din afdragsordning
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e5e7eb; border-radius:6px; overflow:hidden;">
+                      <thead>
+                        <tr style="background-color:#f9fafb; border-bottom:1px solid #e5e7eb;">
+                          <th style="padding:10px 12px; text-align:left; font-size:13px; color:#4b5563;">Rate</th>
+                          <th style="padding:10px 12px; text-align:right; font-size:13px; color:#4b5563;">Beløb</th>
+                          <th style="padding:10px 12px; text-align:right; font-size:13px; color:#4b5563;">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${installmentRowsHtml}
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Summary Totals -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f2f3f2; padding:20px; border-radius:6px; margin-bottom:25px;">
+                <tr>
+                  <td>
+                    <div style="font-size:15px; font-weight:bold; color:#111827; margin-bottom:6px;">Samlet ordre: ${totalPrice} DKK</div>
+                    <div style="font-size:14px; color:#166534; font-weight:bold; margin-bottom:4px;">✓ Samlet betalt: ${totalPaid} DKK</div>
+                    <div style="font-size:14px; color:#b45309; font-weight:bold;">Resterende beløb: ${remainingAmount.toFixed(2)} DKK</div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Footer Signature -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border-top:1px solid #cdcdcd; padding-top:15px;">
+                <tr>
+                  <td style="font-size:14px; color:#6b7280; line-height:1.5;">
+                    <p style="margin:0 0 10px 0;">Er du i tvivl om noget? Kundeservice er altid klar til at hjælpe dig på <a href="mailto:info@studentlife.dk" style="color:#111827; font-weight:bold; text-decoration:none;">info@studentlife.dk</a>.</p>
+                    <p style="margin:0 0 10px 0;">Vi ønsker dig en dejlig dag,</p>
+                    <p style="margin:0; font-weight:bold; color:#111827;">Studentlife 😊</p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
     `;
 
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || process.env.EMAIL_USER || 'salg@studentlife.dk',
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
       to: order.customerEmail,
-      subject: `Bekræftelse: Din ${installment.label} for ordre ${order.orderNumber} er betalt`,
-      html: html,
-      text: `Hej ${customerName},\n\nMange tak for din betaling! Vi bekræfter hermed, at din ratebetaling (${installment.label}) på ${installment.amount} DKK for ordre ${order.orderNumber} er gennemført.\n\nSamlet betalt: ${totalPaid} DKK\nResterende beløb: ${remainingAmount} DKK\n\nMed venlig hilsen,\nStudent Life`
-    };
+      subject: `Kvittering for modtaget ratebetaling - Ordre ${order.orderNumber}`,
+      html,
+      text: `Kære ${customerName},\n\nMange tak for din betaling! Din ratebetaling (${installment.label}) på ${installment.amount} DKK for ordre ${order.orderNumber} er gennemført.\nResterende beløb: ${remainingAmount.toFixed(2)} DKK.\n\nMed venlig hilsen,\nStudentlife`
+    });
 
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ Installment confirmation email sent to ${order.customerEmail}`);
+    console.log(`✅ Installment confirmation email sent to ${order.customerEmail} for order ${order.orderNumber} (rate index ${installmentIndex})`);
   } catch (err) {
-    console.error("❌ Failed to send installment confirmation email:", err.message);
+    console.error("❌ Error sending installment confirmation email:", err);
   }
 };
 
@@ -3506,7 +3950,14 @@ const payInstallment = async (req, res) => {
   try {
     const order = await prisma.order.findUnique({ where: { id: parseInt(orderId) } });
     if (!order || !order.installmentDetails) {
-      return res.status(404).send('Ordrer eller afdragsordning ikke fundet.');
+      return res.status(404).send(renderStyledMessagePage({
+        title: 'Ikke fundet',
+        heading: 'Ordre eller afdragsordning ikke fundet',
+        message: 'Den efterspurgte ordre eller afdragsordning kunne desværre ikke findes i systemet.',
+        buttonText: 'Tilbage til forsiden',
+        buttonUrl: 'https://studentlife.dk',
+        isSuccess: false
+      }));
     }
 
     let details = order.installmentDetails;
@@ -3518,7 +3969,14 @@ const payInstallment = async (req, res) => {
     const installment = details && Array.isArray(details.installments) ? details.installments[idx] : null;
 
     if (!installment) {
-      return res.status(404).send('Rate ikke fundet.');
+      return res.status(404).send(renderStyledMessagePage({
+        title: 'Ikke fundet',
+        heading: 'Rate ikke fundet',
+        message: 'Den efterspurgte rate kunne ikke findes på denne ordre.',
+        buttonText: 'Tilbage til forsiden',
+        buttonUrl: clientUrl || 'https://studentlife.dk',
+        isSuccess: false
+      }));
     }
 
     // Determine the exact clientUrl matching non-installment checkout
@@ -3556,7 +4014,17 @@ const payInstallment = async (req, res) => {
     }
 
     if (installment.status === 'Paid') {
-      return res.redirect(303, `${clientUrl}/installment-success?order_id=${order.id}&installment_index=${idx}&status=already_paid`);
+      if (clientUrl) {
+        return res.redirect(303, `${clientUrl}/installment-success?order_id=${order.id}&installment_index=${idx}&status=already_paid`);
+      }
+      return res.status(200).send(renderStyledMessagePage({
+        title: 'Rate allerede betalt',
+        heading: 'Denne rate er allerede betalt',
+        message: `Rate <strong>${installment.label || (idx + 1) + '. rate'}</strong> for ordre <strong>${order.orderNumber}</strong> er allerede registreret som betalt.`,
+        buttonText: 'Tilbage til butikken',
+        buttonUrl: clientUrl || 'https://studentlife.dk',
+        isSuccess: true
+      }));
     }
 
     const isFlatpay = flatpayService.isFlatpayActive();
@@ -4165,5 +4633,6 @@ const getInstallmentStatus = async (req, res) => {
 
 module.exports = {
   workflowStatusChange, sendCapEmail, stripePayment, getSessionDetails, stripeWebhook, frisbiiWebhook, processSuccessfulCapOrder, processSuccessfulInstallmentPayment, getInstallmentStatus, emailTester, createInstallmentOrder, payInstallment,
-  capOrderEmail, capOrderAdminEmail, factoryOrderEmail, createEmailTransporter
+  capOrderEmail, capOrderAdminEmail, factoryOrderEmail, createEmailTransporter,
+  buildInstallmentPaymentRequestEmail, sendInstallmentConfirmationEmail
 };

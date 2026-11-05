@@ -521,8 +521,7 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
         throw new Error(stripeData.message || "Failed to create Stripe checkout session");
       }
 
-      const { id: sessionId } = stripeData;
-      const stripe = await stripePromise;
+      const { id: sessionId, url: checkoutUrl } = stripeData;
 
       const customerName = `${customerDetails.firstName || ''} ${customerDetails.lastName || ''}`.trim();
 
@@ -567,8 +566,22 @@ const QuoteModal = ({ isOpen, onClose, selectedOptions, price, onContinueConfigu
         notes: customerDetails.notes,
       });
 
-      // 3️⃣ Redirect to Stripe Checkout
-      await stripe.redirectToCheckout({ sessionId });
+      // 1️⃣ Direct redirect if hosted checkout URL is provided (Frisbii / Flatpay or Stripe Checkout URL)
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
+        return;
+      }
+
+      // 2️⃣ Stripe client-side redirect fallback
+      if (sessionId) {
+        const stripe = await stripePromise;
+        if (stripe) {
+          await stripe.redirectToCheckout({ sessionId });
+          return;
+        }
+      }
+
+      throw new Error("Ingen betalingslink modtaget.");
 
     } catch (error) {
       console.error("Error during checkout:", error);

@@ -5,6 +5,7 @@ const nodemailer = require("nodemailer");
 const Stripe = require("stripe");
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+const flatpayService = require("../services/flatpay.service");
 
 
 
@@ -423,6 +424,7 @@ ${textSections}
     text
   };
 };
+
 const capOrderEmail = (orderData) => {
   const {
     customerDetails,
@@ -433,7 +435,8 @@ const capOrderEmail = (orderData) => {
     orderDate,
     packageName,
     program,
-    email
+    email,
+    installmentDetails
   } = orderData;
 
   const shippingPrices = {
@@ -610,6 +613,39 @@ const capOrderEmail = (orderData) => {
   };
   const programColor = programColorMap[program] || program;
 
+  let instDetails = installmentDetails;
+  if (typeof instDetails === 'string') {
+    try { instDetails = JSON.parse(instDetails); } catch (e) { instDetails = null; }
+  }
+
+  const isInstallment = !!instDetails && Array.isArray(instDetails.installments) && instDetails.installments.length > 0;
+  const downPayment = isInstallment ? parseFloat(instDetails.downPayment || instDetails.installments[0]?.amount || 399) : 0;
+  let totalPaidAmount = 0;
+  if (isInstallment) {
+    instDetails.installments.forEach((inst, idx) => {
+      if (inst.status === 'Paid' || idx === 0) {
+        totalPaidAmount += parseFloat(inst.amount || 0);
+      }
+    });
+  }
+  const remainingInstallmentBalance = Math.max(0, parseFloat(totalPrice) - totalPaidAmount);
+
+  const installmentScheduleRowsHtml = isInstallment ? instDetails.installments.map((inst, idx) => {
+    const isPaid = inst.status === 'Paid' || idx === 0;
+    const badge = isPaid
+      ? '<span style="color:#166534; font-weight:bold; background:#dcfce7; padding:2px 6px; border-radius:4px; font-size:11px;">✓ Betalt i dag</span>'
+      : '<span style="color:#854d0e; font-weight:bold; background:#fef9c3; padding:2px 6px; border-radius:4px; font-size:11px;">Afventer</span>';
+    const dueStr = inst.dueDate ? new Date(inst.dueDate).toLocaleDateString('da-DK') : '-';
+    return `
+      <tr style="border-bottom:1px solid #e5e7eb;">
+        <td style="padding:6px 8px; color:#111827; font-weight:600;">${inst.label || (idx + 1) + '. rate'}</td>
+        <td style="padding:6px 8px; color:#4b5563;">${dueStr}</td>
+        <td style="padding:6px 8px; text-align:right; font-weight:bold; color:#111827;">${inst.amount} DKK</td>
+        <td style="padding:6px 8px; text-align:right;">${badge}</td>
+      </tr>
+    `;
+  }).join('') : '';
+
   const html = `
 
 <!DOCTYPE html>
@@ -678,7 +714,7 @@ const capOrderEmail = (orderData) => {
               <table width="100%" border="0" cellpadding="0" cellspacing="0">
                 <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px;">Kære: ${customerDetails.firstName} ${customerDetails.lastName},</td></tr>
                 <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px;">Tak for din bestilling hos Studentlife.</td></tr>
-                <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px;">Din bestilling med ordre nummer: ${orderNumber} er nu betalt.</td></tr>
+                <tr><td style="font-size:18px; font-weight:bold; padding-bottom:15px;">${isInstallment ? `Din bestilling med ordrenummer: ${orderNumber} er bekræftet (1. rate / udbetaling på ${downPayment} DKK er betalt).` : `Din bestilling med ordre nummer: ${orderNumber} er nu betalt.`}</td></tr>
                 <tr><td style="font-size:16px; padding-bottom:15px;">Husk at tjekke alle detaljer er korrekte, herunder også leveringstid ${dayNumber}/${monthNumber}/${year}, skolens logo samt skolebroderi.</td></tr>
                 <tr><td style="font-size:16px; padding-bottom:15px;">Vi håber at du kommer til at elske din studenterhue.</td></tr>
               </table>
@@ -712,6 +748,14 @@ const capOrderEmail = (orderData) => {
               <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f2f3f2; padding:30px 25px;">
                 <tr>
                   <td style="font-size:19px; font-weight:bold; padding-bottom:15px;">Betalingsoplysninger</td>
+                </tr>
+                <tr>
+                  <td style="padding-bottom:10px;">
+                    <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                      <tr><td style="font-weight:bold; font-size:15px; padding-bottom:5px;">Betalingsmetode:</td></tr>
+                      <tr><td style="font-size:16px;">${isInstallment ? `Delbetaling / Rater (${downPayment} DKK betalt i dag)` : 'Fuld betaling'}</td></tr>
+                    </table>
+                  </td>
                 </tr>
                 <tr>
                   <td style="padding-bottom:10px;">
@@ -1541,6 +1585,29 @@ const capOrderEmail = (orderData) => {
                     <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">SUM: ${totalPrice} DKK</div>
                     <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">LEVERING: ${handlingFee} DKK</div>
                     <div style="font-size:14px; text-transform:uppercase; margin-bottom:5px;">MOMS: ${(totalPrice * 0.20).toFixed(2)} DKK</div>
+
+                    ${isInstallment ? `
+                    <hr style="border:none; border-top:1px solid #cdcdcd; margin:15px 0;">
+                    <div style="font-size:15px; font-weight:bold; color:#111827; margin-bottom:8px;">BETALINGSPLAN (DELBETALING)</div>
+                    <table width="100%" border="0" cellpadding="6" cellspacing="0" style="background:#ffffff; border-radius:6px; border:1px solid #e5e7eb; margin-bottom:12px; font-size:13px; border-collapse:collapse;">
+                      <thead>
+                        <tr style="background:#f9fafb; border-bottom:1px solid #e5e7eb; font-weight:bold; color:#4b5563;">
+                          <th align="left" style="padding:6px 8px;">Rate</th>
+                          <th align="right" style="padding:6px 8px;">Beløb</th>
+                          <th align="right" style="padding:6px 8px;">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${installmentScheduleRowsHtml}
+                      </tbody>
+                    </table>
+                    <div style="font-size:14px; color:#166534; font-weight:bold; margin-bottom:4px;">
+                      ✓ Betalt i dag (1. rate): ${downPayment} DKK
+                    </div>
+                    <div style="font-size:14px; color:#b45309; font-weight:bold;">
+                      Resterende beløb til betaling: ${remainingInstallmentBalance.toFixed(2)} DKK
+                    </div>
+                    ` : ''}
                   </td>
                 </tr>
               </table>
@@ -1685,7 +1752,8 @@ const capOrderAdminEmail = (orderData) => {
     orderDate,
     packageName,
     program,
-    email
+    email,
+    installmentDetails
   } = orderData;
 
   const shippingPrices = {
@@ -1831,6 +1899,39 @@ const capOrderAdminEmail = (orderData) => {
     return value;
   };
 
+  let instDetails = installmentDetails;
+  if (typeof instDetails === 'string') {
+    try { instDetails = JSON.parse(instDetails); } catch (e) { instDetails = null; }
+  }
+
+  const isInstallment = !!instDetails && Array.isArray(instDetails.installments) && instDetails.installments.length > 0;
+  const downPayment = isInstallment ? parseFloat(instDetails.downPayment || instDetails.installments[0]?.amount || 399) : 0;
+  let totalPaidAmount = 0;
+  if (isInstallment) {
+    instDetails.installments.forEach((inst, idx) => {
+      if (inst.status === 'Paid' || idx === 0) {
+        totalPaidAmount += parseFloat(inst.amount || 0);
+      }
+    });
+  }
+  const remainingInstallmentBalance = Math.max(0, parseFloat(totalPrice) - totalPaidAmount);
+
+  const installmentScheduleRowsHtml = isInstallment ? instDetails.installments.map((inst, idx) => {
+    const isPaid = inst.status === 'Paid' || idx === 0;
+    const badge = isPaid
+      ? '<span style="color:#166534; font-weight:bold; background:#dcfce7; padding:2px 6px; border-radius:4px; font-size:11px;">✓ Betalt i dag</span>'
+      : '<span style="color:#854d0e; font-weight:bold; background:#fef9c3; padding:2px 6px; border-radius:4px; font-size:11px;">Afventer</span>';
+    const dueStr = inst.dueDate ? new Date(inst.dueDate).toLocaleDateString('da-DK') : '-';
+    return `
+      <tr style="border-bottom:1px solid #e5e7eb;">
+        <td style="padding:6px 8px; color:#111827; font-weight:600;">${inst.label || (idx + 1) + '. rate'}</td>
+        <td style="padding:6px 8px; color:#4b5563;">${dueStr}</td>
+        <td style="padding:6px 8px; text-align:right; font-weight:bold; color:#111827;">${inst.amount} DKK</td>
+        <td style="padding:6px 8px; text-align:right;">${badge}</td>
+      </tr>
+    `;
+  }).join('') : '';
+
   const html = `
 <!DOCTYPE html>
 <html lang="da">
@@ -1869,7 +1970,7 @@ const capOrderAdminEmail = (orderData) => {
                   <td style="font-size:18px; font-weight:bold; padding-bottom:15px; color:#333333;">Kunde ordre oplysninger:</td>
                 </tr>
                 <tr>
-                  <td style="font-size:16px; padding-bottom:15px;">Ordren er oprettet: ${orderDate.toLocaleDateString()}</td>
+                  <td style="font-size:16px; padding-bottom:15px;">Ordren er oprettet: ${new Date(orderDate).toLocaleDateString("da-DK")}</td>
                 </tr>
                 <tr>
                   <td style="background-color:#f2f3f2; padding:15px; font-weight:bold; font-size:15px; text-align:center;">Order nr: ${orderNumber}</td>
@@ -1886,6 +1987,14 @@ const capOrderAdminEmail = (orderData) => {
               <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f2f3f2; padding:30px 25px;">
                 <tr>
                   <td style="font-size:19px; font-weight:bold; padding-bottom:15px;">Betalingsoplysninger</td>
+                </tr>
+                <tr>
+                  <td style="padding-bottom:10px;">
+                    <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                      <tr><td style="font-weight:bold; font-size:15px; padding-bottom:5px;">Betalingsmetode:</td></tr>
+                      <tr><td style="font-size:16px;">${isInstallment ? `Delbetaling / Rater (${downPayment} DKK betalt i dag)` : 'Fuld betaling'}</td></tr>
+                    </table>
+                  </td>
                 </tr>
                 <tr>
                   <td style="padding-bottom:10px;">
@@ -2713,6 +2822,29 @@ const capOrderAdminEmail = (orderData) => {
                             <div style="margin-bottom: 5px; font-size: 14px; text-transform: uppercase;">SUM: ${totalPrice} DKK</div>
                             <div style="margin-bottom: 5px; font-size: 14px; text-transform: uppercase;">LEVERING: ${handlingFee} DKK</div>
                             <div style="margin-bottom: 5px; font-size: 14px; text-transform: uppercase;">MOMS: ${(totalPrice * 0.20).toFixed(2)} DKK</div>
+
+                            ${isInstallment ? `
+                            <hr style="border: none; border-top: 1px solid #cdcdcd; margin: 15px 0;">
+                            <div style="font-size: 15px; font-weight: bold; color: #111827; margin-bottom: 8px;">BETALINGSPLAN (DELBETALING)</div>
+                            <table width="100%" border="0" cellpadding="6" cellspacing="0" style="background: #ffffff; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 12px; font-size: 13px; border-collapse: collapse;">
+                              <thead>
+                                <tr style="background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #4b5563;">
+                                  <th align="left" style="padding: 6px 8px;">Rate</th>
+                                  <th align="right" style="padding: 6px 8px;">Beløb</th>
+                                  <th align="right" style="padding: 6px 8px;">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                ${installmentScheduleRowsHtml}
+                              </tbody>
+                            </table>
+                            <div style="font-size: 14px; color: #166534; font-weight: bold; margin-bottom: 4px;">
+                              ✓ Betalt i dag (1. rate): ${downPayment} DKK
+                            </div>
+                            <div style="font-size: 14px; color: #b45309; font-weight: bold;">
+                              Resterende beløb til betaling: ${remainingInstallmentBalance.toFixed(2)} DKK
+                            </div>
+                            ` : ''}
                         </td>
                     </tr>
               </table>
@@ -2835,7 +2967,7 @@ MOMS: 20% of the total price DKK (vat)
 
 const sendCapEmail = async (req, res) => {
   try {
-    let {
+    const {
       customerDetails,
       selectedOptions,
       totalPrice,
@@ -2849,18 +2981,17 @@ const sendCapEmail = async (req, res) => {
       installmentDetails,
     } = req.body;
 
-    // Parse stringified JSON if they are passed as strings (e.g. from Stripe Webhook or db calls)
-    if (typeof customerDetails === 'string') {
-      try { customerDetails = JSON.parse(customerDetails); } catch (_) { }
-    }
-    if (typeof selectedOptions === 'string') {
-      try { selectedOptions = JSON.parse(selectedOptions); } catch (_) { }
-    }
-    if (typeof capImages === 'string') {
-      try { capImages = JSON.parse(capImages); } catch (_) { }
-    }
-    if (typeof installmentDetails === 'string') {
-      try { installmentDetails = JSON.parse(installmentDetails); } catch (_) { }
+    let finalInstallmentDetails = installmentDetails;
+    if (!finalInstallmentDetails && orderNumber) {
+      try {
+        const dbOrder = await prisma.order.findUnique({
+          where: { orderNumber },
+          select: { installmentDetails: true }
+        });
+        if (dbOrder?.installmentDetails) {
+          finalInstallmentDetails = dbOrder.installmentDetails;
+        }
+      } catch (e) {}
     }
 
     const buildCapAttachments = (images) => {
@@ -2898,7 +3029,8 @@ const sendCapEmail = async (req, res) => {
       orderDate: orderDate || new Date().toISOString(),
       packageName: packageName,
       program: program,
-      email: email
+      email: email,
+      installmentDetails: finalInstallmentDetails
     });
     const emailContentAdmin = capOrderAdminEmail({
       customerDetails,
@@ -2909,7 +3041,8 @@ const sendCapEmail = async (req, res) => {
       orderDate: orderDate || new Date().toISOString(),
       packageName: packageName,
       program: program,
-      email: email
+      email: email,
+      installmentDetails: finalInstallmentDetails
     });
     const emailContentFactory = await factoryOrderEmail({
       customerDetails,
@@ -2934,8 +3067,8 @@ const sendCapEmail = async (req, res) => {
 
     const mailOptionsAdmin = {
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-      to: 'salg@studentlife.dk',
-      // to: 'abdulahad010274@gmail.com',
+      // to: 'salg@studentlife.dk',
+      to: 'abdulahad010274@gmail.com',
       subject: emailContentAdmin.subject,
       html: emailContentAdmin.html,
       text: emailContentAdmin.text
@@ -2943,8 +3076,8 @@ const sendCapEmail = async (req, res) => {
 
     const mailOptionsFactory = {
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-      to: 'salg@studentlife.dk',
-      // to: 'abdulahad010274@gmail.com',
+      // to: 'salg@studentlife.dk',
+      to: 'abdulahad010274@gmail.com',
       subject: emailContentFactory.subject,
       html: emailContentFactory.html,
       text: emailContentFactory.text
@@ -3002,6 +3135,649 @@ const sendCapEmail = async (req, res) => {
   }
 };
 
+// Concurrency lock sets to prevent duplicate order creations and double emails
+const processingOrders = new Set();
+const processedWebhookEventIds = new Set();
+
+/**
+ * Reusable helper: Process a successful Cap Configurator Order
+ * Used by Stripe Webhook, Frisbii Webhook, and fail-safe checkout-session retrieval
+ */
+const processSuccessfulCapOrder = async (tempOrderId, orderDataOverride = null) => {
+  if (!tempOrderId) return null;
+
+  // 1. In-memory Mutex: Drop any duplicate call while an order is currently being processed
+  if (processingOrders.has(tempOrderId)) {
+    console.log(`⚠️ Order ${tempOrderId} is already being processed. Dropping duplicate call.`);
+    return null;
+  }
+  processingOrders.add(tempOrderId);
+
+  // Retain lock for 60 seconds so near-simultaneous duplicate webhooks or page refreshes are dropped
+  setTimeout(() => {
+    processingOrders.delete(tempOrderId);
+  }, 60000);
+
+  try {
+    let orderData = orderDataOverride;
+
+    if (!orderData) {
+      const tempOrders = await prisma.$queryRaw`SELECT * FROM TempOrder WHERE id = ${tempOrderId}`;
+      if (!tempOrders || tempOrders.length === 0) {
+        console.log(`ℹ️ TempOrder ${tempOrderId} not found (it may have already been claimed and processed).`);
+        return null;
+      }
+
+      const tempOrder = tempOrders[0];
+      orderData = tempOrder.orderData;
+      if (typeof orderData === 'string') {
+        try { orderData = JSON.parse(orderData); } catch (e) { }
+      }
+    }
+
+    if (!orderData) return null;
+
+    // 2. ATOMIC CLAIM: Delete from TempOrder immediately BEFORE doing DB create or sending emails!
+    // This guarantees that any concurrent webhook or redirect thread that reaches this point
+    // will find 0 rows in TempOrder and cannot re-process!
+    await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${tempOrderId}`.catch(() => {});
+
+    // 3. Guard against duplicate order creation if already exists in DB
+    if (orderData.orderNumber) {
+      const existingOrder = await prisma.order.findFirst({
+        where: { orderNumber: orderData.orderNumber }
+      });
+      if (existingOrder) {
+        console.log(`ℹ️ Order ${orderData.orderNumber} already exists in database. Skipping duplicate creation.`);
+        return existingOrder;
+      }
+    }
+
+    const paidStatus = await prisma.orderStatus.findUnique({ where: { slug: 'paid' } });
+
+    let finalInstallmentDetails = null;
+    if (orderData.isInstallment && orderData.installmentPlanId) {
+      const plan = await prisma.installmentPlan.findUnique({
+        where: { id: orderData.installmentPlanId }
+      });
+      if (plan) {
+        const downPayment = plan.downPaymentAmount || 399;
+        const remainingAmount = Math.max(0, orderData.finalPrice - downPayment);
+        let installmentRows = plan.installments;
+        if (typeof installmentRows === 'string') {
+          try { installmentRows = JSON.parse(installmentRows); } catch { installmentRows = []; }
+        }
+        if (!Array.isArray(installmentRows)) {
+          installmentRows = [];
+        }
+
+        const installmentCount = installmentRows.length;
+        const installmentAmount = installmentCount > 0 ? (remainingAmount / installmentCount).toFixed(2) : 0;
+
+        const generatedInstallments = [
+          {
+            amount: downPayment,
+            label: "1. betaling (ved bestilling)",
+            status: 'Paid',
+            paidAt: new Date().toISOString()
+          }
+        ];
+
+        for (let i = 0; i < installmentCount; i++) {
+          generatedInstallments.push({
+            amount: parseFloat(installmentAmount),
+            label: installmentRows[i]?.label || `${i + 2}. rate`,
+            status: 'Pending',
+            paidAt: null
+          });
+        }
+
+        finalInstallmentDetails = {
+          downPayment,
+          installments: generatedInstallments
+        };
+      }
+    }
+
+    const order = await prisma.order.create({
+      data: {
+        customerDetails: orderData.customerDetails,
+        selectedOptions: orderData.selectedOptions,
+        totalPrice: orderData.finalPrice,
+        currency: orderData.currency || 'DKK',
+        orderNumber: orderData.orderNumber,
+        orderDate: orderData.orderDate || new Date(),
+        customerEmail: orderData.email,
+        status: paidStatus ? paidStatus.name.toUpperCase().replace(/\s+/g, '_') : 'PAID',
+        statusId: paidStatus?.id || null,
+        packageName: orderData.packageName,
+        program: orderData.program,
+        customerId: orderData.customerId,
+        capImages: orderData.capImages || null,
+        discountCodeId: orderData.discountRecord?.id || null,
+        discountAmount: orderData.discountAmount,
+        installmentDetails: finalInstallmentDetails,
+      },
+    });
+
+    if (orderData.discountRecord) {
+      await prisma.discountCode.update({
+        where: { id: orderData.discountRecord.id },
+        data: { usedAt: new Date(), usedByOrderId: order.id },
+      }).catch(err => console.error("Error updating discount code:", err.message));
+    }
+
+    // Cancel pending marketing SMS campaigns now that order is confirmed
+    if (orderData.customerId) {
+      const { cancelPendingCampaignMessages } = require('../services/sms.service');
+      await cancelPendingCampaignMessages(orderData.customerId).catch(err => {
+        console.error("Failed to cancel pending campaign messages after order creation:", err);
+      });
+    }
+
+    await sendCapEmail(
+      {
+        body: {
+          customerDetails: order.customerDetails,
+          selectedOptions: order.selectedOptions,
+          totalPrice: order.totalPrice,
+          currency: order.currency,
+          orderNumber: order.orderNumber,
+          orderDate: order.orderDate,
+          email: order.customerEmail,
+          packageName: order.packageName,
+          program: order.program,
+          capImages: order.capImages,
+          installmentDetails: order.installmentDetails,
+        }
+      },
+      { status: () => ({ json: () => { } }) }
+    ).catch(err => console.error("❌ Email sending error in processSuccessfulCapOrder:", err.message));
+
+    console.log(`✅ Order ${order.orderNumber} successfully processed and confirmed.`);
+    return order;
+  } catch (err) {
+    console.error("❌ Error in processSuccessfulCapOrder:", err.message);
+    throw err;
+  }
+};
+
+
+/**
+ * Reusable helper: Process a successful Installment payment
+ */
+
+/**
+ * Helper: Render a beautiful branded HTML status / error page
+ */
+const renderStyledMessagePage = ({ title, heading, message, buttonText = 'Tilbage til butikken', buttonUrl = 'https://studentlife.dk', isSuccess = true }) => {
+  return `
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title} - Studentlife</title>
+</head>
+<body style="margin:0; padding:40px 15px; font-family:Arial, sans-serif; background-color:#f8fafc; color:#1e293b; text-align:center;">
+  <div style="max-width:520px; margin:0 auto; background:#ffffff; border-radius:12px; padding:36px 24px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05); border:1px solid #e2e8f0;">
+    <div style="margin-bottom:24px;">
+      <img src="https://elipsestudio.com/student/01.png" alt="Studentlife" style="max-height:55px;">
+    </div>
+    <div style="display:inline-block; width:56px; height:56px; line-height:56px; border-radius:50%; background:${isSuccess ? '#dcfce7' : '#fee2e2'}; color:${isSuccess ? '#166534' : '#ef4444'}; font-size:26px; margin-bottom:16px;">
+      ${isSuccess ? '✓' : '!'}
+    </div>
+    <h2 style="margin:0 0 10px 0; font-size:20px; color:#0f172a;">${heading}</h2>
+    <p style="margin:0 0 28px 0; font-size:14px; color:#64748b; line-height:1.6;">
+      ${message}
+    </p>
+    <a href="${buttonUrl}" style="display:inline-block; padding:12px 28px; background:#0f172a; color:#ffffff; text-decoration:none; border-radius:8px; font-size:14px; font-weight:600;">
+      ${buttonText}
+    </a>
+  </div>
+</body>
+</html>
+  `;
+};
+
+/**
+ * Branded Installment Payment Request Email (when next rate is due)
+ */
+const buildInstallmentPaymentRequestEmail = ({ order, installment, installmentIndex, paymentLink }) => {
+  let custDetails = order.customerDetails;
+  if (typeof custDetails === 'string') {
+    try { custDetails = JSON.parse(custDetails); } catch (e) { custDetails = {}; }
+  }
+  const customerName = custDetails?.firstName
+    ? `${custDetails.firstName} ${custDetails.lastName || ''}`.trim()
+    : 'Kunde';
+
+  let details = order.installmentDetails;
+  if (typeof details === 'string') {
+    try { details = JSON.parse(details); } catch (e) { details = {}; }
+  }
+
+  const installments = (details && Array.isArray(details.installments)) ? details.installments : [];
+  let totalPaid = 0;
+  installments.forEach((inst) => {
+    if (inst.status === 'Paid') {
+      totalPaid += parseFloat(inst.amount || 0);
+    }
+  });
+
+  const totalPrice = parseFloat(order.totalPrice || 0);
+  const remainingAmount = Math.max(0, totalPrice - totalPaid);
+
+  const installmentRowsHtml = installments.map((inst, idx) => {
+    const isPaid = inst.status === 'Paid';
+    const isCurrent = idx === parseInt(installmentIndex);
+
+    let statusBadge = '';
+    let rowBg = '#ffffff';
+
+    if (isPaid) {
+      statusBadge = '<span style="color:#166534; font-weight:bold; background:#dcfce7; padding:3px 8px; border-radius:4px; font-size:12px;">✓ Betalt</span>';
+    } else if (isCurrent) {
+      statusBadge = '<span style="color:#1d4ed8; font-weight:bold; background:#dbeafe; padding:3px 8px; border-radius:4px; font-size:12px;">Klar til betaling</span>';
+      rowBg = '#eff6ff';
+    } else {
+      statusBadge = '<span style="color:#854d0e; font-weight:bold; background:#fef9c3; padding:3px 8px; border-radius:4px; font-size:12px;">Afventer</span>';
+    }
+
+    const dueDateText = inst.dueDate ? new Date(inst.dueDate).toLocaleDateString('da-DK') : '-';
+
+    return `
+      <tr style="background-color: ${rowBg}; border-bottom: 1px solid #e5e7eb;">
+        <td style="padding: 10px 12px; font-size: 14px; color: #111827;">
+          <strong>${inst.label || `${idx + 1}. rate`}</strong>
+        </td>
+        <td style="padding: 10px 12px; font-size: 14px; color: #4b5563;">
+          ${dueDateText}
+        </td>
+        <td style="padding: 10px 12px; font-size: 14px; text-align: right; color: #111827; font-weight: bold;">
+          ${inst.amount} DKK
+        </td>
+        <td style="padding: 10px 12px; text-align: right;">
+          ${statusBadge}
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  const dueDateFormatted = installment.dueDate ? new Date(installment.dueDate).toLocaleDateString('da-DK') : '';
+
+  const html = `
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Klar til betaling af næste rate - Studentlife</title>
+</head>
+<body style="margin:0; padding:0; background-color:#ffffff; font-family:Arial, sans-serif; color:#333333; line-height:1.4;">
+  <div style="text-align: center; padding: 20px 5px;">
+    <img src="https://elipsestudio.com/student/01.png" alt="Studentlife" style="max-width: 100%; height: auto;">
+  </div>
+
+  <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#ffffff;">
+    <tr>
+      <td align="center">
+        <table width="700" border="0" cellpadding="0" cellspacing="0" style="max-width:700px; width:100%;">
+          <tr>
+            <td style="padding:0 20px;">
+              
+              <!-- Banner -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f9fafb; border-top:1px solid #e5e7eb; border-bottom:1px solid #e5e7eb;">
+                <tr>
+                  <td align="center" style="padding:15px 0;">
+                    <table border="0" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="font-size:15px; font-weight:bold; color:#111827; padding:0 15px;">✓ Sikker betaling</td>
+                        <td style="font-size:15px; font-weight:bold; color:#111827; padding:0 15px;">✓ Automatisk bekræftelse</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                <tr><td style="height:20px;">&nbsp;</td></tr>
+              </table>
+
+              <!-- Greeting Section -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                <tr><td style="font-size:18px; font-weight:bold; padding-bottom:12px;">Kære ${customerName},</td></tr>
+                <tr>
+                  <td style="font-size:16px; padding-bottom:15px; line-height:1.5; color:#374151;">
+                    Din næste rate for din studenterhueordre (<strong>${order.orderNumber}</strong>) er nu klar til betaling.
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Order & Rate Callout Box -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:24px; margin-bottom:20px;">
+                <tr>
+                  <td>
+                    <div style="font-size:12px; font-weight:bold; text-transform:uppercase; color:#64748b; letter-spacing:0.5px;">Forfalden rate</div>
+                    <div style="font-size:24px; font-weight:bold; color:#0f172a; margin:6px 0 2px 0;">${installment.amount} DKK</div>
+                    <div style="font-size:15px; color:#334155; font-weight:bold; margin-bottom:12px;">${installment.label || `${parseInt(installmentIndex) + 1}. rate`}</div>
+
+                    <table border="0" cellpadding="0" cellspacing="0" style="margin-top:10px;">
+                      <tr>
+                        <td align="center" style="border-radius:6px; background-color:#16a34a;">
+                          <a href="${paymentLink}" target="_blank" style="display:inline-block; padding:14px 28px; font-size:16px; font-weight:bold; color:#ffffff; text-decoration:none; border-radius:6px; background-color:#16a34a;">
+                            Betal din rate nu (${installment.amount} DKK) →
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Schedule Table -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-top:20px; margin-bottom:20px;">
+                <tr>
+                  <td style="font-size:17px; font-weight:bold; padding-bottom:10px; color:#111827;">
+                    Status på din afdragsordning
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e5e7eb; border-radius:6px; overflow:hidden;">
+                      <thead>
+                        <tr style="background-color:#f9fafb; border-bottom:1px solid #e5e7eb;">
+                          <th style="padding:10px 12px; text-align:left; font-size:13px; color:#4b5563;">Rate</th>
+                          <th style="padding:10px 12px; text-align:right; font-size:13px; color:#4b5563;">Beløb</th>
+                          <th style="padding:10px 12px; text-align:right; font-size:13px; color:#4b5563;">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${installmentRowsHtml}
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Summary Totals -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f2f3f2; padding:20px; border-radius:6px; margin-bottom:25px;">
+                <tr>
+                  <td>
+                    <div style="font-size:15px; font-weight:bold; color:#111827; margin-bottom:6px;">Samlet ordre: ${totalPrice} DKK</div>
+                    <div style="font-size:14px; color:#166534; font-weight:bold; margin-bottom:4px;">✓ Allerede betalt: ${totalPaid} DKK</div>
+                    <div style="font-size:14px; color:#b45309; font-weight:bold;">Resterende beløb: ${remainingAmount.toFixed(2)} DKK</div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Footer Signature -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border-top:1px solid #cdcdcd; padding-top:15px;">
+                <tr>
+                  <td style="font-size:14px; color:#6b7280; line-height:1.5;">
+                    <p style="margin:0 0 10px 0;">Er du i tvivl om noget? Kundeservice er altid klar til at hjælpe dig på <a href="mailto:info@studentlife.dk" style="color:#111827; font-weight:bold; text-decoration:none;">info@studentlife.dk</a>.</p>
+                    <p style="margin:0 0 10px 0;">Vi ønsker dig en dejlig dag,</p>
+                    <p style="margin:0; font-weight:bold; color:#111827;">Studentlife 😊</p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  return {
+    subject: `Din næste rate for ordre ${order.orderNumber} er klar til betaling`,
+    html,
+    text: `Kære ${customerName},\n\nDin næste rate (${installment.label}) på ${installment.amount} DKK for ordre ${order.orderNumber} er klar til betaling.\n\nBetal her: ${paymentLink}\n\nMed venlig hilsen,\nStudentlife`
+  };
+};
+
+/**
+ * Branded Installment Confirmation Email (sent when customer pays a rate)
+ */
+const sendInstallmentConfirmationEmail = async ({ order, installment, installmentIndex, details }) => {
+  try {
+    const transporter = createEmailTransporter();
+
+    let custDetails = order.customerDetails;
+    if (typeof custDetails === 'string') {
+      try { custDetails = JSON.parse(custDetails); } catch (e) { custDetails = {}; }
+    }
+    const customerName = custDetails?.firstName
+      ? `${custDetails.firstName} ${custDetails.lastName || ''}`.trim()
+      : 'Kunde';
+
+    const installments = (details && Array.isArray(details.installments)) ? details.installments : [];
+    let totalPaid = 0;
+    installments.forEach(inst => {
+      if (inst.status === 'Paid') {
+        totalPaid += parseFloat(inst.amount || 0);
+      }
+    });
+    const totalPrice = parseFloat(order.totalPrice || 0);
+    const remainingAmount = Math.max(0, totalPrice - totalPaid);
+    const isFullyPaid = remainingAmount <= 0;
+
+    const installmentRowsHtml = installments.map((inst, index) => {
+      const isPaid = inst.status === 'Paid';
+      const statusBadge = isPaid
+        ? '<span style="color: #166534; font-weight: bold; background: #dcfce7; padding: 3px 8px; border-radius: 4px; font-size: 12px;">✓ Betalt</span>'
+        : '<span style="color: #854d0e; font-weight: bold; background: #fef9c3; padding: 3px 8px; border-radius: 4px; font-size: 12px;">Afventer</span>';
+
+      const paidDateStr = inst.paidAt
+        ? `<div style="font-size: 11px; color: #6b7280;">Betalt: ${new Date(inst.paidAt).toLocaleDateString('da-DK')}</div>`
+        : (inst.dueDate ? `<div style="font-size: 11px; color: #9ca3af;">Forfald: ${new Date(inst.dueDate).toLocaleDateString('da-DK')}</div>` : '');
+
+      return `
+        <tr style="border-bottom: 1px solid #e5e7eb;">
+          <td style="padding: 10px 12px; font-size: 14px; color: #111827;">
+            <strong>${inst.label || `${index + 1}. rate`}</strong>
+            ${paidDateStr}
+          </td>
+          <td style="padding: 10px 12px; font-size: 14px; text-align: right; color: #111827; font-weight: bold;">
+            ${inst.amount} DKK
+          </td>
+          <td style="padding: 10px 12px; text-align: right;">
+            ${statusBadge}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    const html = `
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bekræftelse på ratebetaling - Studentlife</title>
+</head>
+<body style="margin:0; padding:0; background-color:#ffffff; font-family:Arial, sans-serif; color:#333333; line-height:1.4;">
+  <div style="text-align: center; padding: 20px 5px;">
+    <img src="https://elipsestudio.com/student/01.png" alt="Studentlife" style="max-width: 100%; height: auto;">
+  </div>
+
+  <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#ffffff;">
+    <tr>
+      <td align="center">
+        <table width="700" border="0" cellpadding="0" cellspacing="0" style="max-width:700px; width:100%;">
+          <tr>
+            <td style="padding:0 20px;">
+              
+              <!-- Banner -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f9fafb; border-top:1px solid #e5e7eb; border-bottom:1px solid #e5e7eb;">
+                <tr>
+                  <td align="center" style="padding:15px 0;">
+                    <table border="0" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="font-size:15px; font-weight:bold; color:#111827; padding:0 15px;">✓ Betaling modtaget</td>
+                        <td style="font-size:15px; font-weight:bold; color:#111827; padding:0 15px;">✓ Opdateret oversigt</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                <tr><td style="height:20px;">&nbsp;</td></tr>
+              </table>
+
+              <!-- Greeting Section -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                <tr><td style="font-size:18px; font-weight:bold; padding-bottom:12px;">Kære ${customerName},</td></tr>
+                <tr>
+                  <td style="font-size:16px; padding-bottom:15px; line-height:1.5; color:#374151;">
+                    Mange tak for din betaling! Vi bekræfter hermed, at din ratebetaling for ordre <strong>${order.orderNumber}</strong> er gennemført.
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Success Card -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:24px; margin-bottom:20px;">
+                <tr>
+                  <td>
+                    <div style="font-size:12px; color:#166534; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px;">✓ Betaling gennemført</div>
+                    <div style="font-size:24px; font-weight:bold; color:#15803d; margin:6px 0 2px 0;">${installment.amount} DKK</div>
+                    <div style="font-size:15px; color:#166534; font-weight:bold;">${installment.label || 'Rate'}</div>
+                    <div style="font-size:13px; color:#15803d; margin-top:4px;">Dato: ${new Date().toLocaleDateString('da-DK')}</div>
+                  </td>
+                </tr>
+              </table>
+
+              ${isFullyPaid ? `
+              <!-- Fully Paid Celebration Card -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:16px; margin-bottom:20px;">
+                <tr>
+                  <td style="text-align:center;">
+                    <div style="font-size:18px; font-weight:bold; color:#1e40af; margin-bottom:4px;">🎉 Tillykke! Alle rater er nu betalt!</div>
+                    <div style="font-size:14px; color:#3b82f6;">Din ordre er nu fuldt betalt og klar til levering.</div>
+                  </td>
+                </tr>
+              </table>
+              ` : ''}
+
+              <!-- Schedule Table -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-top:10px; margin-bottom:20px;">
+                <tr>
+                  <td style="font-size:17px; font-weight:bold; padding-bottom:10px; color:#111827;">
+                    Status på din afdragsordning
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse; border:1px solid #e5e7eb; border-radius:6px; overflow:hidden;">
+                      <thead>
+                        <tr style="background-color:#f9fafb; border-bottom:1px solid #e5e7eb;">
+                          <th style="padding:10px 12px; text-align:left; font-size:13px; color:#4b5563;">Rate</th>
+                          <th style="padding:10px 12px; text-align:right; font-size:13px; color:#4b5563;">Beløb</th>
+                          <th style="padding:10px 12px; text-align:right; font-size:13px; color:#4b5563;">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${installmentRowsHtml}
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Summary Totals -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f2f3f2; padding:20px; border-radius:6px; margin-bottom:25px;">
+                <tr>
+                  <td>
+                    <div style="font-size:15px; font-weight:bold; color:#111827; margin-bottom:6px;">Samlet ordre: ${totalPrice} DKK</div>
+                    <div style="font-size:14px; color:#166534; font-weight:bold; margin-bottom:4px;">✓ Samlet betalt: ${totalPaid} DKK</div>
+                    <div style="font-size:14px; color:#b45309; font-weight:bold;">Resterende beløb: ${remainingAmount.toFixed(2)} DKK</div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Footer Signature -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border-top:1px solid #cdcdcd; padding-top:15px;">
+                <tr>
+                  <td style="font-size:14px; color:#6b7280; line-height:1.5;">
+                    <p style="margin:0 0 10px 0;">Er du i tvivl om noget? Kundeservice er altid klar til at hjælpe dig på <a href="mailto:info@studentlife.dk" style="color:#111827; font-weight:bold; text-decoration:none;">info@studentlife.dk</a>.</p>
+                    <p style="margin:0 0 10px 0;">Vi ønsker dig en dejlig dag,</p>
+                    <p style="margin:0; font-weight:bold; color:#111827;">Studentlife 😊</p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `;
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+      to: order.customerEmail,
+      subject: `Kvittering for modtaget ratebetaling - Ordre ${order.orderNumber}`,
+      html,
+      text: `Kære ${customerName},\n\nMange tak for din betaling! Din ratebetaling (${installment.label}) på ${installment.amount} DKK for ordre ${order.orderNumber} er gennemført.\nResterende beløb: ${remainingAmount.toFixed(2)} DKK.\n\nMed venlig hilsen,\nStudentlife`
+    });
+
+    console.log(`✅ Installment confirmation email sent to ${order.customerEmail} for order ${order.orderNumber} (rate index ${installmentIndex})`);
+  } catch (err) {
+    console.error("❌ Error sending installment confirmation email:", err);
+  }
+};
+
+const processSuccessfulInstallmentPayment = async (orderId, installmentIndex) => {
+  try {
+    const order = await prisma.order.findUnique({ where: { id: parseInt(orderId) } });
+    if (order && order.installmentDetails) {
+      let details = order.installmentDetails;
+      if (typeof details === 'string') {
+        try { details = JSON.parse(details); } catch (e) { details = {}; }
+      }
+      const idx = parseInt(installmentIndex);
+      if (details && Array.isArray(details.installments) && details.installments[idx]) {
+        const targetInstallment = details.installments[idx];
+
+        // Idempotency guard: Don't send duplicate emails if already marked Paid
+        if (targetInstallment.status === 'Paid') {
+          console.log(`ℹ️ Installment ${idx + 1} for order ${orderId} is already Paid. Skipping.`);
+          return;
+        }
+
+        targetInstallment.status = 'Paid';
+        targetInstallment.paidAt = new Date().toISOString();
+
+        await prisma.order.update({
+          where: { id: parseInt(orderId) },
+          data: { installmentDetails: JSON.stringify(details) }
+        });
+        console.log(`✅ Installment ${idx + 1} paid for order ${orderId}`);
+
+        // Send confirmation email with full overview to the user
+        await sendInstallmentConfirmationEmail({
+          order,
+          installment: targetInstallment,
+          installmentIndex: idx,
+          details
+        }).catch(err => console.error("Error sending installment confirmation email:", err));
+      }
+    }
+  } catch (err) {
+    console.error("❌ Error updating installment payment:", err.message);
+  }
+};
+
+/**
+ * Create checkout session (Supports both Flatpay/Frisbii and Stripe)
+ */
 const stripePayment = async (req, res) => {
   const {
     customerDetails,
@@ -3013,14 +3789,13 @@ const stripePayment = async (req, res) => {
     email,
     packageName,
     program,
-    capImages,
     discountCode,
     isInstallment,
     installmentPlanId,
   } = req.body;
 
   try {
-    const { upsertCustomerFromOrder, applyDiscountCode, getStatusBySlug } = require('../services/core.service');
+    const { upsertCustomerFromOrder, applyDiscountCode } = require('../services/core.service');
 
     const customer = await upsertCustomerFromOrder(customerDetails, email);
 
@@ -3043,7 +3818,7 @@ const stripePayment = async (req, res) => {
       }
     }
 
-    let stripeChargeAmount = finalPrice;
+    let chargeAmount = finalPrice;
     let validatedIsInstallment = false;
 
     if (isInstallment) {
@@ -3056,7 +3831,7 @@ const stripePayment = async (req, res) => {
           const tierMatch = plan.packageTier === 'all' || (plan.packageTier || '').toLowerCase() === (packageName || 'standard').toLowerCase();
           if (progMatch && tierMatch) {
             validatedIsInstallment = true;
-            stripeChargeAmount = plan.downPaymentAmount != null ? plan.downPaymentAmount : 399;
+            chargeAmount = plan.downPaymentAmount != null ? plan.downPaymentAmount : 399;
           }
         }
       }
@@ -3069,7 +3844,9 @@ const stripePayment = async (req, res) => {
     const { v4: uuidv4 } = require('uuid');
     const tempOrderId = uuidv4();
 
-    // Store in temporary table using raw SQL to avoid needing a prisma generate restart
+    const isFlatpay = flatpayService.isFlatpayActive();
+
+    // Store in temporary table
     await prisma.$executeRaw`
       INSERT INTO TempOrder (id, orderData) 
       VALUES (${tempOrderId}, ${JSON.stringify({
@@ -3079,19 +3856,54 @@ const stripePayment = async (req, res) => {
       finalPrice,
       discountRecord,
       discountAmount,
-      installmentPlanId: validatedIsInstallment ? installmentPlanId : null
+      installmentPlanId: validatedIsInstallment ? installmentPlanId : null,
+      gateway: isFlatpay ? 'flatpay' : 'stripe'
     })})
     `;
 
     const { frontendUrl } = req.body;
-    let clientUrl = frontendUrl || req.headers.origin;
+    let clientUrl = frontendUrl || req.headers.origin || 'http://localhost:5173/devstudentlife';
     if (clientUrl.endsWith('/')) {
       clientUrl = clientUrl.slice(0, -1);
     }
-    if (!clientUrl.includes('/studentlife')) {
-      clientUrl = `${clientUrl}/studentlife`;
+    if (!clientUrl.includes('/devstudentlife') && !clientUrl.includes('/studentlife')) {
+      clientUrl = `${clientUrl}/devstudentlife`;
     }
 
+    // 🌟 FLATPAY / FRISBII GATEWAY
+    if (isFlatpay) {
+      const chargeSession = await flatpayService.createChargeSession({
+        handle: tempOrderId,
+        amount: chargeAmount,
+        currency: currency || 'DKK',
+        customer: {
+          email,
+          firstName: customerDetails?.firstName,
+          lastName: customerDetails?.lastName,
+          phone: customerDetails?.phone
+        },
+        orderLines: [
+          {
+            ordertext: validatedIsInstallment
+              ? `Cap Order (1st Installment) : ${orderNumber}`
+              : `Cap Order : ${orderNumber}`,
+            amount: chargeAmount,
+            quantity: 1
+          }
+        ],
+        acceptUrl: `${clientUrl}/success?session_id=${tempOrderId}&invoice=${tempOrderId}&gateway=flatpay`,
+        cancelUrl: `${clientUrl}/cancel?gateway=flatpay`
+      });
+
+      return res.json({
+        id: chargeSession.id,
+        url: chargeSession.url,
+        sessionId: chargeSession.id,
+        gateway: 'flatpay'
+      });
+    }
+
+    // 🌟 STRIPE GATEWAY
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       customer_email: email,
@@ -3102,11 +3914,11 @@ const stripePayment = async (req, res) => {
       line_items: [
         {
           price_data: {
-            currency: "dkk",
+            currency: (currency || "dkk").toLowerCase(),
             product_data: {
-              name: isInstallment ? `Cap Order (1st Installment) : ${orderNumber}` : `Cap Order : ${orderNumber}`,
+              name: validatedIsInstallment ? `Cap Order (1st Installment) : ${orderNumber}` : `Cap Order : ${orderNumber}`,
             },
-            unit_amount: Math.round(stripeChargeAmount * 100),
+            unit_amount: Math.round(chargeAmount * 100),
           },
           quantity: 1,
         },
@@ -3116,19 +3928,36 @@ const stripePayment = async (req, res) => {
       success_url: `${clientUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${clientUrl}/cancel`,
     });
-    res.json({ id: session.id });
+
+    res.json({
+      id: session.id,
+      url: session.url,
+      sessionId: session.id,
+      gateway: 'stripe'
+    });
   } catch (err) {
+    console.error("Error creating checkout session:", err);
     res.status(500).json({ error: err.message });
   }
 };
 
+/**
+ * Pay installment link
+ */
 const payInstallment = async (req, res) => {
   const { orderId, installmentIndex, frontendUrl } = req.query;
 
   try {
     const order = await prisma.order.findUnique({ where: { id: parseInt(orderId) } });
     if (!order || !order.installmentDetails) {
-      return res.status(404).send('Ordrer eller afdragsordning ikke fundet.');
+      return res.status(404).send(renderStyledMessagePage({
+        title: 'Ikke fundet',
+        heading: 'Ordre eller afdragsordning ikke fundet',
+        message: 'Den efterspurgte ordre eller afdragsordning kunne desværre ikke findes i systemet.',
+        buttonText: 'Tilbage til forsiden',
+        buttonUrl: 'https://studentlife.dk',
+        isSuccess: false
+      }));
     }
 
     let details = order.installmentDetails;
@@ -3140,27 +3969,94 @@ const payInstallment = async (req, res) => {
     const installment = details && Array.isArray(details.installments) ? details.installments[idx] : null;
 
     if (!installment) {
-      return res.status(404).send('Rate ikke fundet.');
+      return res.status(404).send(renderStyledMessagePage({
+        title: 'Ikke fundet',
+        heading: 'Rate ikke fundet',
+        message: 'Den efterspurgte rate kunne ikke findes på denne ordre.',
+        buttonText: 'Tilbage til forsiden',
+        buttonUrl: clientUrl || 'https://studentlife.dk',
+        isSuccess: false
+      }));
     }
 
-    if (installment.status === 'Paid') {
-      return res.status(400).send('Denne rate er allerede betalt.');
+    // Determine the exact clientUrl matching non-installment checkout
+    let clientUrl = frontendUrl || (details && details.frontendUrl) || process.env.FRONTEND_URL || process.env.FRONTEND_BASE_URL;
+
+    if (!clientUrl && req.headers.origin) {
+      clientUrl = req.headers.origin;
     }
 
-    let clientUrl = frontendUrl || req.headers.referer || req.headers.origin || process.env.FRONTEND_URL || 'https://studentlife.dk';
-    try {
-      const parsedUrl = new URL(clientUrl);
-      clientUrl = parsedUrl.origin;
-    } catch (e) {
-      clientUrl = 'https://studentlife.dk';
+    if (!clientUrl && req.headers.referer) {
+      const ref = req.headers.referer;
+      if (!ref.includes('mail.') && !ref.includes('google.') && !ref.includes('outlook.') && !ref.includes('yahoo.')) {
+        try {
+          clientUrl = new URL(ref).origin;
+        } catch (e) {}
+      }
     }
+
+    if (!clientUrl) {
+      const host = (req.headers['x-forwarded-host'] || req.get('host') || '').toLowerCase();
+      if (host.includes('localhost') || host.includes('127.0.0.1')) {
+        clientUrl = 'http://localhost:5173/devstudentlife';
+      } else if (host.includes('dev')) {
+        clientUrl = 'https://studenterhue.studentlife.dk/devstudentlife';
+      } else {
+        clientUrl = 'https://studenterhue.studentlife.dk/studentlife';
+      }
+    }
+
     if (clientUrl.endsWith('/')) {
       clientUrl = clientUrl.slice(0, -1);
     }
-    if (!clientUrl.includes('/studentlife')) {
-      clientUrl = `${clientUrl}/studentlife`;
+    if (!clientUrl.includes('/devstudentlife') && !clientUrl.includes('/studentlife')) {
+      clientUrl = `${clientUrl}/devstudentlife`;
     }
 
+    if (installment.status === 'Paid') {
+      if (clientUrl) {
+        return res.redirect(303, `${clientUrl}/installment-success?order_id=${order.id}&installment_index=${idx}&status=already_paid`);
+      }
+      return res.status(200).send(renderStyledMessagePage({
+        title: 'Rate allerede betalt',
+        heading: 'Denne rate er allerede betalt',
+        message: `Rate <strong>${installment.label || (idx + 1) + '. rate'}</strong> for ordre <strong>${order.orderNumber}</strong> er allerede registreret som betalt.`,
+        buttonText: 'Tilbage til butikken',
+        buttonUrl: clientUrl || 'https://studentlife.dk',
+        isSuccess: true
+      }));
+    }
+
+    const isFlatpay = flatpayService.isFlatpayActive();
+
+    // 🌟 FLATPAY / FRISBII INSTALLMENT PAYMENT
+    if (isFlatpay) {
+      const installmentHandle = `inst_${order.id}_${idx}_${Date.now()}`;
+      const chargeSession = await flatpayService.createChargeSession({
+        handle: installmentHandle,
+        amount: parseFloat(installment.amount || 0),
+        currency: order.currency || 'DKK',
+        customer: {
+          email: order.customerEmail,
+          firstName: order.customerDetails?.firstName || '',
+          lastName: order.customerDetails?.lastName || '',
+          phone: order.customerDetails?.phone || ''
+        },
+        orderLines: [
+          {
+            ordertext: `Cap Order : ${order.orderNumber} - ${installment.label}`,
+            amount: parseFloat(installment.amount || 0),
+            quantity: 1
+          }
+        ],
+        acceptUrl: `${clientUrl}/installment-success?order_id=${order.id}&installment_index=${idx}&session_id=${installmentHandle}&gateway=flatpay`,
+        cancelUrl: `${clientUrl}/cancel?gateway=flatpay`
+      });
+
+      return res.redirect(303, chargeSession.url);
+    }
+
+    // 🌟 STRIPE INSTALLMENT PAYMENT
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       customer_email: order.customerEmail,
@@ -3173,7 +4069,7 @@ const payInstallment = async (req, res) => {
       line_items: [
         {
           price_data: {
-            currency: "dkk",
+            currency: (order.currency || "dkk").toLowerCase(),
             product_data: {
               name: `Cap Order : ${order.orderNumber} - ${installment.label}`,
             },
@@ -3184,7 +4080,7 @@ const payInstallment = async (req, res) => {
       ],
       mode: "payment",
       locale: "da",
-      success_url: `${clientUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${clientUrl}/installment-success?order_id=${order.id}&installment_index=${idx}&session_id={CHECKOUT_SESSION_ID}&gateway=stripe`,
       cancel_url: `${clientUrl}/cancel`,
     });
 
@@ -3195,44 +4091,287 @@ const payInstallment = async (req, res) => {
   }
 };
 
-
+/**
+ * Retrieve session details (Supports Stripe session IDs, Frisbii IDs, invoice handles, and TempOrder handles)
+ */
 const getSessionDetails = async (req, res) => {
-  const { session_id } = req.query;
+  const { session_id, invoice, id } = req.query;
+  const targetId = session_id || invoice || id;
+
+  if (!targetId) {
+    return res.status(400).json({ error: "Missing session_id or invoice parameter" });
+  }
 
   try {
-    const session = await stripe.checkout.sessions.retrieve(session_id, {
-      expand: ["line_items", "payment_intent.payment_method"],
+    // 1. Check if targetId is an existing order number or installment handle
+    let existingOrder = await prisma.order.findFirst({
+      where: {
+        OR: [
+          { orderNumber: targetId },
+          ...(targetId.startsWith('inst_') ? [{ id: parseInt(targetId.split('_')[1]) || 0 }] : [])
+        ]
+      }
     });
 
-    res.json(session);
+    // 2. Check if targetId is in TempOrder
+    const tempOrders = await prisma.$queryRaw`SELECT * FROM TempOrder WHERE id = ${targetId}`;
+    let tempOrderData = null;
+    if (tempOrders && tempOrders.length > 0) {
+      try {
+        tempOrderData = typeof tempOrders[0].orderData === 'string'
+          ? JSON.parse(tempOrders[0].orderData)
+          : tempOrders[0].orderData;
+      } catch (e) {}
+    }
+
+    // 3. If it looks like a Stripe checkout session ID (starts with cs_test_ or cs_live_)
+    if (targetId.startsWith('cs_test_') || targetId.startsWith('cs_live_')) {
+      const session = await stripe.checkout.sessions.retrieve(targetId, {
+        expand: ["line_items", "payment_intent.payment_method"],
+      });
+      return res.json(session);
+    }
+
+    // 4. Try looking up in Frisbii API (as invoice or charge handle)
+    const frisbiiInvoice = await flatpayService.getInvoice(targetId);
+    const frisbiiCharge = frisbiiInvoice ? null : await flatpayService.getCharge(targetId);
+    const invoiceData = frisbiiInvoice || frisbiiCharge;
+
+    if (invoiceData) {
+      // If invoice is settled/authorized and order is still in TempOrder, finalize now as a safety net
+      if ((invoiceData.state === 'settled' || invoiceData.state === 'authorized') && tempOrderData) {
+        try {
+          const created = await processSuccessfulCapOrder(targetId, tempOrderData);
+          if (created) existingOrder = created;
+        } catch (finalizeErr) {
+          console.error("Error finalizing order in getSessionDetails:", finalizeErr);
+        }
+      }
+
+      const amountTotal = invoiceData.amount || Math.round((tempOrderData?.finalPrice || 0) * 100);
+      const currency = (invoiceData.currency || tempOrderData?.currency || 'DKK').toLowerCase();
+      const customerEmail = invoiceData.customer?.email || tempOrderData?.email || tempOrderData?.customerDetails?.email || '';
+      const orderNumber = tempOrderData?.orderNumber || targetId;
+
+      return res.json({
+        id: targetId,
+        customer_email: customerEmail,
+        amount_total: amountTotal,
+        currency: currency,
+        metadata: {
+          orderNumber: orderNumber,
+          packageName: tempOrderData?.packageName || 'Standard'
+        },
+        line_items: {
+          data: (invoiceData.order_lines && invoiceData.order_lines.length > 0)
+            ? invoiceData.order_lines.map(line => ({
+                id: line.id || '1',
+                description: line.ordertext || `Cap Order : ${orderNumber}`,
+                quantity: line.quantity || 1,
+                amount_total: line.amount || amountTotal
+              }))
+            : [
+                {
+                  id: '1',
+                  description: `Cap Order : ${orderNumber}`,
+                  quantity: 1,
+                  amount_total: amountTotal
+                }
+              ]
+        }
+      });
+    }
+
+    // 5. Fallback with TempOrder data if found
+    if (tempOrderData) {
+      const orderNumber = tempOrderData.orderNumber || targetId;
+      const amountTotal = Math.round((tempOrderData.finalPrice || 0) * 100);
+      return res.json({
+        id: targetId,
+        customer_email: tempOrderData.email || tempOrderData.customerDetails?.email || '',
+        amount_total: amountTotal,
+        currency: (tempOrderData.currency || 'DKK').toLowerCase(),
+        metadata: {
+          orderNumber: orderNumber,
+          packageName: tempOrderData.packageName || 'Standard'
+        },
+        line_items: {
+          data: [
+            {
+              id: '1',
+              description: `Cap Order : ${orderNumber}`,
+              quantity: 1,
+              amount_total: amountTotal
+            }
+          ]
+        }
+      });
+    }
+
+    // 6. Fallback with Existing Order data if found
+    if (existingOrder) {
+      return res.json({
+        id: targetId,
+        customer_email: existingOrder.customerEmail,
+        amount_total: Math.round(existingOrder.totalPrice * 100),
+        currency: (existingOrder.currency || 'DKK').toLowerCase(),
+        metadata: {
+          orderNumber: existingOrder.orderNumber,
+          packageName: existingOrder.packageName
+        },
+        line_items: {
+          data: [
+            {
+              id: '1',
+              description: `Cap Order : ${existingOrder.orderNumber}`,
+              quantity: 1,
+              amount_total: Math.round(existingOrder.totalPrice * 100)
+            }
+          ]
+        }
+      });
+    }
+
+    // 7. Last resort fallback to Stripe
+    const session = await stripe.checkout.sessions.retrieve(targetId, {
+      expand: ["line_items", "payment_intent.payment_method"],
+    });
+    return res.json(session);
   } catch (err) {
+    console.error("Error in getSessionDetails:", err);
     res.status(500).json({ error: err.message });
   }
 };
 
+/**
+ * Frisbii / Flatpay Webhook Handler
+ */
+const frisbiiWebhook = async (req, res) => {
+  try {
+    const payload = req.body;
+    console.log("🔔 Frisbii webhook received:", payload?.event_type, payload?.id, payload?.invoice);
 
+    if (!payload || !payload.event_type) {
+      return res.status(400).send("Bad Request: Missing payload");
+    }
 
+    // Deduplicate identical webhook delivery attempts
+    if (payload.id) {
+      if (processedWebhookEventIds.has(payload.id)) {
+        console.log(`ℹ️ Frisbii event ${payload.id} already processed. Skipping duplicate.`);
+        return res.json({ received: true });
+      }
+      processedWebhookEventIds.add(payload.id);
+      setTimeout(() => processedWebhookEventIds.delete(payload.id), 60000);
+    }
+    console.log("🔔 Frisbii webhook received:", payload?.event_type, payload?.id, payload?.invoice);
+
+    if (!payload || !payload.event_type) {
+      return res.status(400).send("Bad Request: Missing payload");
+    }
+
+    const isValid = flatpayService.verifyWebhookSignature(payload);
+    if (!isValid) {
+      console.error("❌ Invalid Frisbii webhook signature");
+      return res.status(400).send("Invalid signature");
+    }
+
+    const { event_type, invoice } = payload;
+
+    if (event_type === "invoice_settled" || event_type === "invoice_authorized") {
+      if (!invoice) {
+        return res.json({ received: true });
+      }
+
+      // Check if this is a Webshop Order
+      if (invoice.startsWith("WS-") || invoice.startsWith("ws_")) {
+        const { handleWebshopCheckoutSuccess } = require('./webshop.controller');
+        const tempOrders = await prisma.$queryRaw`SELECT * FROM TempOrder WHERE id = ${invoice}`;
+        if (tempOrders && tempOrders.length > 0) {
+          const rawData = tempOrders[0].orderData;
+          const orderData = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+
+          await handleWebshopCheckoutSuccess({
+            id: invoice,
+            amount_total: Math.round((orderData.totalAmount || 0) * 100),
+            currency: (orderData.currency || 'dkk').toLowerCase(),
+            customer_details: {
+              email: orderData.customerDetails?.email,
+              name: `${orderData.customerDetails?.firstName || ''} ${orderData.customerDetails?.lastName || ''}`.trim(),
+              phone: orderData.customerDetails?.phone,
+              address: orderData.shippingAddress
+            },
+            metadata: {
+              isWebshop: 'true',
+              orderNumber: orderData.orderNumber || invoice,
+              customerEmail: orderData.customerDetails?.email,
+              customerName: `${orderData.customerDetails?.firstName || ''} ${orderData.customerDetails?.lastName || ''}`.trim(),
+              customerPhone: orderData.customerDetails?.phone,
+              customerAddress: JSON.stringify(orderData.shippingAddress || {}),
+              cartItems: JSON.stringify(orderData.cartItems || [])
+            }
+          });
+
+          await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${invoice}`.catch(() => {});
+        }
+        return res.json({ received: true });
+      }
+
+      // Check if this is an Installment payment
+      if (invoice.startsWith("inst_")) {
+        const parts = invoice.split('_');
+        const orderId = parseInt(parts[1]);
+        const installmentIndex = parseInt(parts[2]);
+        if (!isNaN(orderId) && !isNaN(installmentIndex)) {
+          await processSuccessfulInstallmentPayment(orderId, installmentIndex);
+        }
+        return res.json({ received: true });
+      }
+
+      // Cap Configurator Order
+      await processSuccessfulCapOrder(invoice);
+    }
+
+    return res.json({ received: true });
+  } catch (error) {
+    console.error("❌ Error in Frisbii webhook handler:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * Stripe Webhook Handler (Preserved, with automatic Frisbii routing fallback)
+ */
 const stripeWebhook = async (req, res) => {
   const sig = req.headers["stripe-signature"];
 
-  let event;
+  // If no stripe-signature header, check if it's a Frisbii webhook sent to /api/webhook
+  if (!sig) {
+    let bodyJson = null;
+    try {
+      const raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : req.body;
+      bodyJson = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    } catch (e) {}
+    if (bodyJson && (bodyJson.event_type || bodyJson.signature)) {
+      req.body = bodyJson;
+      return frisbiiWebhook(req, res);
+    }
+    return res.status(400).send("Webhook Error: Missing signature");
+  }
 
+  let event;
   try {
-    // ✅ RAW BODY use ho rahi hai
     event = stripe.webhooks.constructEvent(
-      req.body, // ⚠️ RAW buffer
+      req.body,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
-
-    console.log("✅ Webhook verified");
-
+    console.log("✅ Stripe Webhook verified");
   } catch (err) {
-    console.error("❌ Webhook error:", err.message);
+    console.error("❌ Stripe Webhook error:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // ✅ handle event
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
 
@@ -3242,165 +4381,24 @@ const stripeWebhook = async (req, res) => {
       return res.json({ received: true });
     }
 
-    if (session.metadata.type === 'installment_payment') {
-      try {
-        const orderId = parseInt(session.metadata.orderId);
-        const installmentIndex = parseInt(session.metadata.installmentIndex);
-
-        const order = await prisma.order.findUnique({ where: { id: orderId } });
-        if (order && order.installmentDetails) {
-          let details = order.installmentDetails;
-          if (typeof details === 'string') {
-            try { details = JSON.parse(details); } catch (e) { details = {}; }
-          }
-          if (details && Array.isArray(details.installments) && details.installments[installmentIndex]) {
-            details.installments[installmentIndex].status = 'Paid';
-            details.installments[installmentIndex].paidAt = new Date().toISOString();
-
-            await prisma.order.update({
-              where: { id: orderId },
-              data: { installmentDetails: JSON.stringify(details) }
-            });
-            console.log(`✅ Installment ${installmentIndex + 1} paid for order ${orderId}`);
-          }
-        }
-      } catch (err) {
-        console.error("❌ Error updating installment payment:", err.message);
+    if (session.metadata?.type === 'installment_payment') {
+      const orderId = parseInt(session.metadata.orderId);
+      const installmentIndex = parseInt(session.metadata.installmentIndex);
+      if (!isNaN(orderId) && !isNaN(installmentIndex)) {
+        await processSuccessfulInstallmentPayment(orderId, installmentIndex);
       }
       return res.json({ received: true });
     }
 
-    const tempOrderId = session.metadata.tempOrderId;
-
+    const tempOrderId = session.metadata?.tempOrderId;
     if (tempOrderId) {
-      try {
-        const tempOrders = await prisma.$queryRaw`SELECT * FROM TempOrder WHERE id = ${tempOrderId}`;
-        if (!tempOrders || tempOrders.length === 0) {
-          console.log("❌ TempOrder not found");
-          return res.json({ received: true });
-        }
-
-        const tempOrder = tempOrders[0];
-        let orderData = tempOrder.orderData;
-        if (typeof orderData === 'string') {
-          orderData = JSON.parse(orderData);
-        }
-
-        const paidStatus = await prisma.orderStatus.findUnique({ where: { slug: 'paid' } });
-
-        let finalInstallmentDetails = null;
-        if (orderData.isInstallment && orderData.installmentPlanId) {
-          const plan = await prisma.installmentPlan.findUnique({
-            where: { id: orderData.installmentPlanId }
-          });
-          if (plan) {
-            const downPayment = plan.downPaymentAmount || 399;
-            const remainingAmount = Math.max(0, orderData.finalPrice - downPayment);
-            let installmentRows = plan.installments;
-            if (typeof installmentRows === 'string') {
-              try { installmentRows = JSON.parse(installmentRows); } catch { installmentRows = []; }
-            }
-            if (!Array.isArray(installmentRows)) {
-              installmentRows = [];
-            }
-
-            const installmentCount = installmentRows.length;
-            const installmentAmount = installmentCount > 0 ? (remainingAmount / installmentCount).toFixed(2) : 0;
-
-            const generatedInstallments = [
-              {
-                amount: downPayment,
-                label: "1. betaling (ved bestilling)",
-                status: 'Paid',
-                paidAt: new Date().toISOString()
-              }
-            ];
-
-            for (let i = 0; i < installmentCount; i++) {
-              generatedInstallments.push({
-                amount: parseFloat(installmentAmount),
-                label: installmentRows[i]?.label || `${i + 2}. rate`,
-                status: 'Pending',
-                paidAt: null
-              });
-            }
-
-            finalInstallmentDetails = {
-              downPayment,
-              installments: generatedInstallments
-            };
-          }
-        }
-
-        const order = await prisma.order.create({
-          data: {
-            customerDetails: JSON.stringify(orderData.customerDetails),
-            selectedOptions: JSON.stringify(orderData.selectedOptions),
-            totalPrice: orderData.finalPrice,
-            currency: orderData.currency,
-            orderNumber: orderData.orderNumber,
-            orderDate: orderData.orderDate,
-            customerEmail: orderData.email,
-            status: paidStatus ? paidStatus.name.toUpperCase().replace(/\s+/g, '_') : 'PAID',
-            statusId: paidStatus?.id || null,
-            packageName: orderData.packageName,
-            program: orderData.program,
-            customerId: orderData.customerId,
-            capImages: orderData.capImages ? JSON.stringify(orderData.capImages) : null,
-            discountCodeId: orderData.discountRecord?.id || null,
-            discountAmount: orderData.discountAmount,
-            installmentDetails: finalInstallmentDetails ? JSON.stringify(finalInstallmentDetails) : null,
-          },
-        });
-
-        if (orderData.discountRecord) {
-          await prisma.discountCode.update({
-            where: { id: orderData.discountRecord.id },
-            data: { usedAt: new Date(), usedByOrderId: order.id },
-          });
-        }
-
-        // Cancel pending marketing SMS campaigns now that order is confirmed
-        if (orderData.customerId) {
-          const { cancelPendingCampaignMessages } = require('../services/sms.service');
-          await cancelPendingCampaignMessages(orderData.customerId).catch(err => {
-            console.error("Failed to cancel pending campaign messages after order creation:", err);
-          });
-        }
-
-        await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${tempOrderId}`;
-
-        console.log(`⚡ Stripe Webhook: Dispatching order confirmation emails for Order Number: ${order.orderNumber} to Customer: ${order.customerEmail}...`);
-
-        await sendCapEmail(
-          {
-            body: {
-              customerDetails: order.customerDetails,
-              selectedOptions: order.selectedOptions,
-              totalPrice: order.totalPrice,
-              currency: order.currency,
-              orderNumber: order.orderNumber,
-              orderDate: order.orderDate,
-              email: order.customerEmail,
-              packageName: order.packageName,
-              program: order.program,
-              capImages: order.capImages,
-              installmentDetails: order.installmentDetails,
-            }
-          },
-          { status: () => ({ json: () => { } }) }
-        );
-
-        console.log(`✅ Stripe Webhook: Successfully processed and sent confirmation emails for Order: ${order.orderNumber}`);
-
-      } catch (err) {
-        console.error("❌ Stripe Webhook: Failed to process order / send email:", err);
-      }
+      await processSuccessfulCapOrder(tempOrderId);
     }
   }
 
   res.json({ received: true });
 };
+
 
 const emailTester = async (req, res) => {
   const {
@@ -3494,8 +4492,8 @@ const createInstallmentOrder = async (req, res) => {
       data: {
         orderNumber: orderNumber || `CAP-${Date.now()}`,
         customerEmail: email,
-        customerDetails: JSON.stringify(customerDetails),
-        selectedOptions: JSON.stringify(selectedOptions),
+        customerDetails,
+        selectedOptions,
         totalPrice: parseFloat(totalPrice) || 0,
         currency,
         orderDate: orderDate ? new Date(orderDate) : new Date(),
@@ -3504,9 +4502,9 @@ const createInstallmentOrder = async (req, res) => {
         packageName: packageName || null,
         program: program || null,
         customerId: customer.id,
-        capImages: capImages ? JSON.stringify(capImages) : null,
+        capImages: capImages || null,
         installmentPlanId: installmentPlanId ? parseInt(installmentPlanId) : null,
-        installmentDetails: installmentDetails ? JSON.stringify(installmentDetails) : null,
+        installmentDetails: installmentDetails || null,
       },
     });
 
@@ -3554,7 +4552,87 @@ const createInstallmentOrder = async (req, res) => {
   }
 };
 
+
+/**
+ * Retrieve installment status & history for an order (Used by InstallmentSuccessScreen)
+ */
+const getInstallmentStatus = async (req, res) => {
+  const { order_id, orderId, installment_index, installmentIndex, session_id } = req.query;
+  const targetOrderId = order_id || orderId;
+  const targetIndex = installment_index !== undefined ? installment_index : installmentIndex;
+
+  try {
+    let order = null;
+
+    if (targetOrderId) {
+      order = await prisma.order.findUnique({
+        where: { id: parseInt(targetOrderId) }
+      });
+    } else if (session_id && session_id.startsWith('inst_')) {
+      const parts = session_id.split('_');
+      const parsedId = parseInt(parts[1]);
+      if (!isNaN(parsedId)) {
+        order = await prisma.order.findUnique({
+          where: { id: parsedId }
+        });
+      }
+    }
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Ordren blev ikke fundet" });
+    }
+
+    let details = order.installmentDetails;
+    if (typeof details === 'string') {
+      try { details = JSON.parse(details); } catch (e) { details = {}; }
+    }
+
+    let custDetails = order.customerDetails;
+    if (typeof custDetails === 'string') {
+      try { custDetails = JSON.parse(custDetails); } catch (e) { custDetails = {}; }
+    }
+
+    const customerName = custDetails?.firstName
+      ? `${custDetails.firstName} ${custDetails.lastName || ''}`.trim()
+      : 'Kunde';
+
+    const installments = (details && Array.isArray(details.installments)) ? details.installments : [];
+    const idx = parseInt(targetIndex);
+    const currentInstallment = !isNaN(idx) && installments[idx] ? installments[idx] : null;
+
+    let totalPaid = 0;
+    installments.forEach(inst => {
+      if (inst.status === 'Paid') {
+        totalPaid += parseFloat(inst.amount || 0);
+      }
+    });
+
+    const totalPrice = parseFloat(order.totalPrice || 0);
+    const remainingAmount = Math.max(0, totalPrice - totalPaid);
+
+    return res.json({
+      success: true,
+      orderNumber: order.orderNumber,
+      orderId: order.id,
+      customerEmail: order.customerEmail,
+      customerName,
+      totalPrice,
+      currency: order.currency || 'DKK',
+      currentInstallment,
+      installmentIndex: idx,
+      totalPaid,
+      remainingAmount,
+      installments
+    });
+  } catch (err) {
+    console.error("Error in getInstallmentStatus:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+
 module.exports = {
-  workflowStatusChange, sendCapEmail, stripePayment, getSessionDetails, stripeWebhook, emailTester, createInstallmentOrder, payInstallment,
-  capOrderEmail, capOrderAdminEmail, factoryOrderEmail, createEmailTransporter
+  workflowStatusChange, sendCapEmail, stripePayment, getSessionDetails, stripeWebhook, frisbiiWebhook, processSuccessfulCapOrder, processSuccessfulInstallmentPayment, getInstallmentStatus, emailTester, createInstallmentOrder, payInstallment,
+  capOrderEmail, capOrderAdminEmail, factoryOrderEmail, createEmailTransporter,
+  buildInstallmentPaymentRequestEmail, sendInstallmentConfirmationEmail
 };
