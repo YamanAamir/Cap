@@ -17,11 +17,10 @@
  * - Hiroko Ruiz (weryne@mailinator.com)
  * 
  * SAFETY RULES:
- * 1. Checks if customer ALREADY has an order in database:
- *    - If YES: DOES NOT create duplicate order! Instead, if installment 2/rate is pending,
- *      marks it as PAID and sends installment confirmation receipt.
- * 2. If NO: recovers the missing order from TempOrder or PM2 logs, creates order in DB,
- *    and sends order confirmation email.
+ * 1. ONLY Installment 2 (index 1) can be marked Paid.
+ * 2. Automatically REVERTS any accidental Paid status on Installment 3+ back to 'Pending'.
+ * 3. Never creates duplicate orders for customers who already have an order in the database.
+ * 4. Recovers missing orders from TempOrder or PM2 logs (with robust ~ and Danish key cleaning).
  */
 
 const fs = require('fs');
@@ -82,9 +81,9 @@ async function getOrCreateCustomer(customerEmail, customerDetails = {}) {
 
 /**
  * STEP 0: Check Existing Orders for Frisbii Paid Customers
- * If an order already exists:
- * - DO NOT create a duplicate order!
- * - If installment 2 / pending rate is unpaid, mark as Paid and send receipt email.
+ * - Ensures ONLY Installment 2 (index 1) is Paid.
+ * - Automatically REVERTS accidental Rate 3+ back to 'Pending'!
+ * - Avoids any duplicate order creation.
  */
 async function checkAndSyncExistingOrders() {
   console.log('\n==================================================');
@@ -110,14 +109,45 @@ async function checkAndSyncExistingOrders() {
       }
 
       if (details && Array.isArray(details.installments) && details.installments.length > 0) {
-        const unpaidIdx = details.installments.findIndex(inst => inst.status !== 'Paid');
-        if (unpaidIdx !== -1) {
-          const inst = details.installments[unpaidIdx];
-          console.log(`💳 Order #${order.orderNumber} has pending installment ${unpaidIdx + 1} (${inst.label || 'Rate ' + (unpaidIdx + 1)}). Updating to PAID...`);
-          await processSuccessfulInstallmentPayment(order.id, unpaidIdx);
-          console.log(`✅ SUCCESS: Installment ${unpaidIdx + 1} marked as PAID and confirmation receipt sent to ${email}!`);
-        } else {
-          console.log(`ℹ️ Order #${order.orderNumber} (${email}) already has all installments marked as Paid. No action needed.`);
+        // ONLY sync Installment 2 (index 1)
+        const inst2 = details.installments[1];
+        if (inst2) {
+          if (inst2.status !== 'Paid') {
+            console.log(`💳 Order #${order.orderNumber} has pending Installment 2 (${inst2.label || 'Rate 2'}). Updating to PAID...`);
+            inst2.status = 'Paid';
+            inst2.paidAt = new Date().toISOString();
+            await prisma.order.update({
+              where: { id: order.id },
+              data: { installmentDetails: JSON.stringify(details) }
+            });
+            await sendInstallmentConfirmationEmail({
+              order,
+              installment: inst2,
+              installmentIndex: 1,
+              details
+            }).catch(err => console.error("Error sending installment email:", err));
+            console.log(`✅ SUCCESS: Installment 2 marked as PAID and confirmation receipt sent to ${email}!`);
+          } else {
+            console.log(`ℹ️ Order #${order.orderNumber} (${email}) already has Installment 2 marked as Paid.`);
+          }
+        }
+
+        // SAFETY: Revert any accidental Paid status on Installment 3 or later back to 'Pending'!
+        let detailsChanged = false;
+        for (let i = 2; i < details.installments.length; i++) {
+          if (details.installments[i].status === 'Paid') {
+            console.log(`🔄 REVERTING accidental Paid status on Installment ${i + 1} for Order #${order.orderNumber} (ID: ${order.id})...`);
+            details.installments[i].status = 'Pending';
+            details.installments[i].paidAt = null;
+            detailsChanged = true;
+          }
+        }
+        if (detailsChanged) {
+          await prisma.order.update({
+            where: { id: order.id },
+            data: { installmentDetails: JSON.stringify(details) }
+          });
+          console.log(`✅ Order #${order.orderNumber} (ID: ${order.id}) Installment 3+ successfully reverted to Pending!`);
         }
       } else {
         console.log(`ℹ️ Order #${order.orderNumber} (${email}) is a full-payment order already in database. WILL NOT duplicate.`);
@@ -244,10 +274,21 @@ async function recoverFromTempOrders() {
 
 /**
  * Robustly parses a JS object literal extracted from Node util.inspect/Prisma logs.
+ * Handles Prisma error tildes, diff markers, and Danish keys with spaces.
  */
 function cleanAndParseLogBlock(raw) {
   let cleaned = raw.replace(/^\s*\d+\|cap-live\s*\|\s*/gm, '');
 
+  // 1. Remove Prisma diff underline markers and hint lines
+  cleaned = cleaned
+    .split('\n')
+    .filter(line => !/^\s*[~^?-]{2,}/.test(line) && !/^\s*\?\s+/.test(line))
+    .join('\n');
+
+  // 2. Remove all tildes ~ (Prisma error/diff indicators)
+  cleaned = cleaned.replace(/~/g, ' ');
+
+  // 3. Quote unquoted keys (including Danish characters and spaces like "Roset farve:")
   let processed = cleaned.replace(
     /([{,\s])([a-zA-Z\u00C0-\u024F0-9_ -]+?)\s*:/g,
     (match, prefix, key) => {
@@ -260,7 +301,14 @@ function cleanAndParseLogBlock(raw) {
     }
   );
 
-  return (new Function(`return (${processed});`))();
+  const startIdx = processed.indexOf('{');
+  const endIdx = processed.lastIndexOf('}');
+  if (startIdx === -1 || endIdx === -1) {
+    throw new Error('No valid JS object braces found');
+  }
+  const objStr = processed.substring(startIdx, endIdx + 1);
+
+  return (new Function(`return (${objStr});`))();
 }
 
 /**
@@ -436,7 +484,7 @@ async function main() {
   console.log('Time:', new Date().toISOString());
   console.log('Target Emails:', FRISBII_PAID_EMAILS);
 
-  // Step 0: Check existing orders first (sync installment 2 if paid, avoid any duplicate creation)
+  // Step 0: Check existing orders first (sync ONLY Installment 2, REVERT accidental Installment 3+, avoid duplicate creation)
   await checkAndSyncExistingOrders();
 
   // Step 1: Recover only missing orders from TempOrder
