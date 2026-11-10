@@ -86,3 +86,12 @@ export const resendEmailsBulk = (ids) => api.post('/admin/email-logs/resend-bulk
 export const getWebhookLogs = (params) => api.get('/admin/webhook-logs', { params }).then(r => r.data);
 export const getWebhookLog = (id) => api.get(`/admin/webhook-logs/${id}`).then(r => r.data);
 export const resetUser2fa = (userId) => api.post(`/admin/users/${userId}/reset-2fa`).then(r => r.data);
+
+// ─── Black Friday / Black Week VIP Leads ───
+export const getBlackFridayLeads = (params) => api.get('/admin/black-friday/leads', { params }).then(r => r.data);
+export const deleteBlackFridayLead = (id) => api.delete(`/admin/black-friday/leads/${id}`).then(r => r.data);
+export const bulkDeleteBlackFridayLeads = (ids) => api.post('/admin/black-friday/leads/bulk-delete', { ids }).then(r => r.data);
+export const broadcastBlackFridaySms = (data) => api.post('/admin/black-friday/broadcast-sms', data).then(r => r.data);
+export const broadcastBlackFridayEmail = (data) => api.post('/admin/black-friday/broadcast-email', data).then(r => r.data);
+export const exportBlackFridayCsv = () => api.get('/admin/black-friday/export', { responseType: 'blob' }).then(r => r.data);
+

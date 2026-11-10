@@ -20,6 +20,7 @@ import ProductionPage from './pages/ProductionPage';
 import OrderStatusesPage from './pages/OrderStatusesPage';
 import DiscountCodesPage from './pages/DiscountCodesPage';
 import SmsCampaignsPage from './pages/SmsCampaignsPage';
+import BlackFridayPage from './pages/BlackFridayPage';
 import ExcelConfigPage from './pages/ExcelConfigPage';
 import EmailTemplatesPage from './pages/EmailTemplatesPage';
 import UsersPage from './pages/UsersPage';
@@ -84,6 +85,7 @@ function App() {
 
             <Route path="statuses" element={<OrderStatusesPage />} />
             <Route path="sms" element={<SmsCampaignsPage />} />
+            <Route path="black-friday" element={<BlackFridayPage />} />
             <Route path="excel" element={<ExcelConfigPage />} />
             <Route path="emails" element={<EmailTemplatesPage />} />
             <Route path="logs/emails" element={<EmailLogsPage />} />

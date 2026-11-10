@@ -10,6 +10,7 @@ const orderRoutes = require('./routes/order.routes');
 const adminRoutes = require('./routes/admin.routes');
 const marketingRoutes = require('./routes/marketing.routes');
 const webshopRoutes = require('./routes/webshop.routes');
+const blackFridayRoutes = require('./routes/blackFriday.routes');
 const cookieParser = require('cookie-parser');
 const { withWebhookLog } = require('./utils/webhookLog');
 const { auditMiddleware } = require('./utils/audit');
@@ -99,6 +100,8 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/marketing', marketingRoutes);
 app.use('/api/webshop', webshopRoutes);
+app.use('/api/black-friday', blackFridayRoutes);
+app.use('/api/admin/black-friday', blackFridayRoutes);
 
 // root
 app.get('/', (req, res) => {

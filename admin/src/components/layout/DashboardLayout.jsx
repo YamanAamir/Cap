@@ -5,7 +5,7 @@ import {
   LayoutDashboard, ShoppingCart, LogOut, Menu, Flag, Users, Factory,
   ListOrdered, Tag, MessageSquare, FileSpreadsheet, Mail, Settings, CreditCard,
   Image as ImageIcon, ShoppingBag, Globe, Clock, MailCheck, Webhook,
-  ShieldCheck, History, KeyRound, ChevronDown
+  ShieldCheck, History, KeyRound, ChevronDown, Megaphone, Flame
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -22,15 +22,18 @@ const getNavConfig = (role, mode) => {
         { title: 'Order Statuses', icon: ListOrdered, path: '/dashboard/webshop/statuses' },
         { title: 'Email Templates', icon: Mail, path: '/dashboard/webshop/emails' },
       ],
-      collapsible: {
-        title: 'Security & Logs',
-        icon: ShieldCheck,
-        items: [
-          { title: 'Security & 2FA', icon: KeyRound, path: '/dashboard/security' },
-          { title: 'Email Logs', icon: MailCheck, path: '/dashboard/logs/emails' },
-          { title: 'Webhook Logs', icon: Webhook, path: '/dashboard/logs/webhooks' },
-        ],
-      },
+      sections: [
+        {
+          key: 'security_logs',
+          title: 'Security & Logs',
+          icon: ShieldCheck,
+          items: [
+            { title: 'Security & 2FA', icon: KeyRound, path: '/dashboard/security' },
+            { title: 'Email Logs', icon: MailCheck, path: '/dashboard/logs/emails' },
+            { title: 'Webhook Logs', icon: Webhook, path: '/dashboard/logs/webhooks' },
+          ],
+        },
+      ],
     };
   }
 
@@ -40,13 +43,16 @@ const getNavConfig = (role, mode) => {
         { title: 'Production Tasks', icon: Factory, path: '/dashboard/factory' },
         { title: 'Factory Media', icon: ImageIcon, path: '/dashboard/factory/media' },
       ],
-      collapsible: {
-        title: 'Security',
-        icon: KeyRound,
-        items: [
-          { title: 'Security & 2FA', icon: KeyRound, path: '/dashboard/security' },
-        ],
-      },
+      sections: [
+        {
+          key: 'security',
+          title: 'Security',
+          icon: KeyRound,
+          items: [
+            { title: 'Security & 2FA', icon: KeyRound, path: '/dashboard/security' },
+          ],
+        },
+      ],
     };
   }
 
@@ -60,25 +66,36 @@ const getNavConfig = (role, mode) => {
       { title: 'Order Statuses', icon: ListOrdered, path: '/dashboard/statuses' },
       { title: 'Excel Template', icon: FileSpreadsheet, path: '/dashboard/excel-templates' },
       { title: 'Email Templates', icon: Mail, path: '/dashboard/emails' },
-      { title: 'SMS Campaigns', icon: MessageSquare, path: '/dashboard/sms' },
       { title: 'Discount Codes', icon: Tag, path: '/dashboard/discounts' },
       { title: 'Installment Plans', icon: CreditCard, path: '/dashboard/installments' },
       { title: 'Configurator', icon: Settings, path: '/dashboard/settings/configurator' },
       { title: 'Production Settings', icon: Factory, path: '/dashboard/settings/production' },
       { title: 'Users & Roles', icon: Users, path: '/dashboard/users' },
     ],
-    collapsible: {
-      title: 'Automation & Logs',
-      icon: ShieldCheck,
-      items: [
-        { title: 'Auto Installment Jobs', icon: Clock, path: '/dashboard/installment-jobs' },
-        { title: 'Security & 2FA', icon: KeyRound, path: '/dashboard/security' },
-        { title: 'Email Logs', icon: MailCheck, path: '/dashboard/logs/emails' },
-        { title: 'Webhook Logs', icon: Webhook, path: '/dashboard/logs/webhooks' },
-        { title: 'Audit Trail', icon: ShieldCheck, path: '/dashboard/logs/audit' },
-        { title: 'Login History', icon: History, path: '/dashboard/logs/logins' },
-      ],
-    },
+    sections: [
+      {
+        key: 'campaigns',
+        title: 'Campaigns & Marketing',
+        icon: Megaphone,
+        items: [
+          { title: 'SMS Campaigns', icon: MessageSquare, path: '/dashboard/sms' },
+          { title: 'Black Friday VIP', icon: Flame, path: '/dashboard/black-friday' },
+        ],
+      },
+      {
+        key: 'automation_logs',
+        title: 'Automation & Logs',
+        icon: ShieldCheck,
+        items: [
+          { title: 'Auto Installment Jobs', icon: Clock, path: '/dashboard/installment-jobs' },
+          { title: 'Security & 2FA', icon: KeyRound, path: '/dashboard/security' },
+          { title: 'Email Logs', icon: MailCheck, path: '/dashboard/logs/emails' },
+          { title: 'Webhook Logs', icon: Webhook, path: '/dashboard/logs/webhooks' },
+          { title: 'Audit Trail', icon: ShieldCheck, path: '/dashboard/logs/audit' },
+          { title: 'Login History', icon: History, path: '/dashboard/logs/logins' },
+        ],
+      },
+    ],
   };
 };
 
@@ -92,6 +109,7 @@ const pageTitles = {
   '/dashboard/excel-templates': 'Excel Template',
   '/dashboard/emails': 'Email Templates',
   '/dashboard/sms': 'SMS Campaigns',
+  '/dashboard/black-friday': 'Black Friday VIP Leads & Broadcast',
   '/dashboard/discounts': 'Discount Codes',
   '/dashboard/installments': 'Installment Plans',
   '/dashboard/installment-jobs': 'Auto Installment Jobs',
@@ -125,6 +143,7 @@ const pageSubtitles = {
   '/dashboard/excel-templates': 'Excel Configuration',
   '/dashboard/emails': 'Email Templates Listing',
   '/dashboard/sms': 'SMS Marketing Listing',
+  '/dashboard/black-friday': 'VIP Leads & Broadcast (SMS / Email)',
   '/dashboard/discounts': 'StudentLife Coupon Listing',
   '/dashboard/installments': 'Manage Installment Plans',
   '/dashboard/installment-jobs': 'Scheduled & delayed rate status triggers',
@@ -153,7 +172,16 @@ const DashboardLayout = () => {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
-  const [isCollapsibleOpen, setIsCollapsibleOpen] = useState(false);
+  const [openSections, setOpenSections] = useState({});
+
+  const toggleSection = (key) => {
+    if (!isSidebarOpen && !isMobile) {
+      setIsSidebarOpen(true);
+      setOpenSections(prev => ({ ...prev, [key]: true }));
+    } else {
+      setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
+    }
+  };
 
   // Mode switcher: 'cap' (default) or 'web'
   const [dashboardMode, setDashboardMode] = useState(() => {
@@ -246,14 +274,17 @@ const DashboardLayout = () => {
     pageSubtitles[location.pathname] || '';
 
   const navConfig = getNavConfig(user?.role, dashboardMode);
-  const isCollapsibleChildActive = !!navConfig.collapsible?.items?.some(it => isActive(it.path));
+  const navSections = navConfig.sections || [];
 
   // Automatically expand if user visits any of the nested child routes
   useEffect(() => {
-    if (isCollapsibleChildActive) {
-      setIsCollapsibleOpen(true);
-    }
-  }, [location.pathname, isCollapsibleChildActive]);
+    navSections.forEach(sec => {
+      const isSecActive = sec.items?.some(it => isActive(it.path));
+      if (isSecActive) {
+        setOpenSections(prev => ({ ...prev, [sec.key]: true }));
+      }
+    });
+  }, [location.pathname]);
 
   return (
     <div className="flex h-screen bg-[#f8f9fa] overflow-hidden font-sans">
@@ -360,97 +391,95 @@ const DashboardLayout = () => {
             );
           })}
 
-          {/* Collapsible Section for New Features & Logs */}
-          {navConfig.collapsible && navConfig.collapsible.items.length > 0 && (
-            <div className="pt-2 mt-2 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => {
-                  if (!isSidebarOpen && !isMobile) {
-                    setIsSidebarOpen(true);
-                    setIsCollapsibleOpen(true);
-                  } else {
-                    setIsCollapsibleOpen(!isCollapsibleOpen);
-                  }
-                }}
-                className={cn(
-                  'w-full flex items-center relative transition-colors duration-200 group cursor-pointer text-left',
-                  (isSidebarOpen || isMobile) ? 'px-6 py-2.5' : 'justify-center py-2.5'
-                )}
-              >
-                <div className={cn("flex items-center w-full relative z-10", !(isSidebarOpen || isMobile) && "justify-center")}>
-                  <navConfig.collapsible.icon className={cn(
-                    'h-[18px] w-[18px] shrink-0 transition-colors',
-                    isCollapsibleChildActive ? 'text-[#1e3a8a]' : 'text-slate-500 group-hover:text-slate-900'
-                  )} />
-                  {(isSidebarOpen || isMobile) ? (
-                    <div className="flex items-center justify-between flex-1 ml-4">
-                      <span className={cn(
-                        "text-sm font-semibold transition-colors",
-                        isCollapsibleChildActive ? "text-[#1e3a8a]" : "text-slate-700 group-hover:text-slate-900"
-                      )}>
-                        {navConfig.collapsible.title}
-                      </span>
-                      <ChevronDown className={cn(
-                        "w-4 h-4 text-slate-400 transition-transform duration-200",
-                        isCollapsibleOpen ? "transform rotate-180" : ""
-                      )} />
-                    </div>
-                  ) : (
-                    <div className="absolute left-12 bg-slate-800 text-white text-xs px-2.5 py-1.5 rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 font-medium shadow-lg">
-                      {navConfig.collapsible.title}
-                    </div>
-                  )}
-                </div>
-                {/* Active Indicator Line if any child is active but collapsed */}
-                {isCollapsibleChildActive && !isCollapsibleOpen && (
-                  <div className="absolute right-0 top-0 bottom-0 w-1 bg-[#1e3a8a] z-0" />
-                )}
-              </button>
+          {/* Collapsible Sections for Campaigns & Marketing and Automation & Logs */}
+          {navSections.map((sec) => {
+            const isChildActive = !!sec.items?.some(it => isActive(it.path));
+            const isOpen = !!openSections[sec.key];
 
-              {/* Sub-items list */}
-              {isCollapsibleOpen && (
-                <div className={cn(
-                  "space-y-0.5 transition-all duration-200",
-                  (isSidebarOpen || isMobile) ? "bg-slate-50/80 py-1 pl-3 border-l-2 border-indigo-200 ml-6 mr-3 rounded-r-lg my-1" : ""
-                )}>
-                  {navConfig.collapsible.items.map((subItem) => {
-                    const subActive = isActive(subItem.path);
-                    return (
-                      <Link
-                        key={subItem.path}
-                        to={subItem.path}
-                        className={cn(
-                          'flex items-center relative transition-colors duration-200 group rounded-md',
-                          (isSidebarOpen || isMobile) ? 'px-3 py-2' : 'justify-center py-2',
-                          subActive ? 'bg-indigo-50/90 text-[#1e3a8a] font-bold' : 'hover:bg-slate-100 text-slate-600'
-                        )}
-                      >
-                        <div className={cn("flex items-center w-full relative z-10", !(isSidebarOpen || isMobile) && "justify-center")}>
-                          <subItem.icon className={cn(
-                            'h-4 w-4 shrink-0 transition-colors',
-                            subActive ? 'text-[#1e3a8a]' : 'text-slate-400 group-hover:text-slate-700'
-                          )} />
-                          {(isSidebarOpen || isMobile) ? (
-                            <span className={cn(
-                              "text-xs font-medium flex-1 ml-3 transition-colors",
-                              subActive ? "text-[#1e3a8a] font-bold" : "text-slate-600 group-hover:text-slate-900"
-                            )}>
-                              {subItem.title}
-                            </span>
-                          ) : (
-                            <div className="absolute left-12 bg-slate-800 text-white text-xs px-2.5 py-1.5 rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 font-medium shadow-lg">
-                              {subItem.title}
-                            </div>
+            return (
+              <div key={sec.key} className="pt-2 mt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => toggleSection(sec.key)}
+                  className={cn(
+                    'w-full flex items-center relative transition-colors duration-200 group cursor-pointer text-left',
+                    (isSidebarOpen || isMobile) ? 'px-6 py-2.5' : 'justify-center py-2.5'
+                  )}
+                >
+                  <div className={cn("flex items-center w-full relative z-10", !(isSidebarOpen || isMobile) && "justify-center")}>
+                    <sec.icon className={cn(
+                      'h-[18px] w-[18px] shrink-0 transition-colors',
+                      isChildActive ? 'text-[#1e3a8a]' : 'text-slate-500 group-hover:text-slate-900'
+                    )} />
+                    {(isSidebarOpen || isMobile) ? (
+                      <div className="flex items-center justify-between flex-1 ml-4">
+                        <span className={cn(
+                          "text-sm font-semibold transition-colors",
+                          isChildActive ? "text-[#1e3a8a]" : "text-slate-700 group-hover:text-slate-900"
+                        )}>
+                          {sec.title}
+                        </span>
+                        <ChevronDown className={cn(
+                          "w-4 h-4 text-slate-400 transition-transform duration-200",
+                          isOpen ? "transform rotate-180" : ""
+                        )} />
+                      </div>
+                    ) : (
+                      <div className="absolute left-12 bg-slate-800 text-white text-xs px-2.5 py-1.5 rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 font-medium shadow-lg">
+                        {sec.title}
+                      </div>
+                    )}
+                  </div>
+                  {/* Active Indicator Line if any child is active but collapsed */}
+                  {isChildActive && !isOpen && (
+                    <div className="absolute right-0 top-0 bottom-0 w-1 bg-[#1e3a8a] z-0" />
+                  )}
+                </button>
+
+                {/* Sub-items list */}
+                {isOpen && (
+                  <div className={cn(
+                    "space-y-0.5 transition-all duration-200",
+                    (isSidebarOpen || isMobile) ? "bg-slate-50/80 py-1 pl-3 border-l-2 border-indigo-200 ml-6 mr-3 rounded-r-lg my-1" : ""
+                  )}>
+                    {sec.items.map((subItem) => {
+                      const subActive = isActive(subItem.path);
+                      return (
+                        <Link
+                          key={subItem.path}
+                          to={subItem.path}
+                          className={cn(
+                            'flex items-center relative transition-colors duration-200 group rounded-md',
+                            (isSidebarOpen || isMobile) ? 'px-3 py-2' : 'justify-center py-2',
+                            subActive ? 'bg-indigo-50/90 text-[#1e3a8a] font-bold' : 'hover:bg-slate-100 text-slate-600'
                           )}
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
+                        >
+                          <div className={cn("flex items-center w-full relative z-10", !(isSidebarOpen || isMobile) && "justify-center")}>
+                            <subItem.icon className={cn(
+                              'h-4 w-4 shrink-0 transition-colors',
+                              subActive ? 'text-[#1e3a8a]' : 'text-slate-400 group-hover:text-slate-700'
+                            )} />
+                            {(isSidebarOpen || isMobile) ? (
+                              <span className={cn(
+                                "text-xs font-medium flex-1 ml-3 transition-colors",
+                                subActive ? "text-[#1e3a8a] font-bold" : "text-slate-600 group-hover:text-slate-900"
+                              )}>
+                                {subItem.title}
+                              </span>
+                            ) : (
+                              <div className="absolute left-12 bg-slate-800 text-white text-xs px-2.5 py-1.5 rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 font-medium shadow-lg">
+                                {subItem.title}
+                              </div>
+                            )}
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
       </aside>
 

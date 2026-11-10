@@ -480,3 +480,25 @@ model WebshopOrderStatus {
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
 }
+
+// ─── Black Friday / Black Week VIP Leads ───
+model BlackFridayLead {
+  id              Int       @id @default(autoincrement())
+  name            String
+  email           String    @unique
+  phone           String
+  school          String?
+  source          String    @default("wordpress_vip")
+  ip              String?
+  userAgent       String?   @db.Text
+  smsSentCount    Int       @default(0)
+  emailSentCount  Int       @default(0)
+  lastContactedAt DateTime?
+  notes           String?   @db.Text
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([email])
+  @@index([phone])
+  @@index([createdAt])
+}
