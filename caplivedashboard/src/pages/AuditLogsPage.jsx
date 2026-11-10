@@ -99,6 +99,12 @@ const AuditLogsPage = () => {
     return 'bg-gray-100 text-gray-800 border-gray-200';
   };
 
+  const checkIsSuccess = (log) => {
+    if (log.status) return log.status === 'SUCCESS';
+    if (log.statusCode) return log.statusCode >= 200 && log.statusCode < 400;
+    return !log.error;
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Header */}
@@ -151,6 +157,7 @@ const AuditLogsPage = () => {
               <option value="UPDATE">UPDATE</option>
               <option value="DELETE">DELETE</option>
               <option value="STATUS_CHANGE">STATUS_CHANGE</option>
+              <option value="LOGIN">LOGIN</option>
               <option value="AUTH">AUTH</option>
             </select>
           </div>
@@ -164,6 +171,7 @@ const AuditLogsPage = () => {
               <option value="">All Entities</option>
               <option value="Order">Order</option>
               <option value="User">User</option>
+              <option value="auth">Auth</option>
               <option value="InstallmentJob">InstallmentJob</option>
               <option value="ProductionBatch">ProductionBatch</option>
               <option value="OrderStatus">OrderStatus</option>
@@ -227,7 +235,12 @@ const AuditLogsPage = () => {
                 </tr>
               ) : (
                 logs.map((log) => {
-                  const isSuccess = log.status === 'SUCCESS';
+                  const isSuccess = checkIsSuccess(log);
+                  const userName = log.userName || log.user?.name;
+                  const userEmail = log.userEmail || log.user?.email;
+                  const displayName = userName || userEmail || 'System / Auto';
+                  const initial = displayName.charAt(0).toUpperCase();
+
                   return (
                     <tr key={log.id} className="hover:bg-gray-50/70 transition-colors">
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-xs">
@@ -244,14 +257,14 @@ const AuditLogsPage = () => {
                       <td className="px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs uppercase">
-                            {log.user?.name ? log.user.name.charAt(0) : (log.user?.email ? log.user.email.charAt(0) : '?')}
+                            {initial}
                           </div>
                           <div>
                             <p className="font-medium text-gray-900 text-xs">
-                              {log.user?.name || log.user?.email || 'System / Auto'}
+                              {displayName}
                             </p>
-                            {log.user?.name && log.user?.email && (
-                              <p className="text-[11px] text-gray-400">{log.user.email}</p>
+                            {userName && userEmail && (
+                              <p className="text-[11px] text-gray-400">{userEmail}</p>
                             )}
                           </div>
                         </div>
@@ -264,29 +277,36 @@ const AuditLogsPage = () => {
                       </td>
 
                       <td className="px-4 py-3 whitespace-nowrap text-xs">
-                        <span className="font-semibold text-gray-800">{log.entity}</span>
+                        <span className="font-semibold text-gray-800">{log.entity || '-'}</span>
                         {log.entityId && (
                           <span className="text-gray-400 font-mono ml-1.5">#{log.entityId}</span>
                         )}
                       </td>
 
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold ${
-                          isSuccess
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-rose-100 text-rose-800'
-                        }`}>
-                          {isSuccess ? (
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                          ) : (
-                            <XCircle className="w-3.5 h-3.5" />
+                        <div className="flex items-center gap-1.5">
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold ${
+                            isSuccess
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-rose-100 text-rose-800'
+                          }`}>
+                            {isSuccess ? (
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                            ) : (
+                              <XCircle className="w-3.5 h-3.5" />
+                            )}
+                            {isSuccess ? 'Success' : 'Failed'}
+                          </span>
+                          {log.statusCode && (
+                            <span className="text-[11px] font-mono text-gray-400">
+                              ({log.statusCode})
+                            </span>
                           )}
-                          {log.status}
-                        </span>
+                        </div>
                       </td>
 
                       <td className="px-4 py-3 font-mono text-xs text-gray-500 whitespace-nowrap">
-                        {log.ipAddress || '-'}
+                        {log.ip || log.ipAddress || '-'}
                       </td>
 
                       <td className="px-4 py-3 text-right whitespace-nowrap">
@@ -362,7 +382,7 @@ const AuditLogsPage = () => {
                 <div>
                   <span className="text-gray-500 block">User:</span>
                   <span className="font-semibold text-gray-900">
-                    {selectedLog.user?.name || selectedLog.user?.email || 'System'}
+                    {selectedLog.userName || selectedLog.userEmail || selectedLog.user?.name || selectedLog.user?.email || 'System'}
                   </span>
                 </div>
                 <div>
@@ -377,13 +397,14 @@ const AuditLogsPage = () => {
                 </div>
                 <div>
                   <span className="text-gray-500 block">Status:</span>
-                  <span className={`font-semibold ${selectedLog.status === 'SUCCESS' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                    {selectedLog.status}
+                  <span className={`font-semibold ${checkIsSuccess(selectedLog) ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {checkIsSuccess(selectedLog) ? 'Success' : 'Failed'}
+                    {selectedLog.statusCode && ` (${selectedLog.statusCode})`}
                   </span>
                 </div>
                 <div>
                   <span className="text-gray-500 block">IP Address:</span>
-                  <span className="font-mono text-gray-700">{selectedLog.ipAddress || '-'}</span>
+                  <span className="font-mono text-gray-700">{selectedLog.ip || selectedLog.ipAddress || '-'}</span>
                 </div>
                 <div>
                   <span className="text-gray-500 block">Timestamp:</span>

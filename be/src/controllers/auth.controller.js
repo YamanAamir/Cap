@@ -34,7 +34,7 @@ const completeLogin = async (req, res, user, method = 'password') => {
 
   prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } }).catch(() => {});
   await logLogin({ req, user, email: user.email, success: true, reason: method === '2fa' ? 'Login with 2FA' : 'Login' });
-  await logAudit({ req, user, action: 'LOGIN', entity: 'auth', entityId: user.id, details: { method } });
+  await logAudit({ req, user, action: 'LOGIN', entity: 'auth', entityId: user.id, details: { method }, statusCode: 200 });
 
   return res.status(200).json({
     message: 'Login successful',

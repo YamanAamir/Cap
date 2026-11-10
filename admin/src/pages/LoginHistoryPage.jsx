@@ -27,7 +27,7 @@ const LoginHistoryPage = () => {
         page,
         limit,
         search: search.trim() || undefined,
-        status: status || undefined,
+        success: status === 'SUCCESS' ? 'true' : status === 'FAILED' ? 'false' : undefined,
         from: from || undefined,
         to: to || undefined,
       });
@@ -172,7 +172,11 @@ const LoginHistoryPage = () => {
                 </tr>
               ) : (
                 logs.map((log) => {
-                  const isSuccess = log.status === 'SUCCESS';
+                  const isSuccess = log.success === true || log.status === 'SUCCESS';
+                  const userEmail = log.email || log.userEmail || log.user?.email || '-';
+                  const userName = log.userName || log.user?.name;
+                  const is2fa = !!log.twoFactorUsed || (log.reason && log.reason.toLowerCase().includes('2fa'));
+
                   return (
                     <tr key={log.id} className="hover:bg-gray-50/70 transition-colors">
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-xs">
@@ -188,10 +192,10 @@ const LoginHistoryPage = () => {
 
                       <td className="px-4 py-3 whitespace-nowrap">
                         <p className="font-semibold text-gray-900 text-xs">
-                          {log.user?.name || log.email}
+                          {userName || userEmail}
                         </p>
-                        {log.user?.name && (
-                          <p className="text-[11px] text-gray-400">{log.email}</p>
+                        {userName && userEmail && (
+                          <p className="text-[11px] text-gray-400">{userEmail}</p>
                         )}
                       </td>
 
@@ -209,16 +213,16 @@ const LoginHistoryPage = () => {
                             )}
                             {isSuccess ? 'Success' : 'Failed'}
                           </span>
-                          {!isSuccess && log.failureReason && (
+                          {!isSuccess && (log.reason || log.failureReason) && (
                             <span className="text-[11px] text-rose-500 mt-0.5">
-                              {log.failureReason}
+                              {log.reason || log.failureReason}
                             </span>
                           )}
                         </div>
                       </td>
 
                       <td className="px-4 py-3 whitespace-nowrap text-xs">
-                        {log.twoFactorUsed ? (
+                        {is2fa ? (
                           <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded text-xs font-medium">
                             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
                             2FA Verified
@@ -243,7 +247,7 @@ const LoginHistoryPage = () => {
                       </td>
 
                       <td className="px-4 py-3 font-mono text-xs text-gray-600 whitespace-nowrap">
-                        {log.ipAddress || '-'}
+                        {log.ip || log.ipAddress || '-'}
                       </td>
                     </tr>
                   );
