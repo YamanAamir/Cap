@@ -666,7 +666,7 @@ const capOrderEmail = (orderData) => {
 <body style="margin:0; padding:0; background-color:#ffffff; font-family:Arial, sans-serif; color:#333333; line-height:1.4;">
 
     <div style="text-align: center; padding: 20px 5px;">
-        <img src="https://elipsestudio.com/student/01.png" alt="Studentlife" style="max-width: 100%; height: auto;">
+        <img src="https://studenterhue.studentlife.dk/studentlife/image/landing/email.png" alt="Studentlife" style="max-width: 100%; height: auto;">
     </div>
 
     <table width="100%" border="0" cellpadding="0" cellspacing="0">
@@ -3348,7 +3348,7 @@ const renderStyledMessagePage = ({ title, heading, message, buttonText = 'Tilbag
 <body style="margin:0; padding:40px 15px; font-family:Arial, sans-serif; background-color:#f8fafc; color:#1e293b; text-align:center;">
   <div style="max-width:520px; margin:0 auto; background:#ffffff; border-radius:12px; padding:36px 24px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05); border:1px solid #e2e8f0;">
     <div style="margin-bottom:24px;">
-      <img src="https://elipsestudio.com/student/01.png" alt="Studentlife" style="max-height:55px;">
+      <img src="https://studenterhue.studentlife.dk/studentlife/image/landing/email.png" alt="Studentlife" style="max-height:55px;">
     </div>
     <div style="display:inline-block; width:56px; height:56px; line-height:56px; border-radius:50%; background:${isSuccess ? '#dcfce7' : '#fee2e2'}; color:${isSuccess ? '#166534' : '#ef4444'}; font-size:26px; margin-bottom:16px;">
       ${isSuccess ? '✓' : '!'}
@@ -3442,7 +3442,7 @@ const buildInstallmentPaymentRequestEmail = ({ order, installment, installmentIn
 </head>
 <body style="margin:0; padding:0; background-color:#ffffff; font-family:Arial, sans-serif; color:#333333; line-height:1.4;">
   <div style="text-align: center; padding: 20px 5px;">
-    <img src="https://elipsestudio.com/student/01.png" alt="Studentlife" style="max-width: 100%; height: auto;">
+    <img src="https://studenterhue.studentlife.dk/studentlife/image/landing/email.png" alt="Studentlife" style="max-width: 100%; height: auto;">
   </div>
 
   <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#ffffff;">
@@ -3627,7 +3627,7 @@ const sendInstallmentConfirmationEmail = async ({ order, installment, installmen
 </head>
 <body style="margin:0; padding:0; background-color:#ffffff; font-family:Arial, sans-serif; color:#333333; line-height:1.4;">
   <div style="text-align: center; padding: 20px 5px;">
-    <img src="https://elipsestudio.com/student/01.png" alt="Studentlife" style="max-width: 100%; height: auto;">
+    <img src="https://studenterhue.studentlife.dk/studentlife/image/landing/email.png" alt="Studentlife" style="max-width: 100%; height: auto;">
   </div>
 
   <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#ffffff;">

@@ -154,7 +154,7 @@ const factoryOrderEmail = (orderData) => {
     email
   } = orderData;
 
-  const topEmbroideryVal = 
+  const topEmbroideryVal =
     selectedOptions.BRODERI?.['Top broderi'] ||
     selectedOptions['Top broderi'] ||
     selectedOptions.BRODERI?.topBroderi ||
@@ -1229,7 +1229,7 @@ const capOrderEmail = (orderData) => {
 <body style="margin:0; padding:0; background-color:#ffffff; font-family:Arial, sans-serif; color:#333333; line-height:1.4;">
 
     <div style="text-align: center; padding: 20px 5px;">
-        <img src="https://elipsestudio.com/student/01.png" alt="Studentlife" style="max-width: 100%; height: auto;">
+        <img src="https://studenterhue.studentlife.dk/studentlife/image/landing/email.png" alt="Studentlife" style="max-width: 100%; height: auto;">
     </div>
 
     <table width="100%" border="0" cellpadding="0" cellspacing="0">

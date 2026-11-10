@@ -90,7 +90,7 @@ function generateOfficialStudentLifeEmailHtml({ name, headline, bodyText, button
 <body style="margin:0; padding:0; background-color:#ffffff; font-family:Arial, sans-serif; color:#333333; line-height:1.4;">
 
   <div style="text-align: center; padding: 20px 5px;">
-    <img src="https://elipsestudio.com/student/01.png" alt="Studentlife" style="max-width: 100%; height: auto;">
+    <img src="https://studenterhue.studentlife.dk/studentlife/image/landing/email.png" alt="Studentlife" style="max-width: 100%; height: auto;">
   </div>
 
   <table width="100%" border="0" cellpadding="0" cellspacing="0">
@@ -298,15 +298,15 @@ const registerLead = async (req, res) => {
         const transporter = getTransporter();
         const fromAddress = process.env.EMAIL_FROM || 'StudentLife <salg@studentlife.dk>';
 
-        const customerConfirmationSubject = 'Bekræftelse efter tilmelding – Du er på VIP-listen! 🖤';
-        const customerConfirmationBody = `Du er på VIP-listen! 🖤\n\nDu er nu et skridt tættere på årets Black Week-tilbud hos Student Life!\n\nHold øje med din mail og SMS. Vi sender dig dit personlige VIP-link, så snart din eksklusive adgang åbner.\n\nVi ses til Black Week!`;
+        const customerConfirmationSubject = 'Du er på VIP-listen! 🖤';
+        const customerConfirmationBody = `Du er nu et skridt tættere på årets Black Week-tilbud hos Student Life!\n\nHold øje med din mail og SMS. Vi sender dig dit personlige VIP-link, så snart din eksklusive adgang åbner.\n\nVi ses til Black Week!`;
 
         const customerHtml = generateOfficialStudentLifeEmailHtml({
           name: fullName,
-          headline: 'Bekræftelse efter tilmelding',
+          headline: 'Du er på VIP-listen! 🖤',
           bodyText: customerConfirmationBody,
-          buttonText: 'BESØG STUDENT LIFE 🖤',
-          buttonUrl: 'https://studentlife.dk'
+          buttonText: '',
+          buttonUrl: ''
         });
 
         transporter.sendMail({
@@ -315,14 +315,14 @@ const registerLead = async (req, res) => {
           subject: customerConfirmationSubject,
           html: customerHtml
         })
-        .then(async () => {
-          await prisma.blackFridayLead.update({
-            where: { id: lead.id },
-            data: { emailSentCount: { increment: 1 }, lastContactedAt: new Date() }
-          });
-          console.log(`[BlackFriday] Confirmation email successfully sent to ${rawEmail}`);
-        })
-        .catch(err => console.error('[BlackFriday] Failed to send customer confirmation email:', err.message));
+          .then(async () => {
+            await prisma.blackFridayLead.update({
+              where: { id: lead.id },
+              data: { emailSentCount: { increment: 1 }, lastContactedAt: new Date() }
+            });
+            console.log(`[BlackFriday] Confirmation email successfully sent to ${rawEmail}`);
+          })
+          .catch(err => console.error('[BlackFriday] Failed to send customer confirmation email:', err.message));
 
         // 7. Send Notification Email to Client/Admin (if configured in Dashboard)
         const setting = await prisma.systemSetting.findUnique({
@@ -352,8 +352,8 @@ const registerLead = async (req, res) => {
             name: 'Administrator',
             headline: 'Ny VIP Tilmelding Modtaget 🔔',
             bodyText: `En ny kunde har netop tilmeldt sig Black Week VIP-listen på studentlife.dk:\n\n• Navn: ${fullName}\n• E-mail: ${rawEmail}\n• Telefon: ${normalizedPhone}\n• Skole: ${school || 'Ikke angivet'}\n• Tidspunkt: ${formattedTime}\n\nKunden har automatisk modtaget bekræftelsesmailen.`,
-            buttonText: 'ÅBN DASHBOARD 📊',
-            buttonUrl: 'https://capdashboard.studentlife.dk/dashboard/black-friday'
+            buttonText: '',
+            buttonUrl: ''
           });
 
           transporter.sendMail({
@@ -362,8 +362,8 @@ const registerLead = async (req, res) => {
             subject: `🔔 Ny Black Week VIP-tilmelding: ${fullName}`,
             html: adminNotificationHtml
           })
-          .then(() => console.log(`[BlackFriday] Admin notification email sent to ${targetAdminEmail}`))
-          .catch(err => console.error('[BlackFriday] Failed to send admin notification email:', err.message));
+            .then(() => console.log(`[BlackFriday] Admin notification email sent to ${targetAdminEmail}`))
+            .catch(err => console.error('[BlackFriday] Failed to send admin notification email:', err.message));
         }
       } catch (emailErr) {
         console.error('[BlackFriday] Registration email dispatch error:', emailErr.message);

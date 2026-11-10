@@ -268,8 +268,8 @@ const factoryOrderEmail = async (orderData, columnsConfig = null) => {
             }
           }
           const isPassthrough = RAW_PASSTHROUGH_FIELDS.has(subKey) ||
-                                RAW_PASSTHROUGH_FIELDS.has(`${catKey}.${subKey}`) ||
-                                RAW_PASSTHROUGH_FIELDS.has(`options.${catKey}.${subKey}`);
+            RAW_PASSTHROUGH_FIELDS.has(`${catKey}.${subKey}`) ||
+            RAW_PASSTHROUGH_FIELDS.has(`options.${catKey}.${subKey}`);
           return {
             label: translateFactoryValue(subKey),
             value: isPassthrough ? (valueToUse || 'Not Chosen') : (translateFactoryValue(valueToUse) || 'Not Chosen')
@@ -666,7 +666,7 @@ const capOrderEmail = (orderData) => {
 <body style="margin:0; padding:0; background-color:#ffffff; font-family:Arial, sans-serif; color:#333333; line-height:1.4;">
 
     <div style="text-align: center; padding: 20px 5px;">
-        <img src="https://elipsestudio.com/student/01.png" alt="Studentlife" style="max-width: 100%; height: auto;">
+        <img src="https://studenterhue.studentlife.dk/studentlife/image/landing/email.png" alt="Studentlife" style="max-width: 100%; height: auto;">
     </div>
 
     <table width="100%" border="0" cellpadding="0" cellspacing="0">
@@ -3000,7 +3000,7 @@ const sendCapEmail = async (req, res) => {
             ? JSON.parse(dbOrder.installmentDetails)
             : dbOrder.installmentDetails;
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     const buildCapAttachments = (images) => {
@@ -3195,7 +3195,7 @@ const processSuccessfulCapOrder = async (tempOrderId, orderDataOverride = null) 
     // 2. ATOMIC CLAIM: Delete from TempOrder immediately BEFORE doing DB create or sending emails!
     // This guarantees that any concurrent webhook or redirect thread that reaches this point
     // will find 0 rows in TempOrder and cannot re-process!
-    await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${tempOrderId}`.catch(() => {});
+    await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${tempOrderId}`.catch(() => { });
 
     // 3. Guard against duplicate order creation if already exists in DB
     if (orderData.orderNumber) {
@@ -3348,7 +3348,7 @@ const renderStyledMessagePage = ({ title, heading, message, buttonText = 'Tilbag
 <body style="margin:0; padding:40px 15px; font-family:Arial, sans-serif; background-color:#f8fafc; color:#1e293b; text-align:center;">
   <div style="max-width:520px; margin:0 auto; background:#ffffff; border-radius:12px; padding:36px 24px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05); border:1px solid #e2e8f0;">
     <div style="margin-bottom:24px;">
-      <img src="https://elipsestudio.com/student/01.png" alt="Studentlife" style="max-height:55px;">
+      <img src="https://studenterhue.studentlife.dk/studentlife/image/landing/email.png" alt="Studentlife" style="max-height:55px;">
     </div>
     <div style="display:inline-block; width:56px; height:56px; line-height:56px; border-radius:50%; background:${isSuccess ? '#dcfce7' : '#fee2e2'}; color:${isSuccess ? '#166534' : '#ef4444'}; font-size:26px; margin-bottom:16px;">
       ${isSuccess ? '✓' : '!'}
@@ -3442,7 +3442,7 @@ const buildInstallmentPaymentRequestEmail = ({ order, installment, installmentIn
 </head>
 <body style="margin:0; padding:0; background-color:#ffffff; font-family:Arial, sans-serif; color:#333333; line-height:1.4;">
   <div style="text-align: center; padding: 20px 5px;">
-    <img src="https://elipsestudio.com/student/01.png" alt="Studentlife" style="max-width: 100%; height: auto;">
+    <img src="https://studenterhue.studentlife.dk/studentlife/image/landing/email.png" alt="Studentlife" style="max-width: 100%; height: auto;">
   </div>
 
   <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#ffffff;">
@@ -3627,7 +3627,7 @@ const sendInstallmentConfirmationEmail = async ({ order, installment, installmen
 </head>
 <body style="margin:0; padding:0; background-color:#ffffff; font-family:Arial, sans-serif; color:#333333; line-height:1.4;">
   <div style="text-align: center; padding: 20px 5px;">
-    <img src="https://elipsestudio.com/student/01.png" alt="Studentlife" style="max-width: 100%; height: auto;">
+    <img src="https://studenterhue.studentlife.dk/studentlife/image/landing/email.png" alt="Studentlife" style="max-width: 100%; height: auto;">
   </div>
 
   <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#ffffff;">
@@ -4021,7 +4021,7 @@ const payInstallment = async (req, res) => {
       if (!ref.includes('mail.') && !ref.includes('google.') && !ref.includes('outlook.') && !ref.includes('yahoo.')) {
         try {
           clientUrl = new URL(ref).origin;
-        } catch (e) {}
+        } catch (e) { }
       }
     }
 
@@ -4154,7 +4154,7 @@ const getSessionDetails = async (req, res) => {
         tempOrderData = typeof tempOrders[0].orderData === 'string'
           ? JSON.parse(tempOrders[0].orderData)
           : tempOrders[0].orderData;
-      } catch (e) {}
+      } catch (e) { }
     }
 
     // 3. If it looks like a Stripe checkout session ID (starts with cs_test_ or cs_live_)
@@ -4198,19 +4198,19 @@ const getSessionDetails = async (req, res) => {
         line_items: {
           data: (invoiceData.order_lines && invoiceData.order_lines.length > 0)
             ? invoiceData.order_lines.map(line => ({
-                id: line.id || '1',
-                description: line.ordertext || `Cap Order : ${orderNumber}`,
-                quantity: line.quantity || 1,
-                amount_total: line.amount || amountTotal
-              }))
+              id: line.id || '1',
+              description: line.ordertext || `Cap Order : ${orderNumber}`,
+              quantity: line.quantity || 1,
+              amount_total: line.amount || amountTotal
+            }))
             : [
-                {
-                  id: '1',
-                  description: `Cap Order : ${orderNumber}`,
-                  quantity: 1,
-                  amount_total: amountTotal
-                }
-              ]
+              {
+                id: '1',
+                description: `Cap Order : ${orderNumber}`,
+                quantity: 1,
+                amount_total: amountTotal
+              }
+            ]
         }
       });
     }
@@ -4345,7 +4345,7 @@ const frisbiiWebhook = async (req, res) => {
             }
           });
 
-          await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${invoice}`.catch(() => {});
+          await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${invoice}`.catch(() => { });
         }
         return res.json({ received: true });
       }
@@ -4384,7 +4384,7 @@ const stripeWebhook = async (req, res) => {
     try {
       const raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : req.body;
       bodyJson = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    } catch (e) {}
+    } catch (e) { }
     if (bodyJson && (bodyJson.event_type || bodyJson.signature)) {
       req.body = bodyJson;
       return frisbiiWebhook(req, res);
