@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, User, Plus, Edit2, Trash2, Shield, X, Save } from 'lucide-react';
+import { Loader2, User, Plus, Edit2, Trash2, Shield, ShieldCheck, ShieldAlert, X, Save, RotateCcw } from 'lucide-react';
 import api from '../services/api';
+import { resetUser2fa } from '../services/admin.service';
 import ConfirmModal from '../components/common/ConfirmModal';
+import { PasswordInput } from '../components/ui';
 import { cn } from '@/lib/utils';
+import toast from 'react-hot-toast';
 
 const UsersPage = () => {
   const [users, setUsers] = useState([]);
@@ -13,6 +16,7 @@ const UsersPage = () => {
   const [form, setForm] = useState({ id: null, name: '', email: '', password: '', role: 'viewer' });
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, id: null, name: '' });
   const [isDeleting, setIsDeleting] = useState(false);
+  const [resetting2faId, setResetting2faId] = useState(null);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -21,6 +25,7 @@ const UsersPage = () => {
       setUsers(res.data);
     } catch (e) {
       console.error(e);
+      toast.error('Failed to load users');
     } finally {
       setLoading(false);
     }
@@ -34,14 +39,16 @@ const UsersPage = () => {
     try {
       if (form.id) {
         await api.put(`/admin/users/${form.id}`, form);
+        toast.success('User updated successfully');
       } else {
         await api.post('/admin/users', form);
+        toast.success('User created successfully');
       }
       setForm({ id: null, name: '', email: '', password: '', role: 'viewer' });
       setShowForm(false);
       loadUsers();
     } catch (e) {
-      alert(e.response?.data?.message || 'Failed to save user');
+      toast.error(e.response?.data?.message || 'Failed to save user');
     } finally {
       setSaving(false);
     }
@@ -61,12 +68,29 @@ const UsersPage = () => {
     setIsDeleting(true);
     try {
       await api.delete(`/admin/users/${confirmModal.id}`);
+      toast.success('User deleted');
       loadUsers();
     } catch (e) {
-      alert(e.response?.data?.message || 'Failed to delete user');
+      toast.error(e.response?.data?.message || 'Failed to delete user');
     } finally {
       setIsDeleting(false);
       setConfirmModal({ isOpen: false, id: null, name: '' });
+    }
+  };
+
+  const handleReset2fa = async (user) => {
+    if (!window.confirm(`Are you sure you want to reset 2FA for ${user.name || user.email}? This will remove all their registered authenticators and backup codes.`)) {
+      return;
+    }
+    setResetting2faId(user.id);
+    try {
+      await resetUser2fa(user.id);
+      toast.success(`2FA has been reset for ${user.name || user.email}`);
+      loadUsers();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Failed to reset 2FA');
+    } finally {
+      setResetting2faId(null);
     }
   };
 
@@ -85,7 +109,7 @@ const UsersPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-800">Users & Roles</h2>
-          <p className="text-sm text-slate-500">Manage admin access and permission scopes.</p>
+          <p className="text-sm text-slate-500">Manage admin access, permission scopes, and 2FA authentication.</p>
         </div>
         <button 
           onClick={() => {
@@ -97,7 +121,7 @@ const UsersPage = () => {
             showForm ? "bg-slate-200 text-slate-700 hover:bg-slate-300" : "bg-[#1e3a8a] text-white hover:bg-blue-800"
           )}
         >
-          {showForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />} 
+          {showForm ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
           {showForm ? 'CANCEL' : 'ADD NEW USER'}
         </button>
       </div>
@@ -131,12 +155,11 @@ const UsersPage = () => {
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1">
                 Password {form.id && <span className="text-slate-400 font-normal lowercase">(leave blank to keep current)</span>}
               </label>
-              <input 
-                type="password" 
+              <PasswordInput 
                 value={form.password} 
                 onChange={e => setForm({ ...form, password: e.target.value })} 
                 required={!form.id} 
-                className="w-full px-3 py-2 border border-slate-200 rounded text-sm focus:outline-none focus:border-blue-500 font-bold text-slate-700" 
+                placeholder={form.id ? '••••••••' : 'Enter password'}
               />
             </div>
             <div>
@@ -178,6 +201,7 @@ const UsersPage = () => {
               <tr>
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">User</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Role scope</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">2FA Status</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Added</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Actions</th>
               </tr>
@@ -185,7 +209,7 @@ const UsersPage = () => {
             <tbody className="divide-y divide-slate-100">
               {users.length === 0 && !loading ? (
                 <tr>
-                  <td colSpan="4" className="px-6 py-12 text-center text-slate-500 text-sm">
+                  <td colSpan="5" className="px-6 py-12 text-center text-slate-500 text-sm">
                     No users found.
                   </td>
                 </tr>
@@ -215,11 +239,37 @@ const UsersPage = () => {
                         </span>
                       </div>
                     </td>
+                    <td className="px-6 py-4">
+                      {user.twoFactorEnabled ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                            Aktiv 2FA
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">Ikke aktiveret</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-xs text-slate-500">
                       {new Date(user.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-1">
+                      <div className="flex justify-end items-center gap-1">
+                        {user.twoFactorEnabled && (
+                          <button
+                            onClick={() => handleReset2fa(user)}
+                            disabled={resetting2faId === user.id}
+                            className="p-2 text-amber-600 hover:text-amber-800 hover:bg-amber-50 rounded transition-colors"
+                            title="Nulstil 2FA for denne bruger"
+                          >
+                            {resetting2faId === user.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RotateCcw className="h-4 w-4" />
+                            )}
+                          </button>
+                        )}
                         <button
                           onClick={() => handleEdit(user)}
                           className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"

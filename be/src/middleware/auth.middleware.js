@@ -9,6 +9,10 @@ const verifyToken = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
+    // Short-lived tokens issued for a purpose (e.g. the 2FA step) are never valid sessions
+    if (decoded.purpose) {
+      return res.status(401).json({ message: 'Unauthorized: Invalid token' });
+    }
     req.user = decoded;
     if (req.user.userId && !req.user.id) {
       req.user.id = req.user.userId;

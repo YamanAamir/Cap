@@ -4,6 +4,13 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute, PublicRoute } from './components/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import Security2faPage from './pages/Security2faPage';
+import EmailLogsPage from './pages/EmailLogsPage';
+import WebhookLogsPage from './pages/WebhookLogsPage';
+import AuditLogsPage from './pages/AuditLogsPage';
+import LoginHistoryPage from './pages/LoginHistoryPage';
+import InstallmentJobsPage from './pages/InstallmentJobsPage';
 import DashboardLayout from './components/layout/DashboardLayout';
 import DashboardPage from './pages/DashboardPage';
 import OrdersPage from './pages/OrdersPage';
@@ -48,6 +55,15 @@ function App() {
           />
 
           <Route
+            path="/reset-password"
+            element={
+              <PublicRoute>
+                <ResetPasswordPage />
+              </PublicRoute>
+            }
+          />
+
+          <Route
             path="/dashboard"
             element={
               <ProtectedRoute>
@@ -64,11 +80,17 @@ function App() {
             <Route path="production" element={<ProductionPage />} />
             <Route path="discounts" element={<DiscountCodesPage />} />
             <Route path="installments" element={<InstallmentPlansPage />} />
+            <Route path="installment-jobs" element={<InstallmentJobsPage />} />
 
             <Route path="statuses" element={<OrderStatusesPage />} />
             <Route path="sms" element={<SmsCampaignsPage />} />
             <Route path="excel" element={<ExcelConfigPage />} />
             <Route path="emails" element={<EmailTemplatesPage />} />
+            <Route path="logs/emails" element={<EmailLogsPage />} />
+            <Route path="logs/webhooks" element={<WebhookLogsPage />} />
+            <Route path="logs/audit" element={<AuditLogsPage />} />
+            <Route path="logs/logins" element={<LoginHistoryPage />} />
+            <Route path="security" element={<Security2faPage />} />
             <Route path="settings/configurator" element={<ConfiguratorSettingsPage />} />
             <Route path="settings/production" element={<ProductionSettingsPage />} />
             <Route path="users" element={<UsersPage />} />

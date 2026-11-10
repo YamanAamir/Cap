@@ -78,4 +78,6 @@ const Badge = ({ className, variant = "default", ...props }) => {
   )
 }
 
-export { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Badge }
+import PasswordInput from "./PasswordInput"
+
+export { Button, Input, PasswordInput, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Badge }

@@ -65,3 +65,24 @@ export const getInstallmentPlans = () => api.get('/admin/installment-plans').the
 export const createInstallmentPlan = (data) => api.post('/admin/installment-plans', data).then(r => r.data);
 export const updateInstallmentPlan = (id, data) => api.put(`/admin/installment-plans/${id}`, data).then(r => r.data);
 export const deleteInstallmentPlan = (id) => api.delete(`/admin/installment-plans/${id}`).then(r => r.data);
+
+// ─── Installment Automation Jobs ───
+export const getInstallmentJobs = () => api.get('/admin/installment-jobs').then(r => r.data);
+export const createInstallmentJob = (data) => api.post('/admin/installment-jobs', data).then(r => r.data);
+export const updateInstallmentJob = (id, data) => api.put(`/admin/installment-jobs/${id}`, data).then(r => r.data);
+export const toggleInstallmentJob = (id) => api.post(`/admin/installment-jobs/${id}/toggle`).then(r => r.data);
+export const deleteInstallmentJob = (id) => api.delete(`/admin/installment-jobs/${id}`).then(r => r.data);
+export const previewInstallmentJob = (id) => api.get(`/admin/installment-jobs/${id}/preview`).then(r => r.data);
+export const runInstallmentJobNow = (id, orderIds = null) => api.post(`/admin/installment-jobs/${id}/run`, { orderIds }).then(r => r.data);
+export const getInstallmentJobLogs = (params) => api.get('/admin/installment-jobs/logs', { params }).then(r => r.data);
+
+// ─── Logs & Security ───
+export const getAuditLogs = (params) => api.get('/admin/audit-logs', { params }).then(r => r.data);
+export const getLoginHistory = (params) => api.get('/admin/login-history', { params }).then(r => r.data);
+export const getEmailLogs = (params) => api.get('/admin/email-logs', { params }).then(r => r.data);
+export const getEmailLog = (id) => api.get(`/admin/email-logs/${id}`).then(r => r.data);
+export const resendEmail = (id, to = null) => api.post(`/admin/email-logs/${id}/resend`, { to }).then(r => r.data);
+export const resendEmailsBulk = (ids) => api.post('/admin/email-logs/resend-bulk', { ids }).then(r => r.data);
+export const getWebhookLogs = (params) => api.get('/admin/webhook-logs', { params }).then(r => r.data);
+export const getWebhookLog = (id) => api.get(`/admin/webhook-logs/${id}`).then(r => r.data);
+export const resetUser2fa = (userId) => api.post(`/admin/users/${userId}/reset-2fa`).then(r => r.data);

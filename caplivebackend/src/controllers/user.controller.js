@@ -10,6 +10,8 @@ exports.getUsers = async (req, res) => {
         email: true,
         role: true,
         createdAt: true,
+        twoFactorEnabled: true,
+        lastLoginAt: true,
       }
     });
     res.json(users);

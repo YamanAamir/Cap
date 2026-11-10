@@ -787,4 +787,5 @@ module.exports = {
   updateOrder,
   deleteOrder,
   resendOrderEmails,
+  processSingleOrderStatusUpdate,
 };

@@ -14,8 +14,150 @@ model User {
   password              String
   role                  String                  @default("user")
   createdAt             DateTime                @default(now())
+  twoFactorEnabled      Boolean                 @default(false)
+  backupCodes           String?                 @db.LongText
+  resetTokenHash        String?
+  resetTokenExpires     DateTime?
+  lastLoginAt           DateTime?
   productionBatchesSent ProductionBatch[]
   dispatchLogs          ProductionDispatchLog[]
+  authenticators        UserAuthenticator[]
+}
+
+// ─── Security: 2FA authenticator devices (multiple per user) ───
+model UserAuthenticator {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  name       String
+  secretEnc  String    @db.Text
+  verified   Boolean   @default(false)
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─── Security: login history (IP + device) ───
+model LoginHistory {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  email     String
+  success   Boolean
+  reason    String?
+  ip        String?
+  userAgent String?  @db.Text
+  device    String?
+  browser   String?
+  os        String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([email])
+  @@index([createdAt])
+}
+
+// ─── Security: audit trail of every admin write action ───
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int?
+  userName   String?
+  userEmail  String?
+  action     String
+  method     String?
+  path       String?
+  statusCode Int?
+  entity     String?
+  entityId   String?
+  details    String?  @db.LongText
+  ip         String?
+  userAgent  String?  @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ─── Logs: every outgoing email (status + content for resend) ───
+model EmailLog {
+  id                   Int       @id @default(autoincrement())
+  toEmail              String    @db.Text
+  fromEmail            String?
+  subject              String?   @db.Text
+  orderNumber          String?
+  status               String    @default("SENT")
+  error                String?   @db.Text
+  messageId            String?
+  html                 String?   @db.LongText
+  textBody             String?   @db.LongText
+  attachments          String?   @db.LongText
+  attachmentsTruncated Boolean   @default(false)
+  optionsJson          String?   @db.Text
+  resendOfId           Int?
+  resentCount          Int       @default(0)
+  lastResentAt         DateTime?
+  createdAt            DateTime  @default(now())
+
+  @@index([status])
+  @@index([orderNumber])
+  @@index([createdAt])
+}
+
+// ─── Logs: every incoming payment webhook ───
+model WebhookLog {
+  id         Int      @id @default(autoincrement())
+  provider   String
+  eventType  String?
+  eventId    String?
+  reference  String?
+  status     String   @default("RECEIVED")
+  httpStatus Int?
+  error      String?  @db.Text
+  payload    String?  @db.LongText
+  durationMs Int?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([provider])
+  @@index([status])
+  @@index([reference])
+  @@index([createdAt])
+}
+
+// ─── Installment automation: "N months/days after the previous payment, move order to status X" ───
+model InstallmentJob {
+  id               Int      @id @default(autoincrement())
+  name             String
+  statusId         Int
+  delayValue       Int
+  delayUnit        String   @default("MONTHS")
+  sendTime         String   @default("09:00")
+  onlyOrdersAfter  DateTime?
+  apiBaseUrl       String?
+  isActive         Boolean  @default(false)
+  lastRunAt        DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([statusId])
+}
+
+model InstallmentJobLog {
+  id               Int      @id @default(autoincrement())
+  jobId            Int
+  jobName          String?
+  orderId          Int
+  orderNumber      String?
+  customerEmail    String?
+  installmentIndex Int
+  status           String
+  message          String?  @db.Text
+  trigger          String   @default("AUTO")
+  createdAt        DateTime @default(now())
+
+  @@index([jobId, orderId])
+  @@index([createdAt])
 }
 
 model Flag {
@@ -31,7 +173,6 @@ model Customer {
   name                  String
   email                 String                  @unique
   phone                 String?                 @unique
-  school                String?
   orderEmailConsent     Boolean                 @default(true)
   smsMarketingConsent   Boolean                 @default(false)
   emailMarketingConsent Boolean                 @default(false)
@@ -41,78 +182,84 @@ model Customer {
   smsOptOutAt           DateTime?
   createdAt             DateTime                @default(now())
   updatedAt             DateTime                @updatedAt
-  orders                Order[]
+  school                String?
   discountCodes         DiscountCode[]
-  smsMessages           SmsMessage[]
+  orders                Order[]
   campaignEnrollments   SmsCampaignEnrollment[]
+  smsMessages           SmsMessage[]
 }
 
 model OrderStatus {
-  id                    Int            @id @default(autoincrement())
-  name                  String         @unique
-  slug                  String         @unique
-  sortOrder             Int            @default(0)
-  isInternal            Boolean        @default(false)
-  isVisibleToProduction Boolean        @default(true)
-  triggersProduction    Boolean        @default(false)
-  isActive              Boolean        @default(true)
-  color                 String         @default("#6366f1")
+  id                      Int            @id @default(autoincrement())
+  name                    String         @unique
+  slug                    String         @unique
+  sortOrder               Int            @default(0)
+  isInternal              Boolean        @default(false)
+  triggersProduction      Boolean        @default(false)
+  isActive                Boolean        @default(true)
+  color                   String         @default("#6366f1")
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
   customerEmailTemplateId Int?
-  emailTemplate         EmailTemplate? @relation(fields: [customerEmailTemplateId], references: [id])
-  isInstallmentTrigger  Boolean        @default(false)
+  isVisibleToProduction   Boolean        @default(true)
   installmentTriggerIndex Int?
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
-  orders                Order[]
+  isInstallmentTrigger    Boolean        @default(false)
+  orders                  Order[]
+  emailTemplate           EmailTemplate? @relation(fields: [customerEmailTemplateId], references: [id])
+
+  @@index([customerEmailTemplateId], map: "OrderStatus_customerEmailTemplateId_fkey")
 }
 
 model Order {
-  id              Int      @id @default(autoincrement())
-  orderNumber     String
-  customerEmail   String
-  customerDetails Json
-  selectedOptions Json
-  totalPrice      Float
-  currency        String
-  orderDate       DateTime @default(now())
-  status          String   @default("PENDING")
-  packageName     String?
-  program         String?
-
-  customerId       Int?
-  customer         Customer?     @relation(fields: [customerId], references: [id])
-  statusId         Int?
-  orderStatus      OrderStatus?  @relation(fields: [statusId], references: [id])
-  discountCodeId   Int?
-  discountCode     DiscountCode? @relation(fields: [discountCodeId], references: [id])
-  discountAmount   Float?
-  capImages        Json?
-  productionBatchId Int?
-  productionBatch  ProductionBatch? @relation(fields: [productionBatchId], references: [id])
-
+  id                 Int              @id @default(autoincrement())
+  orderNumber        String
+  customerEmail      String
+  customerDetails    String           @db.LongText
+  selectedOptions    String           @db.LongText
+  totalPrice         Float
+  currency           String
+  orderDate          DateTime         @default(now())
+  status             String           @default("PENDING")
+  packageName        String?
+  program            String?
+  customerId         Int?
+  statusId           Int?
+  discountCodeId     Int?
+  discountAmount     Float?
+  capImages          String?          @db.LongText
+  productionBatchId  Int?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  installmentDetails String?          @db.LongText
   installmentPlanId  Int?
+  customer           Customer?        @relation(fields: [customerId], references: [id])
+  discountCode       DiscountCode?    @relation(fields: [discountCodeId], references: [id])
   installmentPlan    InstallmentPlan? @relation(fields: [installmentPlanId], references: [id])
-  installmentDetails Json?
+  productionBatch    ProductionBatch? @relation(fields: [productionBatchId], references: [id])
+  orderStatus        OrderStatus?     @relation(fields: [statusId], references: [id])
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  @@index([customerId], map: "Order_customerId_fkey")
+  @@index([discountCodeId], map: "Order_discountCodeId_fkey")
+  @@index([installmentPlanId], map: "Order_installmentPlanId_fkey")
+  @@index([productionBatchId], map: "Order_productionBatchId_fkey")
+  @@index([statusId], map: "Order_statusId_fkey")
 }
 
 model DiscountCode {
-  id            Int       @id @default(autoincrement())
-  code          String    @unique
+  id            Int                     @id @default(autoincrement())
+  code          String                  @unique
   type          String
   value         Float
   expiresAt     DateTime
-  isActive      Boolean   @default(true)
+  isActive      Boolean                 @default(true)
   phoneNumber   String?
   customerId    Int?
-  customer      Customer? @relation(fields: [customerId], references: [id])
   usedAt        DateTime?
   usedByOrderId Int?
   source        String?
   maxUses       Int?
-  createdAt     DateTime  @default(now())
+  createdAt     DateTime                @default(now())
+  customer      Customer?               @relation(fields: [customerId], references: [id])
   orders        Order[]
   enrollments   SmsCampaignEnrollment[]
 
@@ -128,7 +275,7 @@ model SmsCampaign {
   discountValue             Float?
   weekdaySendTime           String?                 @default("16:00")
   weekendSendTime           String?                 @default("12:00")
-  allowedDays               Json?
+  allowedDays               String?                 @db.LongText
   sendImmediateOnEnrollment Boolean                 @default(true)
   createdAt                 DateTime                @default(now())
   updatedAt                 DateTime                @updatedAt
@@ -139,32 +286,36 @@ model SmsCampaign {
 model SmsCampaignStep {
   id         Int         @id @default(autoincrement())
   campaignId Int
-  campaign   SmsCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   dayOffset  Int
   message    String      @db.Text
   sortOrder  Int         @default(0)
   isActive   Boolean     @default(true)
+  campaign   SmsCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId], map: "SmsCampaignStep_campaignId_fkey")
 }
 
 model SmsCampaignEnrollment {
-  id             Int          @id @default(autoincrement())
+  id             Int           @id @default(autoincrement())
   campaignId     Int
-  campaign       SmsCampaign  @relation(fields: [campaignId], references: [id])
   customerId     Int
-  customer       Customer     @relation(fields: [customerId], references: [id])
   discountCodeId Int?
-  discountCode   DiscountCode? @relation(fields: [discountCodeId], references: [id])
-  enrolledAt     DateTime     @default(now())
+  enrolledAt     DateTime      @default(now())
   completedAt    DateTime?
+  campaign       SmsCampaign   @relation(fields: [campaignId], references: [id], onDelete: NoAction)
+  customer       Customer      @relation(fields: [customerId], references: [id], onDelete: NoAction)
+  discountCode   DiscountCode? @relation(fields: [discountCodeId], references: [id])
   messages       SmsMessage[]
+
+  @@index([campaignId], map: "SmsCampaignEnrollment_campaignId_fkey")
+  @@index([customerId], map: "SmsCampaignEnrollment_customerId_fkey")
+  @@index([discountCodeId], map: "SmsCampaignEnrollment_discountCodeId_fkey")
 }
 
 model SmsMessage {
   id           Int                    @id @default(autoincrement())
   customerId   Int
-  customer     Customer               @relation(fields: [customerId], references: [id])
   enrollmentId Int?
-  enrollment   SmsCampaignEnrollment? @relation(fields: [enrollmentId], references: [id])
   phone        String
   message      String                 @db.Text
   status       String                 @default("SCHEDULED")
@@ -172,6 +323,11 @@ model SmsMessage {
   scheduledFor DateTime
   sentAt       DateTime?
   createdAt    DateTime               @default(now())
+  customer     Customer               @relation(fields: [customerId], references: [id], onDelete: NoAction)
+  enrollment   SmsCampaignEnrollment? @relation(fields: [enrollmentId], references: [id])
+
+  @@index([customerId], map: "SmsMessage_customerId_fkey")
+  @@index([enrollmentId], map: "SmsMessage_enrollmentId_fkey")
 }
 
 model ExcelColumnConfig {
@@ -195,58 +351,63 @@ model ProductionBatch {
   recipientEmail String?
   sentAt         DateTime?
   sentByUserId   Int?
-  sentByUser     User?                   @relation(fields: [sentByUserId], references: [id])
   createdAt      DateTime                @default(now())
   updatedAt      DateTime                @updatedAt
   orders         Order[]
+  sentByUser     User?                   @relation(fields: [sentByUserId], references: [id])
   logs           ProductionDispatchLog[]
+
+  @@index([sentByUserId], map: "ProductionBatch_sentByUserId_fkey")
 }
 
 model ProductionDispatchLog {
   id          Int             @id @default(autoincrement())
   batchId     Int
-  batch       ProductionBatch @relation(fields: [batchId], references: [id])
   adminUserId Int
-  adminUser   User            @relation(fields: [adminUserId], references: [id])
   orderCount  Int
-  fileNames   Json
+  fileNames   String          @db.LongText
   sentAt      DateTime        @default(now())
+  adminUser   User            @relation(fields: [adminUserId], references: [id], onDelete: NoAction)
+  batch       ProductionBatch @relation(fields: [batchId], references: [id], onDelete: NoAction)
+
+  @@index([adminUserId], map: "ProductionDispatchLog_adminUserId_fkey")
+  @@index([batchId], map: "ProductionDispatchLog_batchId_fkey")
 }
 
 model EmailTemplate {
   id        Int           @id @default(autoincrement())
   key       String        @unique
-  name      String?
   subject   String
   body      String        @db.Text
   updatedAt DateTime      @updatedAt
+  name      String?
   statuses  OrderStatus[]
 }
 
 model SystemSetting {
   id    Int    @id @default(autoincrement())
   key   String @unique
-  value Json
+  value String @db.LongText
 }
 
 model TempOrder {
   id        String   @id @default(uuid())
-  orderData Json
+  orderData String   @db.LongText
   createdAt DateTime @default(now())
 }
 
 model InstallmentPlan {
-  id                  Int      @id @default(autoincrement())
-  name                String
-  program             String   // "STX" | "HHX" | ... | "all"
-  packageTier         String   // "standard" | "luksus" | "premium" | "all"
-  isActive            Boolean  @default(true)
-  downPaymentAmount   Float    @default(399)
-  installments        Json     // [{ label: String, dueLabel: String }]
-  notes               String?  @db.Text
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  orders              Order[]
+  id                Int      @id @default(autoincrement())
+  name              String
+  program           String
+  packageTier       String
+  isActive          Boolean  @default(true)
+  installments      String   @db.LongText
+  notes             String?  @db.Text
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  downPaymentAmount Float    @default(399)
+  orders            Order[]
 }
 
 model WebshopProduct {
@@ -259,7 +420,7 @@ model WebshopProduct {
   stockCount       Int      @default(0)
   isActive         Boolean  @default(true)
   isOutOfStock     Boolean  @default(false)
-  images           Json?
+  images           String?   @db.LongText
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
@@ -269,7 +430,7 @@ model WebshopCustomer {
   name      String
   email     String         @unique
   phone     String?
-  address   Json?
+  address   String?         @db.LongText
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
   orders    WebshopOrder[]
@@ -280,9 +441,9 @@ model WebshopOrder {
   orderNumber       String           @unique
   stripeSessionId   String?          @unique
   customerEmail     String
-  customerDetails   Json
-  shippingAddress   Json?
-  items             Json
+  customerDetails   String           @db.LongText
+  shippingAddress   String?          @db.LongText
+  items             String   	       @db.LongText
   totalAmount       Float
   currency          String           @default("DKK")
   paymentStatus     String           @default("PAID")
@@ -319,5 +480,3 @@ model WebshopOrderStatus {
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
 }
-
-

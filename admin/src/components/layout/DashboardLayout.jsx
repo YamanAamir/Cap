@@ -4,7 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import {
   LayoutDashboard, ShoppingCart, LogOut, Menu, Flag, Users, Factory,
   ListOrdered, Tag, MessageSquare, FileSpreadsheet, Mail, Settings, CreditCard,
-  Image as ImageIcon, ShoppingBag, Globe
+  Image as ImageIcon, ShoppingBag, Globe, Clock, MailCheck, Webhook,
+  ShieldCheck, History, KeyRound
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -19,13 +20,17 @@ const getNavItems = (role, mode) => {
       { title: 'Customers', icon: Users, path: '/dashboard/webshop/customers' },
       { title: 'Order Statuses', icon: ListOrdered, path: '/dashboard/webshop/statuses' },
       { title: 'Email Templates', icon: Mail, path: '/dashboard/webshop/emails' },
+      { title: 'Email Logs', icon: MailCheck, path: '/dashboard/logs/emails' },
+      { title: 'Webhook Logs', icon: Webhook, path: '/dashboard/logs/webhooks' },
+      { title: 'Security & 2FA', icon: KeyRound, path: '/dashboard/security' },
     ];
   }
 
   if (role === 'production') {
     return [
       { title: 'Production Tasks', icon: Factory, path: '/dashboard/factory' },
-      { title: 'Factory Media', icon: ImageIcon, path: '/dashboard/factory/media' }
+      { title: 'Factory Media', icon: ImageIcon, path: '/dashboard/factory/media' },
+      { title: 'Security & 2FA', icon: KeyRound, path: '/dashboard/security' }
     ];
   }
   return [
@@ -40,6 +45,12 @@ const getNavItems = (role, mode) => {
     { title: 'SMS Campaigns', icon: MessageSquare, path: '/dashboard/sms' },
     { title: 'Discount Codes', icon: Tag, path: '/dashboard/discounts' },
     { title: 'Installment Plans', icon: CreditCard, path: '/dashboard/installments' },
+    { title: 'Auto Installment Jobs', icon: Clock, path: '/dashboard/installment-jobs' },
+    { title: 'Email Logs', icon: MailCheck, path: '/dashboard/logs/emails' },
+    { title: 'Webhook Logs', icon: Webhook, path: '/dashboard/logs/webhooks' },
+    { title: 'Audit Trail', icon: ShieldCheck, path: '/dashboard/logs/audit' },
+    { title: 'Login History', icon: History, path: '/dashboard/logs/logins' },
+    { title: 'Security & 2FA', icon: KeyRound, path: '/dashboard/security' },
     { title: 'Configurator', icon: Settings, path: '/dashboard/settings/configurator' },
 
     { title: 'Production Settings', icon: Factory, path: '/dashboard/settings/production' },
@@ -59,6 +70,12 @@ const pageTitles = {
   '/dashboard/sms': 'SMS Campaigns',
   '/dashboard/discounts': 'Discount Codes',
   '/dashboard/installments': 'Installment Plans',
+  '/dashboard/installment-jobs': 'Auto Installment Jobs',
+  '/dashboard/logs/emails': 'Email Delivery Logs',
+  '/dashboard/logs/webhooks': 'Webhook Logs',
+  '/dashboard/logs/audit': 'Audit Logs',
+  '/dashboard/logs/logins': 'Login History',
+  '/dashboard/security': 'Security & 2FA',
   '/dashboard/settings/configurator': 'Configurator Settings',
 
   '/dashboard/settings/production': 'Production Display Settings',
@@ -86,6 +103,12 @@ const pageSubtitles = {
   '/dashboard/sms': 'SMS Marketing Listing',
   '/dashboard/discounts': 'StudentLife Coupon Listing',
   '/dashboard/installments': 'Manage Installment Plans',
+  '/dashboard/installment-jobs': 'Scheduled & delayed rate status triggers',
+  '/dashboard/logs/emails': 'Outgoing email logs, status & resend',
+  '/dashboard/logs/webhooks': 'Frisbii / Flatpay and Stripe incoming webhooks',
+  '/dashboard/logs/audit': 'Administrative action audit trail',
+  '/dashboard/logs/logins': 'Sign-in history, devices and IPs',
+  '/dashboard/security': 'Multi-Factor Authenticator (2FA) & Active Devices',
   '/dashboard/settings/configurator': 'Manage prices and availability',
 
   '/dashboard/users': 'Manage Admin Permissions',

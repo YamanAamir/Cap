@@ -2,6 +2,8 @@ const cron = require('node-cron');
 const { createProductionBatch, sendProductionBatch } = require('../services/core.service');
 const { processPendingSms } = require('../services/sms.service');
 const prisma = require('../utils/prisma');
+const { runAllActiveJobs } = require('../services/installmentJob.service');
+const { cleanupOldLogs } = require('../utils/audit');
 
 const startScheduledJobs = () => {
 
@@ -48,6 +50,20 @@ const startScheduledJobs = () => {
       console.error('[CRON] SMS processing error:', err.message);
     }
   });
+
+  // Installment automation – checks every 5 minutes which orders are due for their next installment
+  cron.schedule('*/5 * * * *', async () => {
+    try {
+      await runAllActiveJobs();
+    } catch (err) {
+      console.error('[CRON] Installment jobs error:', err.message);
+    }
+  }, { timezone: 'Europe/Copenhagen' });
+
+  // Nightly cleanup of old log rows
+  cron.schedule('30 3 * * *', async () => {
+    await cleanupOldLogs();
+  }, { timezone: 'Europe/Copenhagen' });
 
   console.log('Scheduled jobs started');
 };

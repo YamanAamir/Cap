@@ -62,15 +62,8 @@ exports.adminUploadProductImage = async (req, res) => {
 };
 
 const createEmailTransporter = () => {
-  return nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || "smtp.simply.com",
-    port: parseInt(process.env.EMAIL_PORT || "465"),
-    secure: process.env.EMAIL_SECURE !== "false",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
+  // Shared pooled transporter (also writes every email to the Email Logs section)
+  return require('../utils/mailer').getTransporter();
 };
 
 // Helper: Slugify string

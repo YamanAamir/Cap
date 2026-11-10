@@ -11,28 +11,31 @@ const adminRoutes = require('./routes/admin.routes');
 const marketingRoutes = require('./routes/marketing.routes');
 const webshopRoutes = require('./routes/webshop.routes');
 const cookieParser = require('cookie-parser');
+const { withWebhookLog } = require('./utils/webhookLog');
+const { auditMiddleware } = require('./utils/audit');
 
 const app = express();
 
 // ✅ STRIPE WEBHOOK (MUST BE FIRST, NO JSON HERE)
 // ✅ WEBHOOKS (Stripe, Frisbii / Flatpay)
 // Stripe requires raw body for HMAC verification; Frisbii fallback also supported on /api/webhook
+// Every call is recorded in WebhookLog (Dashboard → Webhook Logs) without changing the handler's behaviour.
 app.post(
   "/api/webhook",
   express.raw({ type: "application/json" }),
-  webhookController.stripeWebhook
+  withWebhookLog('stripe', webhookController.stripeWebhook)
 );
 
 // Dedicated endpoints for Frisbii / Flatpay Webhooks
 app.post(
   "/api/webhook/frisbii",
   express.json({ limit: "10mb" }),
-  webhookController.frisbiiWebhook
+  withWebhookLog('frisbii', webhookController.frisbiiWebhook)
 );
 app.post(
   "/api/webhook/flatpay",
   express.json({ limit: "10mb" }),
-  webhookController.frisbiiWebhook
+  withWebhookLog('frisbii', webhookController.frisbiiWebhook)
 );
 
 app.use(express.json({ limit: "50mb" }));
@@ -75,6 +78,9 @@ app.use((req, res, next) => {
 });
 
 app.use(cookieParser());
+
+// Audit trail of authenticated write actions (who / what / when / IP)
+app.use(auditMiddleware);
 
 app.use(cors({
   origin: true,

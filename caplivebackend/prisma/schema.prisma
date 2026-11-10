@@ -14,8 +14,150 @@ model User {
   password              String
   role                  String                  @default("user")
   createdAt             DateTime                @default(now())
+  twoFactorEnabled      Boolean                 @default(false)
+  backupCodes           String?                 @db.LongText
+  resetTokenHash        String?
+  resetTokenExpires     DateTime?
+  lastLoginAt           DateTime?
   productionBatchesSent ProductionBatch[]
   dispatchLogs          ProductionDispatchLog[]
+  authenticators        UserAuthenticator[]
+}
+
+// ─── Security: 2FA authenticator devices (multiple per user) ───
+model UserAuthenticator {
+  id         Int       @id @default(autoincrement())
+  userId     Int
+  name       String
+  secretEnc  String    @db.Text
+  verified   Boolean   @default(false)
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─── Security: login history (IP + device) ───
+model LoginHistory {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  email     String
+  success   Boolean
+  reason    String?
+  ip        String?
+  userAgent String?  @db.Text
+  device    String?
+  browser   String?
+  os        String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([email])
+  @@index([createdAt])
+}
+
+// ─── Security: audit trail of every admin write action ───
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int?
+  userName   String?
+  userEmail  String?
+  action     String
+  method     String?
+  path       String?
+  statusCode Int?
+  entity     String?
+  entityId   String?
+  details    String?  @db.LongText
+  ip         String?
+  userAgent  String?  @db.Text
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ─── Logs: every outgoing email (status + content for resend) ───
+model EmailLog {
+  id                   Int       @id @default(autoincrement())
+  toEmail              String    @db.Text
+  fromEmail            String?
+  subject              String?   @db.Text
+  orderNumber          String?
+  status               String    @default("SENT")
+  error                String?   @db.Text
+  messageId            String?
+  html                 String?   @db.LongText
+  textBody             String?   @db.LongText
+  attachments          String?   @db.LongText
+  attachmentsTruncated Boolean   @default(false)
+  optionsJson          String?   @db.Text
+  resendOfId           Int?
+  resentCount          Int       @default(0)
+  lastResentAt         DateTime?
+  createdAt            DateTime  @default(now())
+
+  @@index([status])
+  @@index([orderNumber])
+  @@index([createdAt])
+}
+
+// ─── Logs: every incoming payment webhook ───
+model WebhookLog {
+  id         Int      @id @default(autoincrement())
+  provider   String
+  eventType  String?
+  eventId    String?
+  reference  String?
+  status     String   @default("RECEIVED")
+  httpStatus Int?
+  error      String?  @db.Text
+  payload    String?  @db.LongText
+  durationMs Int?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([provider])
+  @@index([status])
+  @@index([reference])
+  @@index([createdAt])
+}
+
+// ─── Installment automation: "N months/days after the previous payment, move order to status X" ───
+model InstallmentJob {
+  id               Int      @id @default(autoincrement())
+  name             String
+  statusId         Int
+  delayValue       Int
+  delayUnit        String   @default("MONTHS")
+  sendTime         String   @default("09:00")
+  onlyOrdersAfter  DateTime?
+  apiBaseUrl       String?
+  isActive         Boolean  @default(false)
+  lastRunAt        DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([statusId])
+}
+
+model InstallmentJobLog {
+  id               Int      @id @default(autoincrement())
+  jobId            Int
+  jobName          String?
+  orderId          Int
+  orderNumber      String?
+  customerEmail    String?
+  installmentIndex Int
+  status           String
+  message          String?  @db.Text
+  trigger          String   @default("AUTO")
+  createdAt        DateTime @default(now())
+
+  @@index([jobId, orderId])
+  @@index([createdAt])
 }
 
 model Flag {

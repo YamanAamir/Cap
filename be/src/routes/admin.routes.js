@@ -4,6 +4,9 @@ const adminController = require('../controllers/admin.controller');
 const userController = require('../controllers/user.controller');
 const settingsController = require('../controllers/settings.controller');
 const installmentController = require('../controllers/installment.controller');
+const installmentJobController = require('../controllers/installmentJob.controller');
+const twoFactorController = require('../controllers/twofactor.controller');
+const logController = require('../controllers/log.controller');
 const { verifyToken, isAdmin, isAdminOrProduction } = require('../middleware/auth.middleware');
 
 
@@ -80,5 +83,26 @@ router.get('/installment-plans', admin, installmentController.getInstallmentPlan
 router.post('/installment-plans', admin, installmentController.createInstallmentPlan);
 router.put('/installment-plans/:id', admin, installmentController.updateInstallmentPlan);
 router.delete('/installment-plans/:id', admin, installmentController.deleteInstallmentPlan);
+
+// Installment automation jobs
+router.get('/installment-jobs', admin, installmentJobController.listJobs);
+router.post('/installment-jobs', admin, installmentJobController.createJob);
+router.get('/installment-jobs/logs', admin, installmentJobController.getJobLogs);
+router.put('/installment-jobs/:id', admin, installmentJobController.updateJob);
+router.post('/installment-jobs/:id/toggle', admin, installmentJobController.toggleJob);
+router.get('/installment-jobs/:id/preview', admin, installmentJobController.previewJob);
+router.post('/installment-jobs/:id/run', admin, installmentJobController.runJobNow);
+router.delete('/installment-jobs/:id', admin, installmentJobController.deleteJob);
+
+// Security & logs (super-admin only)
+router.post('/users/:id/reset-2fa', admin, twoFactorController.adminResetUser2fa);
+router.get('/audit-logs', admin, logController.getAuditLogs);
+router.get('/login-history', admin, logController.getLoginHistory);
+router.get('/email-logs', admin, logController.getEmailLogs);
+router.post('/email-logs/resend-bulk', admin, logController.resendEmailsBulk);
+router.get('/email-logs/:id', admin, logController.getEmailLog);
+router.post('/email-logs/:id/resend', admin, logController.resendEmail);
+router.get('/webhook-logs', admin, logController.getWebhookLogs);
+router.get('/webhook-logs/:id', admin, logController.getWebhookLog);
 
 module.exports = router;
