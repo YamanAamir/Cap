@@ -240,7 +240,6 @@ const registerLead = async (req, res) => {
     const fullName = String(req.body.full_name || req.body.name || '').trim();
     const rawEmail = String(req.body.email || '').trim().toLowerCase();
     const rawPhone = String(req.body.phone || '').trim();
-    const school = req.body.school ? String(req.body.school).trim() : null;
 
     if (!fullName || fullName.length < 2) {
       return res.status(400).json({ success: false, error: 'Venligst indtast dit fulde navn.' });
@@ -270,7 +269,6 @@ const registerLead = async (req, res) => {
         data: {
           name: fullName || lead.name,
           phone: normalizedPhone || lead.phone,
-          school: school || lead.school,
           ip: ip || lead.ip,
           userAgent: userAgent || lead.userAgent,
           updatedAt: new Date()
@@ -282,7 +280,6 @@ const registerLead = async (req, res) => {
           name: fullName,
           email: rawEmail,
           phone: normalizedPhone,
-          school,
           ip,
           userAgent,
           source: 'wordpress_vip'
@@ -351,7 +348,7 @@ const registerLead = async (req, res) => {
           const adminNotificationHtml = generateOfficialStudentLifeEmailHtml({
             name: 'Administrator',
             headline: 'Ny VIP Tilmelding Modtaget 🔔',
-            bodyText: `En ny kunde har netop tilmeldt sig Black Week VIP-listen på studentlife.dk:\n\n• Navn: ${fullName}\n• E-mail: ${rawEmail}\n• Telefon: ${normalizedPhone}\n• Skole: ${school || 'Ikke angivet'}\n• Tidspunkt: ${formattedTime}\n\nKunden har automatisk modtaget bekræftelsesmailen.`,
+            bodyText: `En ny kunde har netop tilmeldt sig Black Week VIP-listen på studentlife.dk:\n\n• Navn: ${fullName}\n• E-mail: ${rawEmail}\n• Telefon: ${normalizedPhone}\n• Tidspunkt: ${formattedTime}\n\nKunden har automatisk modtaget bekræftelsesmailen.`,
             buttonText: '',
             buttonUrl: ''
           });
@@ -470,7 +467,6 @@ const getLeads = async (req, res) => {
         { name: { contains: q } },
         { email: { contains: q } },
         { phone: { contains: q } },
-        { school: { contains: q } },
       ];
     }
 
@@ -744,13 +740,12 @@ const exportLeadsCsv = async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    const headers = ['ID', 'Name', 'Email', 'Phone', 'School', 'Source', 'SMS Sent', 'Email Sent', 'Created At'];
+    const headers = ['ID', 'Name', 'Email', 'Phone', 'Source', 'SMS Sent', 'Email Sent', 'Created At'];
     const rows = leads.map(l => [
       l.id,
       `"${(l.name || '').replace(/"/g, '""')}"`,
       `"${(l.email || '').replace(/"/g, '""')}"`,
       `"${l.phone || ''}"`,
-      `"${(l.school || '').replace(/"/g, '""')}"`,
       `"${l.source || ''}"`,
       l.smsSentCount || 0,
       l.emailSentCount || 0,

@@ -625,11 +625,7 @@ export default function BlackFridayPage() {
                           </div>
                           <div>
                             <p className="font-semibold text-slate-900">{lead.name}</p>
-                            {lead.school ? (
-                              <p className="text-xs text-slate-400">{lead.school}</p>
-                            ) : (
-                              <p className="text-[11px] text-slate-400">WordPress VIP Registration</p>
-                            )}
+                            <p className="text-[11px] text-slate-400">WordPress VIP Registration</p>
                           </div>
                         </div>
                       </td>
