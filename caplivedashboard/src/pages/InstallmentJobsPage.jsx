@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Clock, Play, Pause, Plus, Trash2, Edit2, Eye, RefreshCw, AlertCircle,
-  CheckCircle2, XCircle, ArrowRight, ShieldCheck, Calendar, Filter, CheckSquare, Square,
-  Layers, ChevronRight, HelpCircle, Loader2
+  Clock, Play, Pause, Plus, Trash2, Edit2, Eye, RefreshCw,
+  CheckCircle2, XCircle, ShieldCheck, Layers, Loader2
 } from 'lucide-react';
 import {
   getInstallmentJobs, createInstallmentJob, updateInstallmentJob,
@@ -62,7 +61,7 @@ const InstallmentJobsPage = () => {
       setJobs(jobsRes || []);
       setOrderStatuses(statusesRes || []);
     } catch (err) {
-      toast.error('Kunne ikke hente afdrags-jobs');
+      toast.error('Failed to load installment jobs');
     } finally {
       setLoading(false);
     }
@@ -75,7 +74,7 @@ const InstallmentJobsPage = () => {
       setLogs(res.data || []);
       setLogsTotal(res.total || 0);
     } catch (err) {
-      toast.error('Kunne ikke hente afviklingslogs');
+      toast.error('Failed to load execution logs');
     } finally {
       setLogsLoading(false);
     }
@@ -95,10 +94,10 @@ const InstallmentJobsPage = () => {
   const handleSaveJob = async (e) => {
     e.preventDefault();
     if (!jobModal.name.trim()) {
-      return toast.error('Angiv venligst et navn til jobbet');
+      return toast.error('Please provide a name for the job');
     }
     if (!jobModal.targetStatusId) {
-      return toast.error('Vælg venligst en mål-ordrestatus');
+      return toast.error('Please select a target order status');
     }
 
     setSavingJob(true);
@@ -116,16 +115,16 @@ const InstallmentJobsPage = () => {
 
       if (jobModal.isEdit) {
         await updateInstallmentJob(jobModal.jobId, payload);
-        toast.success('Job opdateret');
+        toast.success('Job updated successfully');
       } else {
         await createInstallmentJob(payload);
-        toast.success('Automatisk job oprettet');
+        toast.success('Automated job created successfully');
       }
 
       setJobModal({ ...jobModal, isOpen: false });
       loadData();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Kunne ikke gemme job');
+      toast.error(err.response?.data?.message || 'Failed to save job');
     } finally {
       setSavingJob(false);
     }
@@ -135,22 +134,22 @@ const InstallmentJobsPage = () => {
   const handleToggle = async (job) => {
     try {
       await toggleInstallmentJob(job.id);
-      toast.success(job.isActive ? 'Job sat på pause' : 'Job aktiveret');
+      toast.success(job.isActive ? 'Job paused' : 'Job activated');
       loadData();
     } catch (err) {
-      toast.error('Kunne ikke ændre status');
+      toast.error('Failed to toggle job status');
     }
   };
 
   // Delete Job
   const handleDelete = async (job) => {
-    if (!window.confirm(`Er du sikker på, at du vil slette jobbet "${job.name}"?`)) return;
+    if (!window.confirm(`Are you sure you want to delete the job "${job.name}"?`)) return;
     try {
       await deleteInstallmentJob(job.id);
-      toast.success('Job slettet');
+      toast.success('Job deleted');
       loadData();
     } catch (err) {
-      toast.error('Kunne ikke slette job');
+      toast.error('Failed to delete job');
     }
   };
 
@@ -194,7 +193,7 @@ const InstallmentJobsPage = () => {
         selectedOrderIds: dueOrderIds,
       }));
     } catch (err) {
-      toast.error('Kunne ikke hente forhåndsvisning');
+      toast.error('Failed to load preview');
       setPreviewModal(prev => ({ ...prev, loading: false }));
     }
   };
@@ -203,17 +202,17 @@ const InstallmentJobsPage = () => {
   const handleRunNow = async (orderIds = null) => {
     const idsToRun = orderIds || previewModal.selectedOrderIds;
     if (!idsToRun || idsToRun.length === 0) {
-      return toast.error('Ingen ordrer valgt til afvikling');
+      return toast.error('No orders selected for trigger');
     }
 
-    if (!window.confirm(`Er du sikker på, at du vil udløse statusændring og afdrags-e-mails for ${idsToRun.length} ordre(r) nu?`)) {
+    if (!window.confirm(`Are you sure you want to trigger status update and installment emails for ${idsToRun.length} order(s) now?`)) {
       return;
     }
 
     setPreviewModal(prev => ({ ...prev, running: true }));
     try {
       const res = await runInstallmentJobNow(previewModal.job.id, idsToRun);
-      toast.success(`Afviklet: ${res.triggeredCount || 0} ordre(r) udløst succesfuldt!`);
+      toast.success(`Executed: ${res.triggeredCount || 0} order(s) triggered successfully!`);
       // Refresh preview
       const previewRes = await previewInstallmentJob(previewModal.job.id);
       setPreviewModal(prev => ({
@@ -224,7 +223,7 @@ const InstallmentJobsPage = () => {
       }));
       loadData();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Fejl under manuel afvikling');
+      toast.error(err.response?.data?.message || 'Error during manual trigger');
       setPreviewModal(prev => ({ ...prev, running: false }));
     }
   };
@@ -238,14 +237,14 @@ const InstallmentJobsPage = () => {
   const getStateBadge = (state) => {
     switch (state) {
       case 'DUE':
-        return <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded text-xs font-bold">Klar til udsendelse (DUE)</span>;
+        return <span className="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded text-xs font-bold">Ready to Trigger (DUE)</span>;
       case 'SCHEDULED':
-        return <span className="bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 rounded text-xs font-medium">Planlagt (Afventer dato)</span>;
+        return <span className="bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 rounded text-xs font-medium">Scheduled (Pending Date)</span>;
       case 'WAITING_PREVIOUS':
-        return <span className="bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded text-xs font-medium">Afventer Rate 2 betaling</span>;
+        return <span className="bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded text-xs font-medium">Waiting for Rate 2 Payment</span>;
       case 'ALREADY_IN_STATUS':
       case 'ALREADY_TRIGGERED':
-        return <span className="bg-gray-100 text-gray-600 border border-gray-200 px-2 py-0.5 rounded text-xs">Allerede udløst</span>;
+        return <span className="bg-gray-100 text-gray-600 border border-gray-200 px-2 py-0.5 rounded text-xs">Already Triggered</span>;
       default:
         return <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">{state}</span>;
     }
@@ -258,10 +257,10 @@ const InstallmentJobsPage = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Clock className="w-7 h-7 text-indigo-600" />
-            Automatiske Afdrags-Jobs (Installment Triggers)
+            Automated Installment Jobs
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Automatisk udløsning af rate-betalinger (Rate 2 & Rate 3) efter fastsat tidsinterval med indbygget sikkerhedslås.
+            Automated status updates and payment request emails for installment orders (Rate 2 & Rate 3) with safety locking.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -282,7 +281,7 @@ const InstallmentJobsPage = () => {
             className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
           >
             <Plus className="w-4 h-4" />
-            Opret Nyt Afdrags-Job
+            Create Installment Job
           </Button>
         </div>
       </div>
@@ -291,9 +290,9 @@ const InstallmentJobsPage = () => {
       <div className="bg-indigo-50/70 border border-indigo-200 rounded-xl p-4 flex items-start gap-3 text-sm text-indigo-950">
         <ShieldCheck className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
         <div className="space-y-1">
-          <p className="font-semibold text-indigo-900">Sikkerhedslås mod parallelle rater (Fail-Safe)</p>
+          <p className="font-semibold text-indigo-900">Fail-Safe Protection Against Simultaneous Rates</p>
           <p className="text-xs text-indigo-800 leading-relaxed">
-            Systemet beskytter automatisk mod, at Rate 2 og Rate 3 udløses samtidigt. Rate 3 vil <strong>aldrig</strong> blive udløst for en ordre, medmindre Rate 2 allerede er registreret som betalt, og det fastsatte tidsinterval er udløbet.
+            The system automatically prevents Rate 2 and Rate 3 from triggering simultaneously. Rate 3 will <strong>never</strong> trigger for an order unless Rate 2 is verified as PAID and the scheduled interval has passed.
           </p>
         </div>
       </div>
@@ -309,7 +308,7 @@ const InstallmentJobsPage = () => {
           }`}
         >
           <Layers className="w-4 h-4" />
-          Konfigurerede Jobs ({jobs.length})
+          Configured Jobs ({jobs.length})
         </button>
         <button
           onClick={() => setActiveTab('logs')}
@@ -320,7 +319,7 @@ const InstallmentJobsPage = () => {
           }`}
         >
           <Clock className="w-4 h-4" />
-          Afviklingslogs
+          Execution Logs
         </button>
       </div>
 
@@ -330,14 +329,14 @@ const InstallmentJobsPage = () => {
           {loading ? (
             <div className="bg-white p-12 text-center rounded-xl border border-gray-200 shadow-sm text-gray-400">
               <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-500" />
-              Indlæser afdrags-jobs...
+              Loading installment jobs...
             </div>
           ) : jobs.length === 0 ? (
             <div className="bg-white p-12 text-center rounded-xl border border-gray-200 shadow-sm text-gray-500 space-y-3">
               <Clock className="w-12 h-12 text-gray-300 mx-auto" />
-              <p className="text-base font-semibold text-gray-700">Ingen automatiske afdrags-jobs oprettet endnu</p>
+              <p className="text-base font-semibold text-gray-700">No automated installment jobs created yet</p>
               <p className="text-sm text-gray-400 max-w-md mx-auto">
-                Opret et job for automatisk at flytte afdragsordrer til den næste rate-status og sende betalingslink efter f.eks. 1 måned.
+                Create a job to automatically transition installment orders to the next rate status and send payment links after e.g. 1 month.
               </p>
               <Button
                 onClick={() => setJobModal({
@@ -355,7 +354,7 @@ const InstallmentJobsPage = () => {
                 })}
                 className="mt-2"
               >
-                Opret det første job
+                Create First Job
               </Button>
             </div>
           ) : (
@@ -376,12 +375,12 @@ const InstallmentJobsPage = () => {
                             job.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
                           }`}>
                             {job.isActive ? <CheckCircle2 className="w-3 h-3" /> : <Pause className="w-3 h-3" />}
-                            {job.isActive ? 'Aktiv (Auto-kører)' : 'Sat på pause'}
+                            {job.isActive ? 'Active (Auto-running)' : 'Paused'}
                           </span>
                         </div>
                         <button
                           onClick={() => handleToggle(job)}
-                          title={job.isActive ? 'Sæt på pause' : 'Aktivér'}
+                          title={job.isActive ? 'Pause job' : 'Activate job'}
                           className={`p-2 rounded-lg border text-xs font-medium transition-colors ${
                             job.isActive
                               ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
@@ -395,28 +394,28 @@ const InstallmentJobsPage = () => {
                       {/* Config Meta */}
                       <div className="bg-gray-50 rounded-lg p-3 space-y-2 text-xs border border-gray-100">
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-500">Mål-ordrestatus:</span>
+                          <span className="text-gray-500">Target Order Status:</span>
                           <span className="font-semibold text-gray-900 bg-white px-2 py-0.5 rounded border border-gray-200">
                             {targetStatus?.name || `Status #${job.targetStatusId}`}
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-500">Forsinkelse / Interval:</span>
+                          <span className="text-gray-500">Delay / Interval:</span>
                           <span className="font-medium text-indigo-700">
-                            {job.delayValue} {job.delayUnit === 'MONTHS' ? 'Måned(er)' : 'Dag(e)'}
+                            {job.delayValue} {job.delayUnit === 'MONTHS' ? 'Month(s)' : 'Day(s)'}
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-500">Udsendelsestidspunkt:</span>
-                          <span className="font-mono text-gray-800 font-semibold">{job.triggerTime || '09:00'} (DK tid)</span>
+                          <span className="text-gray-500">Trigger Time:</span>
+                          <span className="font-mono text-gray-800 font-semibold">{job.triggerTime || '09:00'} (Copenhagen Time)</span>
                         </div>
                         {(job.orderDateFrom || job.orderDateTo) && (
                           <div className="flex justify-between items-center pt-1 border-t border-gray-200 text-[11px]">
-                            <span className="text-gray-500">Ordredato-filter:</span>
+                            <span className="text-gray-500">Order Date Filter:</span>
                             <span className="text-gray-700">
-                              {job.orderDateFrom ? new Date(job.orderDateFrom).toLocaleDateString('da-DK') : 'Start'}
+                              {job.orderDateFrom ? new Date(job.orderDateFrom).toLocaleDateString('en-US') : 'Start'}
                               {' → '}
-                              {job.orderDateTo ? new Date(job.orderDateTo).toLocaleDateString('da-DK') : 'Slut'}
+                              {job.orderDateTo ? new Date(job.orderDateTo).toLocaleDateString('en-US') : 'End'}
                             </span>
                           </div>
                         )}
@@ -425,9 +424,9 @@ const InstallmentJobsPage = () => {
                       {/* Last Run Info */}
                       <div className="text-[11px] text-gray-500">
                         {job.lastRunAt ? (
-                          <span>Sidst kørt: {new Date(job.lastRunAt).toLocaleString('da-DK')}</span>
+                          <span>Last run: {new Date(job.lastRunAt).toLocaleString('en-US')}</span>
                         ) : (
-                          <span className="text-gray-400">Har endnu ikke kørt automatisk</span>
+                          <span className="text-gray-400">Has not run automatically yet</span>
                         )}
                       </div>
                     </div>
@@ -441,7 +440,7 @@ const InstallmentJobsPage = () => {
                         className="text-indigo-600 border-indigo-200 hover:bg-indigo-50 flex items-center gap-1.5"
                       >
                         <Eye className="w-4 h-4" />
-                        Forhåndsvis & Kør
+                        Preview & Run
                       </Button>
                       <div className="flex items-center gap-1">
                         <Button
@@ -449,7 +448,7 @@ const InstallmentJobsPage = () => {
                           size="sm"
                           onClick={() => openEditModal(job)}
                           className="h-8 w-8 p-0 text-gray-600 hover:text-gray-900"
-                          title="Rediger job"
+                          title="Edit job"
                         >
                           <Edit2 className="w-4 h-4" />
                         </Button>
@@ -458,7 +457,7 @@ const InstallmentJobsPage = () => {
                           size="sm"
                           onClick={() => handleDelete(job)}
                           className="h-8 w-8 p-0 text-rose-600 hover:text-rose-800 hover:bg-rose-50"
-                          title="Slet job"
+                          title="Delete job"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -476,7 +475,7 @@ const InstallmentJobsPage = () => {
       {activeTab === 'logs' && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-            <h3 className="font-bold text-gray-900 text-sm">Udløsningshistorik for afdragsordrer</h3>
+            <h3 className="font-bold text-gray-900 text-sm">Installment Order Trigger History</h3>
             <Button
               variant="outline"
               size="sm"
@@ -485,20 +484,20 @@ const InstallmentJobsPage = () => {
               className="flex items-center gap-1.5"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${logsLoading ? 'animate-spin' : ''}`} />
-              Opdater logs
+              Refresh logs
             </Button>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 text-sm">
               <thead className="bg-gray-50 text-xs">
                 <tr>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Tidspunkt</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Job Navn</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Ordrenummer</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Rate / Afdrag</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Kunde</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Timestamp</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Job Name</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Order Number</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Rate / Installment</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Customer</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-600">Status</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Besked / Fejl</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-600">Message / Error</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -506,13 +505,13 @@ const InstallmentJobsPage = () => {
                   <tr>
                     <td colSpan="7" className="text-center py-12 text-gray-400">
                       <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-500" />
-                      Indlæser afviklingslogs...
+                      Loading execution logs...
                     </td>
                   </tr>
                 ) : logs.length === 0 ? (
                   <tr>
                     <td colSpan="7" className="text-center py-12 text-gray-400">
-                      Ingen udløsningslogs endnu
+                      No trigger logs recorded yet
                     </td>
                   </tr>
                 ) : (
@@ -521,7 +520,7 @@ const InstallmentJobsPage = () => {
                     return (
                       <tr key={log.id} className="hover:bg-gray-50/70 text-xs">
                         <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                          {new Date(log.createdAt).toLocaleString('da-DK')}
+                          {new Date(log.createdAt).toLocaleString('en-US')}
                         </td>
                         <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">
                           {log.job?.name || `Job #${log.jobId}`}
@@ -565,7 +564,7 @@ const InstallmentJobsPage = () => {
             <form onSubmit={handleSaveJob}>
               <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
                 <h3 className="text-lg font-bold text-gray-900">
-                  {jobModal.isEdit ? 'Rediger Afdrags-Job' : 'Opret Nyt Afdrags-Job'}
+                  {jobModal.isEdit ? 'Edit Installment Job' : 'Create New Installment Job'}
                 </h3>
                 <button
                   type="button"
@@ -578,11 +577,11 @@ const InstallmentJobsPage = () => {
 
               <div className="p-6 space-y-4 text-sm">
                 <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Job Navn *</label>
+                  <label className="block font-semibold text-gray-700 mb-1">Job Name *</label>
                   <input
                     type="text"
                     required
-                    placeholder="f.eks. Udløs Rate 2 betaling efter 1 måned"
+                    placeholder="e.g. Trigger Rate 2 payment after 1 month"
                     value={jobModal.name}
                     onChange={(e) => setJobModal({ ...jobModal, name: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
@@ -590,14 +589,14 @@ const InstallmentJobsPage = () => {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Mål-ordrestatus *</label>
+                  <label className="block font-semibold text-gray-700 mb-1">Target Order Status *</label>
                   <select
                     required
                     value={jobModal.targetStatusId}
                     onChange={(e) => setJobModal({ ...jobModal, targetStatusId: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                   >
-                    <option value="">Vælg ordrestatus...</option>
+                    <option value="">Select order status...</option>
                     {orderStatuses.map((s) => (
                       <option key={s.id} value={s.id}>
                         {s.name} ({s.code || s.name})
@@ -605,13 +604,13 @@ const InstallmentJobsPage = () => {
                     ))}
                   </select>
                   <p className="text-xs text-gray-500 mt-1">
-                    Ordrer på afbetaling vil automatisk blive sat til denne status, hvilket udløser rate-betalingslinket og tilhørende e-mail.
+                    Matching installment orders will automatically be moved to this status, triggering the payment link and corresponding email.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-semibold text-gray-700 mb-1">Forsinkelse *</label>
+                    <label className="block font-semibold text-gray-700 mb-1">Delay *</label>
                     <input
                       type="number"
                       min="1"
@@ -622,20 +621,20 @@ const InstallmentJobsPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block font-semibold text-gray-700 mb-1">Enhed *</label>
+                    <label className="block font-semibold text-gray-700 mb-1">Unit *</label>
                     <select
                       value={jobModal.delayUnit}
                       onChange={(e) => setJobModal({ ...jobModal, delayUnit: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                     >
-                      <option value="MONTHS">Måned(er)</option>
-                      <option value="DAYS">Dag(e)</option>
+                      <option value="MONTHS">Month(s)</option>
+                      <option value="DAYS">Day(s)</option>
                     </select>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-gray-700 mb-1">Udsendelsestidspunkt (København tid)</label>
+                  <label className="block font-semibold text-gray-700 mb-1">Trigger Time of Day (Copenhagen Time)</label>
                   <input
                     type="time"
                     value={jobModal.triggerTime}
@@ -643,13 +642,13 @@ const InstallmentJobsPage = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                   />
                   <p className="text-xs text-gray-400 mt-1">
-                    Jobbet evaluerer og udløser ordrer, når klokken har passeret dette tidspunkt på forfaldsdatoen.
+                    The job evaluates and triggers eligible orders once the local clock reaches this time on the due date.
                   </p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 pt-2 border-t border-gray-100">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Kun ordrer oprettet fra (valgfri)</label>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Only orders created from (optional)</label>
                     <input
                       type="date"
                       value={jobModal.orderDateFrom}
@@ -658,7 +657,7 @@ const InstallmentJobsPage = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Kun ordrer oprettet til (valgfri)</label>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Only orders created to (optional)</label>
                     <input
                       type="date"
                       value={jobModal.orderDateTo}
@@ -677,7 +676,7 @@ const InstallmentJobsPage = () => {
                     className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
                   />
                   <label htmlFor="isActiveCheckbox" className="text-xs font-semibold text-gray-700 cursor-pointer">
-                    Jobbet er aktivt (kører automatisk via system-cron hver 5. minut)
+                    Job is active (runs automatically via system cron every 5 minutes)
                   </label>
                 </div>
               </div>
@@ -688,7 +687,7 @@ const InstallmentJobsPage = () => {
                   variant="outline"
                   onClick={() => setJobModal({ ...jobModal, isOpen: false })}
                 >
-                  Annuller
+                  Cancel
                 </Button>
                 <Button
                   type="submit"
@@ -696,7 +695,7 @@ const InstallmentJobsPage = () => {
                   className="bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-2"
                 >
                   {savingJob && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {jobModal.isEdit ? 'Gem Ændringer' : 'Opret Job'}
+                  {jobModal.isEdit ? 'Save Changes' : 'Create Job'}
                 </Button>
               </div>
             </form>
@@ -714,11 +713,11 @@ const InstallmentJobsPage = () => {
                 <div className="flex items-center gap-2">
                   <Eye className="w-5 h-5 text-indigo-600" />
                   <h3 className="text-lg font-bold text-gray-900">
-                    Ordre-evaluering & Manuel Udløsning
+                    Order Evaluation & Manual Trigger
                   </h3>
                 </div>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  Job: <strong>{previewModal.job?.name}</strong> • Forsinkelse: {previewModal.job?.delayValue} {previewModal.job?.delayUnit === 'MONTHS' ? 'mdr' : 'dage'}
+                  Job: <strong>{previewModal.job?.name}</strong> • Delay: {previewModal.job?.delayValue} {previewModal.job?.delayUnit === 'MONTHS' ? 'months' : 'days'}
                 </p>
               </div>
               <button
@@ -734,7 +733,7 @@ const InstallmentJobsPage = () => {
               {previewModal.loading ? (
                 <div className="py-16 text-center text-gray-400">
                   <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-indigo-500" />
-                  Evaluerer alle afdragsordrer og beregner forfaldsdatoer...
+                  Evaluating all installment orders and calculating due dates...
                 </div>
               ) : (
                 <>
@@ -748,7 +747,7 @@ const InstallmentJobsPage = () => {
                           : 'border-gray-200 hover:bg-gray-50'
                       }`}
                     >
-                      <span className="text-gray-500 block">Scannet I alt</span>
+                      <span className="text-gray-500 block">Total Scanned</span>
                       <span className="text-lg font-bold text-gray-900">{previewModal.orders.length}</span>
                     </button>
 
@@ -760,7 +759,7 @@ const InstallmentJobsPage = () => {
                           : 'border-gray-200 hover:bg-gray-50'
                       }`}
                     >
-                      <span className="text-emerald-700 block font-semibold">Klar til udsendelse (DUE)</span>
+                      <span className="text-emerald-700 block font-semibold">Ready to Trigger (DUE)</span>
                       <span className="text-lg font-bold text-emerald-700">
                         {previewModal.orders.filter(o => o.state === 'DUE').length}
                       </span>
@@ -774,7 +773,7 @@ const InstallmentJobsPage = () => {
                           : 'border-gray-200 hover:bg-gray-50'
                       }`}
                     >
-                      <span className="text-blue-700 block font-semibold">Planlagt / Fremtidig</span>
+                      <span className="text-blue-700 block font-semibold">Scheduled / Future</span>
                       <span className="text-lg font-bold text-blue-700">
                         {previewModal.orders.filter(o => o.state === 'SCHEDULED').length}
                       </span>
@@ -788,7 +787,7 @@ const InstallmentJobsPage = () => {
                           : 'border-gray-200 hover:bg-gray-50'
                       }`}
                     >
-                      <span className="text-amber-700 block font-semibold">Afventer Rate 2</span>
+                      <span className="text-amber-700 block font-semibold">Waiting for Rate 2</span>
                       <span className="text-lg font-bold text-amber-700">
                         {previewModal.orders.filter(o => o.state === 'WAITING_PREVIOUS').length}
                       </span>
@@ -826,19 +825,19 @@ const InstallmentJobsPage = () => {
                                 className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
                               />
                             </th>
-                            <th className="px-3 py-2 text-left font-semibold text-gray-600">Ordrenr.</th>
-                            <th className="px-3 py-2 text-left font-semibold text-gray-600">Kunde</th>
-                            <th className="px-3 py-2 text-left font-semibold text-gray-600">Oprettet</th>
-                            <th className="px-3 py-2 text-left font-semibold text-gray-600">Beregnet Forfaldsdato</th>
-                            <th className="px-3 py-2 text-left font-semibold text-gray-600">Status & Sikkerhed</th>
-                            <th className="px-3 py-2 text-right font-semibold text-gray-600">Handling</th>
+                            <th className="px-3 py-2 text-left font-semibold text-gray-600">Order #</th>
+                            <th className="px-3 py-2 text-left font-semibold text-gray-600">Customer</th>
+                            <th className="px-3 py-2 text-left font-semibold text-gray-600">Created</th>
+                            <th className="px-3 py-2 text-left font-semibold text-gray-600">Calculated Due Date</th>
+                            <th className="px-3 py-2 text-left font-semibold text-gray-600">Status & Safeguards</th>
+                            <th className="px-3 py-2 text-right font-semibold text-gray-600">Action</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                           {filteredPreviewOrders.length === 0 ? (
                             <tr>
                               <td colSpan="7" className="text-center py-8 text-gray-400">
-                                Ingen ordrer matcher det valgte filter
+                                No orders match the selected filter
                               </td>
                             </tr>
                           ) : (
@@ -874,10 +873,10 @@ const InstallmentJobsPage = () => {
                                     <p className="text-gray-400 text-[11px]">{ord.customerEmail}</p>
                                   </td>
                                   <td className="px-3 py-2 text-gray-600 whitespace-nowrap">
-                                    {ord.orderDate ? new Date(ord.orderDate).toLocaleDateString('da-DK') : '-'}
+                                    {ord.orderDate ? new Date(ord.orderDate).toLocaleDateString('en-US') : '-'}
                                   </td>
                                   <td className="px-3 py-2 font-medium text-gray-800 whitespace-nowrap">
-                                    {ord.delayDueDate ? new Date(ord.delayDueDate).toLocaleString('da-DK') : '-'}
+                                    {ord.delayDueDate ? new Date(ord.delayDueDate).toLocaleString('en-US') : '-'}
                                   </td>
                                   <td className="px-3 py-2">
                                     <div className="flex flex-col gap-0.5">
@@ -897,7 +896,7 @@ const InstallmentJobsPage = () => {
                                       onClick={() => handleRunNow([ord.orderId])}
                                       className="h-7 text-xs px-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50"
                                     >
-                                      Kør nu
+                                      Run now
                                     </Button>
                                   </td>
                                 </tr>
@@ -915,7 +914,7 @@ const InstallmentJobsPage = () => {
             {/* Footer */}
             <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
               <span className="text-xs text-gray-500">
-                {previewModal.selectedOrderIds.length} ordre(r) valgt til udløsning
+                {previewModal.selectedOrderIds.length} order(s) selected for trigger
               </span>
               <div className="flex items-center gap-2">
                 <Button
@@ -923,7 +922,7 @@ const InstallmentJobsPage = () => {
                   size="sm"
                   onClick={() => setPreviewModal({ ...previewModal, isOpen: false })}
                 >
-                  Luk
+                  Close
                 </Button>
                 <Button
                   size="sm"
@@ -936,7 +935,7 @@ const InstallmentJobsPage = () => {
                   ) : (
                     <Play className="w-4 h-4" />
                   )}
-                  Udløs Valgte Ordrer Nu ({previewModal.selectedOrderIds.length})
+                  Trigger Selected Orders Now ({previewModal.selectedOrderIds.length})
                 </Button>
               </div>
             </div>
@@ -948,4 +947,3 @@ const InstallmentJobsPage = () => {
 };
 
 export default InstallmentJobsPage;
-

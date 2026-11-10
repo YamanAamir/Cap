@@ -244,11 +244,11 @@ const UsersPage = () => {
                         <div className="flex items-center gap-1.5">
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
                             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                            Aktiv 2FA
+                            2FA Enabled
                           </span>
                         </div>
                       ) : (
-                        <span className="text-xs text-slate-400">Ikke aktiveret</span>
+                        <span className="text-xs text-slate-400">Disabled</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-xs text-slate-500">
@@ -261,7 +261,7 @@ const UsersPage = () => {
                             onClick={() => handleReset2fa(user)}
                             disabled={resetting2faId === user.id}
                             className="p-2 text-amber-600 hover:text-amber-800 hover:bg-amber-50 rounded transition-colors"
-                            title="Nulstil 2FA for denne bruger"
+                            title="Reset 2FA for this user"
                           >
                             {resetting2faId === user.id ? (
                               <Loader2 className="h-4 w-4 animate-spin" />

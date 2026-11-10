@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck, Search, RefreshCw, AlertCircle, CheckCircle2, XCircle,
-  Eye, Copy, Check, Filter, User, Calendar, Activity, Laptop, Code
+  Eye, Copy, Check, Filter, Activity
 } from 'lucide-react';
 import { getAuditLogs } from '../services/admin.service';
 import { Button } from '../components/ui';
@@ -40,7 +40,7 @@ const AuditLogsPage = () => {
       setLogs(res.data || []);
       setTotal(res.total || 0);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Kunne ikke hente revisionslog (Audit Logs)');
+      toast.error(err.response?.data?.message || 'Failed to load audit logs');
     } finally {
       setLoading(false);
     }
@@ -59,7 +59,7 @@ const AuditLogsPage = () => {
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
-    toast.success('Kopieret til udklipsholder');
+    toast.success('Copied to clipboard');
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -106,10 +106,10 @@ const AuditLogsPage = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <ShieldCheck className="w-7 h-7 text-indigo-600" />
-            Audit Logs (Revisionsspor)
+            Audit Logs
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Uforanderlig log over alle administrative ændringer, ordreopdateringer og handlinger.
+            Immutable log of all administrative actions, order updates, and system changes.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -121,7 +121,7 @@ const AuditLogsPage = () => {
             className="flex items-center gap-1.5"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Opdater
+            Refresh
           </Button>
         </div>
       </div>
@@ -133,7 +133,7 @@ const AuditLogsPage = () => {
             <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
             <input
               type="text"
-              placeholder="Søg på bruger, IP, entitet ID..."
+              placeholder="Search by user, IP, entity ID..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
@@ -146,7 +146,7 @@ const AuditLogsPage = () => {
               onChange={(e) => { setAction(e.target.value); setPage(1); }}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
             >
-              <option value="">Alle handlinger</option>
+              <option value="">All Actions</option>
               <option value="CREATE">CREATE</option>
               <option value="UPDATE">UPDATE</option>
               <option value="DELETE">DELETE</option>
@@ -161,7 +161,7 @@ const AuditLogsPage = () => {
               onChange={(e) => { setEntity(e.target.value); setPage(1); }}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
             >
-              <option value="">Alle entiteter</option>
+              <option value="">All Entities</option>
               <option value="Order">Order</option>
               <option value="User">User</option>
               <option value="InstallmentJob">InstallmentJob</option>
@@ -177,7 +177,7 @@ const AuditLogsPage = () => {
               value={from}
               onChange={(e) => setFrom(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-              title="Fra dato"
+              title="From date"
             />
           </div>
 
@@ -187,7 +187,7 @@ const AuditLogsPage = () => {
               value={to}
               onChange={(e) => setTo(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-              title="Til dato"
+              title="To date"
             />
             <Button type="submit" size="sm" className="px-4">
               <Filter className="w-4 h-4" />
@@ -202,13 +202,13 @@ const AuditLogsPage = () => {
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold text-gray-600">Tidspunkt</th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-600">Bruger</th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-600">Handling</th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-600">Entitet</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-600">Timestamp</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-600">User</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-600">Action</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-600">Entity</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Status</th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-600">IP Adresse</th>
-                <th className="px-4 py-3 text-right font-semibold text-gray-600">Detaljer</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-600">IP Address</th>
+                <th className="px-4 py-3 text-right font-semibold text-gray-600">Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -216,13 +216,13 @@ const AuditLogsPage = () => {
                 <tr>
                   <td colSpan="7" className="text-center py-12 text-gray-400">
                     <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-500" />
-                    Indlæser audit logs...
+                    Loading audit logs...
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="text-center py-12 text-gray-400">
-                    Ingen audit log poster fundet
+                    No audit log entries found
                   </td>
                 </tr>
               ) : (
@@ -231,7 +231,7 @@ const AuditLogsPage = () => {
                   return (
                     <tr key={log.id} className="hover:bg-gray-50/70 transition-colors">
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-xs">
-                        {new Date(log.createdAt).toLocaleString('da-DK', {
+                        {new Date(log.createdAt).toLocaleString('en-US', {
                           year: 'numeric',
                           month: 'short',
                           day: 'numeric',
@@ -297,7 +297,7 @@ const AuditLogsPage = () => {
                           className="h-8 px-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50"
                         >
                           <Eye className="w-4 h-4 mr-1" />
-                          Vis
+                          View
                         </Button>
                       </td>
                     </tr>
@@ -312,7 +312,7 @@ const AuditLogsPage = () => {
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-200 text-sm">
             <span className="text-gray-500 text-xs">
-              Viser side {page} af {totalPages} ({total} i alt)
+              Showing page {page} of {totalPages} ({total} total)
             </span>
             <div className="flex gap-1">
               <Button
@@ -321,7 +321,7 @@ const AuditLogsPage = () => {
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
               >
-                Forrige
+                Previous
               </Button>
               <Button
                 variant="outline"
@@ -329,7 +329,7 @@ const AuditLogsPage = () => {
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
               >
-                Næste
+                Next
               </Button>
             </div>
           </div>
@@ -345,7 +345,7 @@ const AuditLogsPage = () => {
               <div className="flex items-center gap-2">
                 <Activity className="w-5 h-5 text-indigo-600" />
                 <h3 className="text-lg font-bold text-gray-900">
-                  Audit Log Detaljer #{selectedLog.id}
+                  Audit Log Details #{selectedLog.id}
                 </h3>
               </div>
               <button
@@ -360,19 +360,19 @@ const AuditLogsPage = () => {
             <div className="p-6 space-y-4 overflow-y-auto">
               <div className="grid grid-cols-2 gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200 text-xs">
                 <div>
-                  <span className="text-gray-500 block">Bruger:</span>
+                  <span className="text-gray-500 block">User:</span>
                   <span className="font-semibold text-gray-900">
                     {selectedLog.user?.name || selectedLog.user?.email || 'System'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-500 block">Handling:</span>
+                  <span className="text-gray-500 block">Action:</span>
                   <span className={`inline-flex px-2 py-0.5 rounded font-bold ${getActionBadge(selectedLog.action)}`}>
                     {selectedLog.action}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-500 block">Entitet:</span>
+                  <span className="text-gray-500 block">Entity:</span>
                   <span className="font-medium text-gray-900">{selectedLog.entity} ({selectedLog.entityId || 'N/A'})</span>
                 </div>
                 <div>
@@ -382,16 +382,16 @@ const AuditLogsPage = () => {
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-500 block">IP Adresse:</span>
+                  <span className="text-gray-500 block">IP Address:</span>
                   <span className="font-mono text-gray-700">{selectedLog.ipAddress || '-'}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500 block">Tidspunkt:</span>
-                  <span className="text-gray-900">{new Date(selectedLog.createdAt).toLocaleString('da-DK')}</span>
+                  <span className="text-gray-500 block">Timestamp:</span>
+                  <span className="text-gray-900">{new Date(selectedLog.createdAt).toLocaleString('en-US')}</span>
                 </div>
                 {selectedLog.userAgent && (
                   <div className="col-span-2">
-                    <span className="text-gray-500 block">Klient / User Agent:</span>
+                    <span className="text-gray-500 block">Client / User Agent:</span>
                     <span className="text-gray-700 font-mono text-[11px] truncate block">{selectedLog.userAgent}</span>
                   </div>
                 )}
@@ -401,7 +401,7 @@ const AuditLogsPage = () => {
                 <div className="bg-rose-50 border border-rose-200 text-rose-800 p-3 rounded-xl text-xs flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-rose-600" />
                   <div>
-                    <span className="font-bold block">Fejlbesked:</span>
+                    <span className="font-bold block">Error Message:</span>
                     <pre className="whitespace-pre-wrap font-mono mt-1 text-[11px]">{selectedLog.error}</pre>
                   </div>
                 </div>
@@ -410,17 +410,17 @@ const AuditLogsPage = () => {
               {/* Raw Details / Changes */}
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold text-gray-700">Ændringsdata / Payload</label>
+                  <label className="text-xs font-semibold text-gray-700">Change Details / Payload</label>
                   <button
                     onClick={() => copyToClipboard(formatDetails(selectedLog.details))}
                     className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium py-1 px-2 rounded hover:bg-indigo-50"
                   >
                     {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                    {copied ? 'Kopieret!' : 'Kopiér'}
+                    {copied ? 'Copied!' : 'Copy'}
                   </button>
                 </div>
                 <div className="bg-gray-900 text-gray-100 p-4 rounded-xl font-mono text-xs max-h-72 overflow-auto border border-gray-800">
-                  <pre>{formatDetails(selectedLog.details) || '// Ingen ekstra data'}</pre>
+                  <pre>{formatDetails(selectedLog.details) || '// No extra data'}</pre>
                 </div>
               </div>
             </div>
@@ -428,7 +428,7 @@ const AuditLogsPage = () => {
             {/* Modal Footer */}
             <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex justify-end">
               <Button variant="outline" size="sm" onClick={() => setSelectedLog(null)}>
-                Luk
+                Close
               </Button>
             </div>
           </div>
@@ -439,4 +439,3 @@ const AuditLogsPage = () => {
 };
 
 export default AuditLogsPage;
-

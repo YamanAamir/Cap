@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
-  History, Search, RefreshCw, AlertCircle, CheckCircle2, XCircle,
-  ShieldCheck, Monitor, Smartphone, Tablet, Globe, Calendar, Filter
+  History, Search, RefreshCw, CheckCircle2, XCircle,
+  ShieldCheck, Monitor, Smartphone, Tablet, Filter
 } from 'lucide-react';
 import { getLoginHistory } from '../services/admin.service';
 import { Button } from '../components/ui';
@@ -34,7 +34,7 @@ const LoginHistoryPage = () => {
       setLogs(res.data || []);
       setTotal(res.total || 0);
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Kunne ikke hente login-historik');
+      toast.error(err.response?.data?.message || 'Failed to load login history');
     } finally {
       setLoading(false);
     }
@@ -70,10 +70,10 @@ const LoginHistoryPage = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <History className="w-7 h-7 text-indigo-600" />
-            Login Historik
+            Login History
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Se alle login-forsøg for administratorer og brugere med IP, enhed og 2FA-status.
+            View all sign-in attempts for administrators and users with IP, device, browser, and 2FA status.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -85,7 +85,7 @@ const LoginHistoryPage = () => {
             className="flex items-center gap-1.5"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Opdater
+            Refresh
           </Button>
         </div>
       </div>
@@ -97,7 +97,7 @@ const LoginHistoryPage = () => {
             <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
             <input
               type="text"
-              placeholder="Søg på email, IP, browser, enhed..."
+              placeholder="Search by email, IP, browser, device..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
@@ -110,9 +110,9 @@ const LoginHistoryPage = () => {
               onChange={(e) => { setStatus(e.target.value); setPage(1); }}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
             >
-              <option value="">Alle statuser</option>
-              <option value="SUCCESS">Succesfulde logins</option>
-              <option value="FAILED">Fejlede logins</option>
+              <option value="">All Statuses</option>
+              <option value="SUCCESS">Successful Logins</option>
+              <option value="FAILED">Failed Logins</option>
             </select>
           </div>
 
@@ -122,7 +122,7 @@ const LoginHistoryPage = () => {
               value={from}
               onChange={(e) => setFrom(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-              title="Fra dato"
+              title="From date"
             />
           </div>
 
@@ -132,7 +132,7 @@ const LoginHistoryPage = () => {
               value={to}
               onChange={(e) => setTo(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-              title="Til dato"
+              title="To date"
             />
             <Button type="submit" size="sm" className="px-4">
               <Filter className="w-4 h-4" />
@@ -147,13 +147,13 @@ const LoginHistoryPage = () => {
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold text-gray-600">Tidspunkt</th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-600">Bruger / Email</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-600">Timestamp</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-600">User / Email</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Status</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">2FA</th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-600">Enhed & Browser</th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-600">Operativsystem</th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-600">IP Adresse</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-600">Device & Browser</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-600">Operating System</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-600">IP Address</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -161,13 +161,13 @@ const LoginHistoryPage = () => {
                 <tr>
                   <td colSpan="7" className="text-center py-12 text-gray-400">
                     <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-500" />
-                    Indlæser login historik...
+                    Loading login history...
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="text-center py-12 text-gray-400">
-                    Ingen login-forsøg fundet
+                    No sign-in attempts found
                   </td>
                 </tr>
               ) : (
@@ -176,7 +176,7 @@ const LoginHistoryPage = () => {
                   return (
                     <tr key={log.id} className="hover:bg-gray-50/70 transition-colors">
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-xs">
-                        {new Date(log.createdAt).toLocaleString('da-DK', {
+                        {new Date(log.createdAt).toLocaleString('en-US', {
                           year: 'numeric',
                           month: 'short',
                           day: 'numeric',
@@ -207,7 +207,7 @@ const LoginHistoryPage = () => {
                             ) : (
                               <XCircle className="w-3.5 h-3.5" />
                             )}
-                            {isSuccess ? 'Godkendt' : 'Afvist'}
+                            {isSuccess ? 'Success' : 'Failed'}
                           </span>
                           {!isSuccess && log.failureReason && (
                             <span className="text-[11px] text-rose-500 mt-0.5">
@@ -221,7 +221,7 @@ const LoginHistoryPage = () => {
                         {log.twoFactorUsed ? (
                           <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded text-xs font-medium">
                             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                            2FA Verificeret
+                            2FA Verified
                           </span>
                         ) : (
                           <span className="text-gray-400 text-xs">-</span>
@@ -232,7 +232,7 @@ const LoginHistoryPage = () => {
                         <div className="flex items-center gap-2">
                           {getDeviceIcon(log.device)}
                           <div>
-                            <span className="font-medium text-gray-800">{log.browser || 'Ukendt browser'}</span>
+                            <span className="font-medium text-gray-800">{log.browser || 'Unknown browser'}</span>
                             <span className="text-gray-400 text-[11px] ml-1">({log.device || 'Desktop'})</span>
                           </div>
                         </div>
@@ -257,7 +257,7 @@ const LoginHistoryPage = () => {
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-200 text-sm">
             <span className="text-gray-500 text-xs">
-              Viser side {page} af {totalPages} ({total} i alt)
+              Showing page {page} of {totalPages} ({total} total)
             </span>
             <div className="flex gap-1">
               <Button
@@ -266,7 +266,7 @@ const LoginHistoryPage = () => {
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
               >
-                Forrige
+                Previous
               </Button>
               <Button
                 variant="outline"
@@ -274,7 +274,7 @@ const LoginHistoryPage = () => {
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
               >
-                Næste
+                Next
               </Button>
             </div>
           </div>

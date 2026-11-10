@@ -116,7 +116,7 @@ const evaluateJob = async (job) => {
       customerEmail: o.customerEmail,
       customerName: `${cust.firstName || ''} ${cust.lastName || ''}`.trim(),
       amount: target.amount,
-      label: target.label || `${idx + 1}. rate`,
+      label: target.label || `Installment ${idx + 1}`,
     };
 
     if (doneOrders.has(o.id)) { rows.push({ ...base, state: 'ALREADY_TRIGGERED' }); continue; }
@@ -129,9 +129,9 @@ const evaluateJob = async (job) => {
       refLabel = 'Order / 1st payment';
     } else {
       const prev = inst[idx - 1];
-      if (!prev || prev.status !== 'Paid') { rows.push({ ...base, state: 'WAITING_PREVIOUS', waitingFor: prev?.label || `${idx}. rate` }); continue; }
+      if (!prev || prev.status !== 'Paid') { rows.push({ ...base, state: 'WAITING_PREVIOUS', waitingFor: prev?.label || `Installment ${idx}` }); continue; }
       ref = prev.paidAt || null;
-      refLabel = `${prev.label || idx + '. rate'} paid`;
+      refLabel = `${prev.label || 'Installment ' + idx} paid`;
     }
     if (!ref) { rows.push({ ...base, state: 'NO_REFERENCE_DATE' }); continue; }
 

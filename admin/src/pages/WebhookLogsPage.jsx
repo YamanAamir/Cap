@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   Webhook, Search, RefreshCw, AlertCircle, CheckCircle2, XCircle,
-  Eye, Copy, Check, Filter, Clock, Globe, ArrowRight, Code
+  Eye, Copy, Check, Filter, Code
 } from 'lucide-react';
 import { getWebhookLogs, getWebhookLog } from '../services/admin.service';
 import { Button } from '../components/ui';
@@ -43,7 +43,7 @@ const WebhookLogsPage = () => {
       setTotal(res.total || 0);
       setStats(res.stats || { success: 0, failed: 0 });
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Kunne ikke hente webhook logs');
+      toast.error(err.response?.data?.message || 'Failed to load webhook logs');
     } finally {
       setLoading(false);
     }
@@ -65,7 +65,7 @@ const WebhookLogsPage = () => {
       const data = await getWebhookLog(logId);
       setSelectedLog(data);
     } catch (err) {
-      toast.error('Kunne ikke hente webhook detaljer');
+      toast.error('Failed to load webhook details');
     } finally {
       setViewLoading(false);
     }
@@ -74,7 +74,7 @@ const WebhookLogsPage = () => {
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
-    toast.success('Kopieret til udklipsholder');
+    toast.success('Copied to clipboard');
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -107,7 +107,7 @@ const WebhookLogsPage = () => {
             Webhook Logs
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Overvåg indgående webhooks fra betalingsgateways (Frisbii / Flatpay, Stripe m.fl.)
+            Monitor incoming payment webhooks from Frisbii / Flatpay, Stripe, and other gateways.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -119,7 +119,7 @@ const WebhookLogsPage = () => {
             className="flex items-center gap-1.5"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Opdater
+            Refresh
           </Button>
         </div>
       </div>
@@ -129,7 +129,7 @@ const WebhookLogsPage = () => {
         <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">I alt modtaget</p>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total Received</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">{total.toLocaleString()}</p>
             </div>
             <div className="p-3 bg-indigo-50 rounded-lg">
@@ -141,7 +141,7 @@ const WebhookLogsPage = () => {
         <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Succesfulde</p>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Successful</p>
               <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.success?.toLocaleString() || 0}</p>
             </div>
             <div className="p-3 bg-emerald-50 rounded-lg">
@@ -153,7 +153,7 @@ const WebhookLogsPage = () => {
         <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Fejlede</p>
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Failed</p>
               <p className="text-2xl font-bold text-rose-600 mt-1">{stats.failed?.toLocaleString() || 0}</p>
             </div>
             <div className="p-3 bg-rose-50 rounded-lg">
@@ -170,7 +170,7 @@ const WebhookLogsPage = () => {
             <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
             <input
               type="text"
-              placeholder="Søg på event, reference, ordre-nr..."
+              placeholder="Search event, reference, order number..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
@@ -183,7 +183,7 @@ const WebhookLogsPage = () => {
               onChange={(e) => { setProvider(e.target.value); setPage(1); }}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
             >
-              <option value="">Alle udbydere</option>
+              <option value="">All Providers</option>
               <option value="frisbii">Frisbii / Flatpay</option>
               <option value="stripe">Stripe</option>
             </select>
@@ -195,7 +195,7 @@ const WebhookLogsPage = () => {
               onChange={(e) => { setStatus(e.target.value); setPage(1); }}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
             >
-              <option value="">Alle statusser</option>
+              <option value="">All Statuses</option>
               <option value="SUCCESS">Success</option>
               <option value="FAILED">Failed</option>
             </select>
@@ -207,7 +207,7 @@ const WebhookLogsPage = () => {
               value={from}
               onChange={(e) => setFrom(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-              title="Fra dato"
+              title="From date"
             />
           </div>
 
@@ -217,7 +217,7 @@ const WebhookLogsPage = () => {
               value={to}
               onChange={(e) => setTo(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-              title="Til dato"
+              title="To date"
             />
             <Button type="submit" size="sm" className="px-4">
               <Filter className="w-4 h-4" />
@@ -232,13 +232,13 @@ const WebhookLogsPage = () => {
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left font-semibold text-gray-600">Tidspunkt</th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-600">Udbyder</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-600">Timestamp</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-600">Provider</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Event Type</th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-600">Reference / Ordre</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-600">Reference / Order</th>
                 <th className="px-4 py-3 text-left font-semibold text-gray-600">Status</th>
-                <th className="px-4 py-3 text-left font-semibold text-gray-600">Varighed</th>
-                <th className="px-4 py-3 text-right font-semibold text-gray-600">Handling</th>
+                <th className="px-4 py-3 text-left font-semibold text-gray-600">Duration</th>
+                <th className="px-4 py-3 text-right font-semibold text-gray-600">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -246,13 +246,13 @@ const WebhookLogsPage = () => {
                 <tr>
                   <td colSpan="7" className="text-center py-12 text-gray-400">
                     <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-500" />
-                    Indlæser webhook logs...
+                    Loading webhook logs...
                   </td>
                 </tr>
               ) : logs.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="text-center py-12 text-gray-400">
-                    Ingen webhook logs fundet
+                    No webhook logs found
                   </td>
                 </tr>
               ) : (
@@ -262,7 +262,7 @@ const WebhookLogsPage = () => {
                   return (
                     <tr key={log.id} className="hover:bg-gray-50/70 transition-colors">
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-xs">
-                        {new Date(log.createdAt).toLocaleString('da-DK', {
+                        {new Date(log.createdAt).toLocaleString('en-US', {
                           year: 'numeric',
                           month: 'short',
                           day: 'numeric',
@@ -328,7 +328,7 @@ const WebhookLogsPage = () => {
                           className="h-8 px-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50"
                         >
                           <Eye className="w-4 h-4 mr-1" />
-                          Vis Payload
+                          View Payload
                         </Button>
                       </td>
                     </tr>
@@ -343,7 +343,7 @@ const WebhookLogsPage = () => {
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-t border-gray-200 text-sm">
             <span className="text-gray-500 text-xs">
-              Viser side {page} af {totalPages} ({total} i alt)
+              Showing page {page} of {totalPages} ({total} total)
             </span>
             <div className="flex gap-1">
               <Button
@@ -352,7 +352,7 @@ const WebhookLogsPage = () => {
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
               >
-                Forrige
+                Previous
               </Button>
               <Button
                 variant="outline"
@@ -360,7 +360,7 @@ const WebhookLogsPage = () => {
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
               >
-                Næste
+                Next
               </Button>
             </div>
           </div>
@@ -376,7 +376,7 @@ const WebhookLogsPage = () => {
               <div className="flex items-center gap-2">
                 <Code className="w-5 h-5 text-indigo-600" />
                 <h3 className="text-lg font-bold text-gray-900">
-                  Webhook Detaljer & Payload
+                  Webhook Details & Payload
                 </h3>
               </div>
               <button
@@ -392,7 +392,7 @@ const WebhookLogsPage = () => {
               {/* Meta Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200 text-xs">
                 <div>
-                  <span className="text-gray-500 block">Udbyder:</span>
+                  <span className="text-gray-500 block">Provider:</span>
                   <span className="font-semibold text-gray-900">{selectedLog.provider}</span>
                 </div>
                 <div>
@@ -404,20 +404,20 @@ const WebhookLogsPage = () => {
                   <span className="font-mono font-bold text-indigo-600">{selectedLog.httpStatus || 200}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500 block">Varighed:</span>
+                  <span className="text-gray-500 block">Duration:</span>
                   <span className="font-medium text-gray-900">{selectedLog.durationMs != null ? `${selectedLog.durationMs}ms` : '-'}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500 block">Reference / Ordre:</span>
+                  <span className="text-gray-500 block">Reference / Order:</span>
                   <span className="font-medium text-gray-900">{selectedLog.reference || '-'}</span>
                 </div>
                 <div>
-                  <span className="text-gray-500 block">Afsenders IP:</span>
+                  <span className="text-gray-500 block">Sender IP:</span>
                   <span className="font-mono text-gray-700">{selectedLog.ipAddress || '-'}</span>
                 </div>
                 <div className="col-span-2">
-                  <span className="text-gray-500 block">Tidspunkt:</span>
-                  <span className="text-gray-900">{new Date(selectedLog.createdAt).toLocaleString('da-DK')}</span>
+                  <span className="text-gray-500 block">Timestamp:</span>
+                  <span className="text-gray-900">{new Date(selectedLog.createdAt).toLocaleString('en-US')}</span>
                 </div>
               </div>
 
@@ -426,7 +426,7 @@ const WebhookLogsPage = () => {
                 <div className="bg-rose-50 border border-rose-200 text-rose-800 p-3 rounded-xl text-xs flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-rose-600" />
                   <div>
-                    <span className="font-bold block">Fejl under behandling:</span>
+                    <span className="font-bold block">Processing Error:</span>
                     <pre className="whitespace-pre-wrap font-mono mt-1 text-[11px]">{selectedLog.error}</pre>
                   </div>
                 </div>
@@ -441,11 +441,11 @@ const WebhookLogsPage = () => {
                     className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium py-1 px-2 rounded hover:bg-indigo-50"
                   >
                     {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                    {copied ? 'Kopieret!' : 'Kopiér JSON'}
+                    {copied ? 'Copied!' : 'Copy JSON'}
                   </button>
                 </div>
                 <div className="bg-gray-900 text-gray-100 p-4 rounded-xl font-mono text-xs max-h-80 overflow-auto border border-gray-800">
-                  <pre>{formatPayload(selectedLog.payload) || '// Tom payload'}</pre>
+                  <pre>{formatPayload(selectedLog.payload) || '// Empty payload'}</pre>
                 </div>
               </div>
             </div>
@@ -453,7 +453,7 @@ const WebhookLogsPage = () => {
             {/* Modal Footer */}
             <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex justify-end">
               <Button variant="outline" size="sm" onClick={() => setSelectedLog(null)}>
-                Luk
+                Close
               </Button>
             </div>
           </div>
