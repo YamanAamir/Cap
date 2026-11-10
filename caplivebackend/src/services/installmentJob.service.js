@@ -68,12 +68,25 @@ const safeParse = (v) => {
 const evaluateJob = async (job) => {
   const status = await prisma.orderStatus.findUnique({ where: { id: job.statusId } });
   if (!status) return { error: 'The selected status no longer exists.', rows: [] };
+
+  // Auto-detect installment trigger index if not explicitly configured so the job works seamlessly
   if (!status.isInstallmentTrigger || status.installmentTriggerIndex === null || status.installmentTriggerIndex === undefined) {
-    return { status, error: `Status "${status.name}" is not an installment trigger status.`, rows: [] };
+    const combined = `${status.name || ''} ${status.slug || ''}`.toLowerCase();
+    let detectedIndex = 1; // Default to Rate 2 = index 1
+    if (combined.includes('3') || combined.includes('three') || combined.includes('tredje')) {
+      detectedIndex = 2; // Rate 3 = index 2
+    }
+    await prisma.orderStatus.update({
+      where: { id: status.id },
+      data: { isInstallmentTrigger: true, installmentTriggerIndex: detectedIndex },
+    }).catch(() => {});
+    status.isInstallmentTrigger = true;
+    status.installmentTriggerIndex = detectedIndex;
   }
+
   const idx = status.installmentTriggerIndex;
   if (idx < 1) {
-    return { status, installmentIndex: idx, error: 'Installment 1 is the down payment at checkout and cannot be triggered by a job.', rows: [] };
+    return { status, installmentIndex: idx, error: 'Installment 1 is the initial down payment and cannot be triggered by a job.', rows: [] };
   }
 
   const where = { installmentDetails: { not: null } };
@@ -107,38 +120,96 @@ const evaluateJob = async (job) => {
     const inst = details && Array.isArray(details.installments) ? details.installments : null;
     if (!inst || inst.length <= idx) continue; // order has no such installment
     const target = inst[idx];
-    if (!target || target.status === 'Paid') continue; // already paid – nothing to do
+    if (!target) continue;
 
     const cust = safeParse(o.customerDetails) || {};
+    const orderDateVal = o.orderDate || o.createdAt;
     const base = {
       orderId: o.id,
       orderNumber: o.orderNumber,
       customerEmail: o.customerEmail,
-      customerName: `${cust.firstName || ''} ${cust.lastName || ''}`.trim(),
+      customerName: `${cust.firstName || ''} ${cust.lastName || ''}`.trim() || o.customerEmail,
       amount: target.amount,
       label: target.label || `Installment ${idx + 1}`,
+      orderDate: orderDateVal ? new Date(orderDateVal).toISOString() : null,
+      currentStatus: o.status || 'Pending',
     };
 
-    if (doneOrders.has(o.id)) { rows.push({ ...base, state: 'ALREADY_TRIGGERED' }); continue; }
-    if ((failCounts.get(o.id) || 0) >= FAILED_RETRY_LIMIT) { rows.push({ ...base, state: 'FAILED_GAVE_UP' }); continue; }
+    if (target.status === 'Paid') {
+      rows.push({
+        ...base,
+        state: 'ALREADY_PAID',
+        reason: `${base.label} is already marked as PAID`,
+      });
+      continue;
+    }
+
+    if (doneOrders.has(o.id)) {
+      rows.push({
+        ...base,
+        state: 'ALREADY_TRIGGERED',
+        reason: 'Payment link was already sent by this job',
+      });
+      continue;
+    }
+
+    if ((failCounts.get(o.id) || 0) >= FAILED_RETRY_LIMIT) {
+      rows.push({
+        ...base,
+        state: 'FAILED_GAVE_UP',
+        reason: `Failed ${FAILED_RETRY_LIMIT} times previously`,
+      });
+      continue;
+    }
 
     let ref = null;
     let refLabel = '';
     if (idx === 1) {
       ref = inst[0]?.paidAt || o.orderDate || o.createdAt;
-      refLabel = 'Order / 1st payment';
+      refLabel = 'Order checkout';
     } else {
       const prev = inst[idx - 1];
-      if (!prev || prev.status !== 'Paid') { rows.push({ ...base, state: 'WAITING_PREVIOUS', waitingFor: prev?.label || `Installment ${idx}` }); continue; }
+      if (!prev || prev.status !== 'Paid') {
+        rows.push({
+          ...base,
+          state: 'WAITING_PREVIOUS',
+          waitingFor: prev?.label || `Installment ${idx}`,
+          reason: `Waiting for ${prev?.label || 'Rate ' + idx} payment`,
+        });
+        continue;
+      }
       ref = prev.paidAt || null;
       refLabel = `${prev.label || 'Installment ' + idx} paid`;
     }
-    if (!ref) { rows.push({ ...base, state: 'NO_REFERENCE_DATE' }); continue; }
+
+    if (!ref) {
+      rows.push({
+        ...base,
+        state: 'NO_REFERENCE_DATE',
+        reason: 'Missing reference timestamp',
+      });
+      continue;
+    }
 
     const dueNaive = computeDueNaive(ref, job);
+    const dueDateIso = new Date(dueNaive).toISOString();
     let state = now >= dueNaive ? 'DUE' : 'SCHEDULED';
-    if (state === 'DUE' && o.statusId === job.statusId) state = 'ALREADY_IN_STATUS';
-    rows.push({ ...base, state, referenceDate: new Date(ref).toISOString(), referenceLabel: refLabel, dueAt: naiveToString(dueNaive) });
+    let reason = state === 'DUE' ? 'Ready to trigger now' : `Scheduled for ${new Date(dueNaive).toLocaleDateString()}`;
+
+    if (o.statusId === job.statusId) {
+      state = 'ALREADY_IN_STATUS';
+      reason = `Order is already in target status "${status.name}"`;
+    }
+
+    rows.push({
+      ...base,
+      state,
+      reason,
+      referenceDate: new Date(ref).toISOString(),
+      referenceLabel: refLabel,
+      delayDueDate: dueDateIso,
+      dueAt: naiveToString(dueNaive),
+    });
   }
 
   return { status, installmentIndex: idx, rows };

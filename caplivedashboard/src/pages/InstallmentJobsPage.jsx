@@ -185,17 +185,19 @@ const InstallmentJobsPage = () => {
       running: false,
       selectedOrderIds: [],
       filterState: 'ALL',
+      configError: null,
     });
 
     try {
       const res = await previewInstallmentJob(job.id);
-      const orders = res.orders || [];
+      const orders = res.orders || res.rows || [];
       const dueOrderIds = orders.filter(o => o.state === 'DUE').map(o => o.orderId);
       setPreviewModal(prev => ({
         ...prev,
         orders,
         loading: false,
         selectedOrderIds: dueOrderIds,
+        configError: res.error || null,
       }));
     } catch (err) {
       toast.error('Failed to load preview');
@@ -217,14 +219,16 @@ const InstallmentJobsPage = () => {
     setPreviewModal(prev => ({ ...prev, running: true }));
     try {
       const res = await runInstallmentJobNow(previewModal.job.id, idsToRun);
-      toast.success(`Executed: ${res.triggeredCount || 0} order(s) triggered successfully!`);
+      toast.success(`Executed: ${res.triggeredCount !== undefined ? res.triggeredCount : (res.triggered || 0)} order(s) triggered successfully!`);
       // Refresh preview
       const previewRes = await previewInstallmentJob(previewModal.job.id);
+      const refreshedOrders = previewRes.orders || previewRes.rows || [];
       setPreviewModal(prev => ({
         ...prev,
-        orders: previewRes.orders || [],
+        orders: refreshedOrders,
         running: false,
         selectedOrderIds: [],
+        configError: previewRes.error || null,
       }));
       loadData();
     } catch (err) {
@@ -236,6 +240,9 @@ const InstallmentJobsPage = () => {
   // Filter preview orders by state
   const filteredPreviewOrders = previewModal.orders.filter(o => {
     if (previewModal.filterState === 'ALL') return true;
+    if (previewModal.filterState === 'ALREADY') {
+      return ['ALREADY_IN_STATUS', 'ALREADY_TRIGGERED', 'ALREADY_PAID'].includes(o.state);
+    }
     return o.state === previewModal.filterState;
   });
 
@@ -246,10 +253,13 @@ const InstallmentJobsPage = () => {
       case 'SCHEDULED':
         return <span className="bg-blue-100 text-blue-800 border border-blue-200 px-2 py-0.5 rounded text-xs font-medium">Scheduled (Pending Date)</span>;
       case 'WAITING_PREVIOUS':
-        return <span className="bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded text-xs font-medium">Waiting for Rate 2 Payment</span>;
+        return <span className="bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded text-xs font-medium">Waiting for Rate 2</span>;
       case 'ALREADY_IN_STATUS':
+        return <span className="bg-purple-100 text-purple-800 border border-purple-200 px-2 py-0.5 rounded text-xs font-medium">Already in Status</span>;
       case 'ALREADY_TRIGGERED':
-        return <span className="bg-gray-100 text-gray-600 border border-gray-200 px-2 py-0.5 rounded text-xs">Already Triggered</span>;
+        return <span className="bg-gray-100 text-gray-700 border border-gray-200 px-2 py-0.5 rounded text-xs">Triggered Earlier</span>;
+      case 'ALREADY_PAID':
+        return <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded text-xs font-medium">Paid</span>;
       default:
         return <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">{state}</span>;
     }
@@ -365,7 +375,7 @@ const InstallmentJobsPage = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {jobs.map((job) => {
-                const targetStatus = orderStatuses.find(s => s.id === job.targetStatusId);
+                const targetStatus = orderStatuses.find(s => s.id === (job.targetStatusId || job.statusId)) || (job.statusName ? { name: job.statusName, color: job.statusColor } : null);
                 return (
                   <div
                     key={job.id}
@@ -401,7 +411,7 @@ const InstallmentJobsPage = () => {
                         <div className="flex justify-between items-center">
                           <span className="text-gray-500">Target Order Status:</span>
                           <span className="font-semibold text-gray-900 bg-white px-2 py-0.5 rounded border border-gray-200">
-                            {targetStatus?.name || `Status #${job.targetStatusId}`}
+                            {targetStatus?.name || job.statusName || `Status #${job.statusId || job.targetStatusId || ''}`}
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
@@ -528,18 +538,28 @@ const InstallmentJobsPage = () => {
                           {new Date(log.createdAt).toLocaleString('en-US')}
                         </td>
                         <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">
-                          {log.job?.name || `Job #${log.jobId}`}
+                          {log.jobName || log.job?.name || `Job #${log.jobId}`}
                         </td>
                         <td className="px-4 py-3 font-mono font-medium text-indigo-600 whitespace-nowrap">
-                          {log.order?.orderNumber || (log.orderId ? `#${log.orderId}` : '-')}
+                          {log.orderNumber ? (
+                            <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded font-bold font-mono">
+                              {log.orderNumber}
+                            </span>
+                          ) : (log.order?.orderNumber ? (
+                            <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded font-bold font-mono">
+                              {log.order.orderNumber}
+                            </span>
+                          ) : (
+                            log.orderId ? `#${log.orderId}` : '-'
+                          ))}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <span className="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-medium">
-                            Rate {log.rateIndex != null ? log.rateIndex + 1 : '-'}
+                            Rate {log.installmentIndex != null ? log.installmentIndex + 1 : (log.rateIndex != null ? log.rateIndex + 1 : '2')}
                           </span>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-gray-800">
-                          {log.order?.customerName || log.order?.customerEmail || '-'}
+                          {log.customerEmail || log.order?.customerEmail || log.order?.customerName || '-'}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded font-semibold ${
@@ -735,6 +755,13 @@ const InstallmentJobsPage = () => {
 
             {/* Body */}
             <div className="p-6 space-y-4 overflow-y-auto flex-1">
+              {previewModal.configError && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded-xl text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  <span>{previewModal.configError}</span>
+                </div>
+              )}
+
               {previewModal.loading ? (
                 <div className="py-16 text-center text-gray-400">
                   <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-indigo-500" />
@@ -743,57 +770,71 @@ const InstallmentJobsPage = () => {
               ) : (
                 <>
                   {/* Summary Bar */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-xs">
                     <button
                       onClick={() => setPreviewModal(prev => ({ ...prev, filterState: 'ALL' }))}
-                      className={`p-3 rounded-xl border text-left transition-all ${
+                      className={`p-2.5 rounded-xl border text-left transition-all ${
                         previewModal.filterState === 'ALL'
                           ? 'border-indigo-600 bg-indigo-50/50 shadow-sm'
                           : 'border-gray-200 hover:bg-gray-50'
                       }`}
                     >
-                      <span className="text-gray-500 block">Total Scanned</span>
-                      <span className="text-lg font-bold text-gray-900">{previewModal.orders.length}</span>
+                      <span className="text-gray-500 block text-[11px]">Total Scanned</span>
+                      <span className="text-base font-bold text-gray-900">{previewModal.orders.length}</span>
                     </button>
 
                     <button
                       onClick={() => setPreviewModal(prev => ({ ...prev, filterState: 'DUE' }))}
-                      className={`p-3 rounded-xl border text-left transition-all ${
+                      className={`p-2.5 rounded-xl border text-left transition-all ${
                         previewModal.filterState === 'DUE'
                           ? 'border-emerald-600 bg-emerald-50/50 shadow-sm'
                           : 'border-gray-200 hover:bg-gray-50'
                       }`}
                     >
-                      <span className="text-emerald-700 block font-semibold">Ready to Trigger (DUE)</span>
-                      <span className="text-lg font-bold text-emerald-700">
+                      <span className="text-emerald-700 block text-[11px] font-semibold">Ready (DUE)</span>
+                      <span className="text-base font-bold text-emerald-700">
                         {previewModal.orders.filter(o => o.state === 'DUE').length}
                       </span>
                     </button>
 
                     <button
                       onClick={() => setPreviewModal(prev => ({ ...prev, filterState: 'SCHEDULED' }))}
-                      className={`p-3 rounded-xl border text-left transition-all ${
+                      className={`p-2.5 rounded-xl border text-left transition-all ${
                         previewModal.filterState === 'SCHEDULED'
                           ? 'border-blue-600 bg-blue-50/50 shadow-sm'
                           : 'border-gray-200 hover:bg-gray-50'
                       }`}
                     >
-                      <span className="text-blue-700 block font-semibold">Scheduled / Future</span>
-                      <span className="text-lg font-bold text-blue-700">
+                      <span className="text-blue-700 block text-[11px] font-semibold">Scheduled / Future</span>
+                      <span className="text-base font-bold text-blue-700">
                         {previewModal.orders.filter(o => o.state === 'SCHEDULED').length}
                       </span>
                     </button>
 
                     <button
+                      onClick={() => setPreviewModal(prev => ({ ...prev, filterState: 'ALREADY' }))}
+                      className={`p-2.5 rounded-xl border text-left transition-all ${
+                        previewModal.filterState === 'ALREADY'
+                          ? 'border-purple-600 bg-purple-50/50 shadow-sm'
+                          : 'border-gray-200 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="text-purple-700 block text-[11px] font-semibold">In Status / Sent</span>
+                      <span className="text-base font-bold text-purple-700">
+                        {previewModal.orders.filter(o => ['ALREADY_IN_STATUS', 'ALREADY_TRIGGERED', 'ALREADY_PAID'].includes(o.state)).length}
+                      </span>
+                    </button>
+
+                    <button
                       onClick={() => setPreviewModal(prev => ({ ...prev, filterState: 'WAITING_PREVIOUS' }))}
-                      className={`p-3 rounded-xl border text-left transition-all ${
+                      className={`p-2.5 rounded-xl border text-left transition-all ${
                         previewModal.filterState === 'WAITING_PREVIOUS'
                           ? 'border-amber-600 bg-amber-50/50 shadow-sm'
                           : 'border-gray-200 hover:bg-gray-50'
                       }`}
                     >
-                      <span className="text-amber-700 block font-semibold">Waiting for Rate 2</span>
-                      <span className="text-lg font-bold text-amber-700">
+                      <span className="text-amber-700 block text-[11px] font-semibold">Waiting for Prev Rate</span>
+                      <span className="text-base font-bold text-amber-700">
                         {previewModal.orders.filter(o => o.state === 'WAITING_PREVIOUS').length}
                       </span>
                     </button>
@@ -870,39 +911,48 @@ const InstallmentJobsPage = () => {
                                       className="w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500"
                                     />
                                   </td>
-                                  <td className="px-3 py-2 font-mono font-semibold text-gray-900">
-                                    {ord.orderNumber}
+                                  <td className="px-3 py-2 whitespace-nowrap">
+                                    <span className="font-mono font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded text-xs">
+                                      {ord.orderNumber || `#${ord.orderId}`}
+                                    </span>
                                   </td>
                                   <td className="px-3 py-2">
-                                    <p className="font-medium text-gray-900">{ord.customerName || '-'}</p>
-                                    <p className="text-gray-400 text-[11px]">{ord.customerEmail}</p>
+                                    <p className="font-semibold text-gray-900">{ord.customerName || '-'}</p>
+                                    <p className="text-gray-400 text-[11px] font-mono">{ord.customerEmail}</p>
                                   </td>
                                   <td className="px-3 py-2 text-gray-600 whitespace-nowrap">
-                                    {ord.orderDate ? new Date(ord.orderDate).toLocaleDateString('en-US') : '-'}
+                                    {ord.orderDate ? new Date(ord.orderDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '-'}
                                   </td>
-                                  <td className="px-3 py-2 font-medium text-gray-800 whitespace-nowrap">
-                                    {ord.delayDueDate ? new Date(ord.delayDueDate).toLocaleString('en-US') : '-'}
+                                  <td className="px-3 py-2 whitespace-nowrap">
+                                    {ord.delayDueDate || ord.dueAt ? (
+                                      <span className="font-medium text-gray-800">
+                                        {ord.delayDueDate ? new Date(ord.delayDueDate).toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ord.dueAt}
+                                      </span>
+                                    ) : '-'}
                                   </td>
                                   <td className="px-3 py-2">
                                     <div className="flex flex-col gap-0.5">
-                                      {getStateBadge(ord.state)}
+                                      <div>{getStateBadge(ord.state)}</div>
                                       {ord.reason && (
-                                        <span className="text-[10px] text-gray-400 leading-tight">
+                                        <span className="text-[10px] text-gray-500 leading-tight">
                                           {ord.reason}
                                         </span>
                                       )}
                                     </div>
                                   </td>
-                                  <td className="px-3 py-2 text-right">
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      disabled={previewModal.running}
-                                      onClick={() => handleRunNow([ord.orderId])}
-                                      className="h-7 text-xs px-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50"
-                                    >
-                                      Run now
-                                    </Button>
+                                  <td className="px-3 py-2 text-right whitespace-nowrap">
+                                    {ord.state === 'DUE' ? (
+                                      <Button
+                                        size="sm"
+                                        disabled={previewModal.running}
+                                        onClick={() => handleRunNow([ord.orderId])}
+                                        className="h-7 text-xs px-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-xs"
+                                      >
+                                        Trigger now
+                                      </Button>
+                                    ) : (
+                                      <span className="text-gray-400 text-[11px] italic">Protected</span>
+                                    )}
                                   </td>
                                 </tr>
                               );

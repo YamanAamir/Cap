@@ -56,8 +56,12 @@ const decorate = async (job) => {
   const ev = await evaluateJob(job);
   return {
     ...job,
+    targetStatusId: job.statusId,
+    triggerTime: job.sendTime,
+    orderDateFrom: job.onlyOrdersAfter,
     statusName: ev.status?.name || null,
     statusColor: ev.status?.color || null,
+    targetStatus: ev.status || null,
     installmentIndex: ev.installmentIndex ?? null,
     installmentNumber: ev.installmentIndex !== undefined && ev.installmentIndex !== null ? ev.installmentIndex + 1 : null,
     configError: ev.error || null,
@@ -135,12 +139,22 @@ exports.previewJob = async (req, res) => {
     if (!job) return res.status(404).json({ message: 'Job not found' });
     const ev = await evaluateJob(job);
     res.json({
-      job: { id: job.id, name: job.name, sendTime: job.sendTime, delayValue: job.delayValue, delayUnit: job.delayUnit },
+      job: {
+        id: job.id,
+        name: job.name,
+        sendTime: job.sendTime,
+        triggerTime: job.sendTime,
+        delayValue: job.delayValue,
+        delayUnit: job.delayUnit,
+        statusId: job.statusId,
+        targetStatusId: job.statusId,
+      },
       statusName: ev.status?.name || null,
       installmentNumber: ev.installmentIndex !== undefined ? ev.installmentIndex + 1 : null,
       error: ev.error || null,
       counts: summarize(ev.rows),
       rows: ev.rows,
+      orders: ev.rows, // Ensure both property names work seamlessly
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -158,6 +172,7 @@ exports.runJobNow = async (req, res) => {
     const summary = await runJob(job, { trigger: 'MANUAL', onlyOrderIds: orderIds });
     res.json({
       message: `Triggered ${summary.triggered}, failed ${summary.failed}, skipped ${summary.skipped}`,
+      triggeredCount: summary.triggered,
       ...summary,
     });
   } catch (err) {
@@ -182,6 +197,27 @@ exports.getJobLogs = async (req, res) => {
       prisma.installmentJobLog.findMany({ where, orderBy: { createdAt: 'desc' }, skip: (page - 1) * limit, take: limit }),
       prisma.installmentJobLog.count({ where }),
     ]);
+
+    // Enrich logs with order number, job name, and customer email if missing from older logs
+    const missingOrderRows = rows.filter((r) => (!r.orderNumber || !r.customerEmail) && r.orderId);
+    if (missingOrderRows.length > 0) {
+      try {
+        const orderIds = [...new Set(missingOrderRows.map((r) => r.orderId))];
+        const orders = await prisma.order.findMany({
+          where: { id: { in: orderIds } },
+          select: { id: true, orderNumber: true, customerEmail: true },
+        });
+        const orderMap = new Map(orders.map((o) => [o.id, o]));
+        for (const r of rows) {
+          if (orderMap.has(r.orderId)) {
+            const o = orderMap.get(r.orderId);
+            if (!r.orderNumber) r.orderNumber = o.orderNumber;
+            if (!r.customerEmail) r.customerEmail = o.customerEmail;
+          }
+        }
+      } catch (enrichErr) {}
+    }
+
     res.json({ data: rows, total, page, limit, pages: Math.max(1, Math.ceil(total / limit)) });
   } catch (err) {
     res.status(500).json({ message: err.message });
