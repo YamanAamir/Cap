@@ -287,13 +287,18 @@ const registerLead = async (req, res) => {
         .catch(err => console.error('[BlackFriday] Failed to send customer confirmation email:', err.message));
 
         // 7. Send Notification Email to Client/Admin (if configured in Dashboard)
-        const [notifyEmailSetting, notifyEnabledSetting] = await Promise.all([
-          prisma.systemSetting.findUnique({ where: { key: 'black_friday_notify_email' } }),
-          prisma.systemSetting.findUnique({ where: { key: 'black_friday_notify_enabled' } })
-        ]);
+        const setting = await prisma.systemSetting.findUnique({
+          where: { key: 'black_friday_settings' }
+        });
 
-        const isNotifyEnabled = notifyEnabledSetting ? notifyEnabledSetting.value === 'true' : false;
-        const targetAdminEmail = notifyEmailSetting?.value?.trim();
+        let targetAdminEmail = 'salg@studentlife.dk';
+        let isNotifyEnabled = true;
+
+        if (setting && setting.value) {
+          const val = typeof setting.value === 'string' ? JSON.parse(setting.value) : setting.value;
+          if (val && val.notifyEmail) targetAdminEmail = String(val.notifyEmail).trim();
+          if (val && typeof val.notifyEnabled === 'boolean') isNotifyEnabled = val.notifyEnabled;
+        }
 
         if (isNotifyEnabled && targetAdminEmail) {
           const formattedTime = new Date().toLocaleString('da-DK', {
@@ -350,16 +355,24 @@ const registerLead = async (req, res) => {
  */
 const getSettings = async (req, res) => {
   try {
-    const [notifyEmailSetting, notifyEnabledSetting] = await Promise.all([
-      prisma.systemSetting.findUnique({ where: { key: 'black_friday_notify_email' } }),
-      prisma.systemSetting.findUnique({ where: { key: 'black_friday_notify_enabled' } })
-    ]);
+    const setting = await prisma.systemSetting.findUnique({
+      where: { key: 'black_friday_settings' }
+    });
+
+    let notifyEmail = 'salg@studentlife.dk';
+    let notifyEnabled = true;
+
+    if (setting && setting.value) {
+      const val = typeof setting.value === 'string' ? JSON.parse(setting.value) : setting.value;
+      if (val && val.notifyEmail) notifyEmail = val.notifyEmail;
+      if (val && typeof val.notifyEnabled === 'boolean') notifyEnabled = val.notifyEnabled;
+    }
 
     return res.json({
       success: true,
       settings: {
-        notifyEmail: notifyEmailSetting?.value || 'salg@studentlife.dk',
-        notifyEnabled: notifyEnabledSetting ? notifyEnabledSetting.value === 'true' : true
+        notifyEmail,
+        notifyEnabled
       }
     });
   } catch (error) {
@@ -375,19 +388,20 @@ const getSettings = async (req, res) => {
 const updateSettings = async (req, res) => {
   try {
     const { notifyEmail, notifyEnabled } = req.body;
+    const cleanEmail = String(notifyEmail || '').trim();
+    const cleanEnabled = notifyEnabled !== false;
 
-    await Promise.all([
-      prisma.systemSetting.upsert({
-        where: { key: 'black_friday_notify_email' },
-        update: { value: String(notifyEmail || '').trim() },
-        create: { key: 'black_friday_notify_email', value: String(notifyEmail || '').trim() }
-      }),
-      prisma.systemSetting.upsert({
-        where: { key: 'black_friday_notify_enabled' },
-        update: { value: notifyEnabled ? 'true' : 'false' },
-        create: { key: 'black_friday_notify_enabled', value: notifyEnabled ? 'true' : 'false' }
-      })
-    ]);
+    // Must store as valid JSON string because MySQL SystemSetting table has CHECK (json_valid(value)) constraint (SystemSetting_chk_1)
+    const payload = JSON.stringify({
+      notifyEmail: cleanEmail,
+      notifyEnabled: cleanEnabled
+    });
+
+    await prisma.systemSetting.upsert({
+      where: { key: 'black_friday_settings' },
+      update: { value: payload },
+      create: { key: 'black_friday_settings', value: payload }
+    });
 
     return res.json({
       success: true,
