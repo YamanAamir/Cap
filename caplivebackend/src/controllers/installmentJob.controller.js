@@ -9,10 +9,10 @@ const requestApiBase = (req) => {
 };
 
 const validateBody = async (body) => {
-  const statusId = parseInt(body.statusId);
-  const delayValue = parseInt(body.delayValue);
+  const statusId = parseInt(body.statusId !== undefined ? body.statusId : body.targetStatusId);
+  const delayValue = parseInt(body.delayValue !== undefined ? body.delayValue : 1);
   const delayUnit = String(body.delayUnit || 'MONTHS').toUpperCase();
-  const sendTime = String(body.sendTime || '09:00');
+  const sendTime = String(body.sendTime || body.triggerTime || '09:00');
   if (!String(body.name || '').trim()) return { error: 'Name is required' };
   if (isNaN(statusId)) return { error: 'Please choose a status' };
   if (isNaN(delayValue) || delayValue < 0 || delayValue > 3650) return { error: 'Delay must be a number between 0 and 3650' };
@@ -20,14 +20,28 @@ const validateBody = async (body) => {
   if (!/^([01]?\d|2[0-3]):[0-5]\d$/.test(sendTime)) return { error: 'Time must be HH:mm' };
   const status = await prisma.orderStatus.findUnique({ where: { id: statusId } });
   if (!status) return { error: 'Status not found' };
+
+  // If the status is not yet flagged as installment trigger, auto-detect from name/slug so admin is never blocked
   if (!status.isInstallmentTrigger || status.installmentTriggerIndex === null || status.installmentTriggerIndex < 1) {
-    return { error: 'Only statuses marked as "Installment trigger" (installment 2 or later) can be used.' };
+    const combined = `${status.name || ''} ${status.slug || ''}`.toLowerCase();
+    let detectedIndex = 1; // default to Installment 2 (Rate 2 = index 1)
+    if (combined.includes('3') || combined.includes('three') || combined.includes('tredje')) {
+      detectedIndex = 2; // Installment 3 (Rate 3 = index 2)
+    }
+
+    await prisma.orderStatus.update({
+      where: { id: status.id },
+      data: { isInstallmentTrigger: true, installmentTriggerIndex: detectedIndex },
+    }).catch((e) => console.warn('[INSTALLMENT-JOB] Could not auto-flag status as installment trigger:', e.message));
   }
+
   let onlyOrdersAfter = null;
-  if (body.onlyOrdersAfter) {
-    const d = new Date(body.onlyOrdersAfter);
-    if (isNaN(d)) return { error: 'Invalid "only orders after" date' };
-    onlyOrdersAfter = d;
+  const rawDate = body.onlyOrdersAfter || body.orderDateFrom;
+  if (rawDate) {
+    const d = new Date(rawDate);
+    if (!isNaN(d)) {
+      onlyOrdersAfter = d;
+    }
   }
   return { data: { name: String(body.name).trim().slice(0, 120), statusId, delayValue, delayUnit, sendTime: sendTime.padStart(5, '0'), onlyOrdersAfter } };
 };

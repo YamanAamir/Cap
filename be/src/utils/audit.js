@@ -85,6 +85,67 @@ const logLogin = async ({ req, user = null, email, success, reason = null }) => 
 // Generic middleware: records every authenticated write (POST/PUT/PATCH/DELETE) made by a dashboard user.
 const SKIP_PATH = /^\/api\/(webhook|auth\/(login|forgot-password|reset-password))/;
 
+const getHumanActionTitle = (method, path, entity) => {
+  const m = (method || '').toUpperCase();
+  const cleanPath = (path || '').toLowerCase();
+  
+  if (cleanPath.includes('/installment-jobs')) {
+    if (cleanPath.includes('/trigger') || cleanPath.includes('/run')) return 'Run Installment Job';
+    if (cleanPath.includes('/toggle')) return 'Toggle Installment Job';
+    if (m === 'POST') return 'Create Installment Job';
+    if (m === 'PUT' || m === 'PATCH') return 'Update Installment Job';
+    if (m === 'DELETE') return 'Delete Installment Job';
+    return 'Installment Job Action';
+  }
+  if (cleanPath.includes('/customers')) {
+    if (m === 'POST') return 'Create Customer';
+    if (m === 'PUT' || m === 'PATCH') return 'Update Customer';
+    if (m === 'DELETE') return 'Delete Customer';
+    return 'Customer Action';
+  }
+  if (cleanPath.includes('/orders')) {
+    if (cleanPath.includes('/status')) return 'Update Order Status';
+    if (m === 'POST') return 'Create Order';
+    if (m === 'PUT' || m === 'PATCH') return 'Update Order';
+    if (m === 'DELETE') return 'Delete Order';
+    return 'Order Action';
+  }
+  if (cleanPath.includes('/users')) {
+    if (m === 'POST') return 'Create User';
+    if (m === 'PUT' || m === 'PATCH') return 'Update User';
+    if (m === 'DELETE') return 'Delete User';
+    return 'User Action';
+  }
+  if (cleanPath.includes('/security') || cleanPath.includes('/2fa')) {
+    return 'Update 2FA Security';
+  }
+  if (cleanPath.includes('/email-templates')) {
+    if (m === 'POST') return 'Create Email Template';
+    if (m === 'PUT' || m === 'PATCH') return 'Update Email Template';
+    if (m === 'DELETE') return 'Delete Email Template';
+  }
+  if (cleanPath.includes('/sms')) {
+    if (cleanPath.includes('/send')) return 'Send SMS';
+    if (m === 'POST') return 'Create SMS Campaign';
+    if (m === 'DELETE') return 'Delete SMS Campaign';
+  }
+  if (cleanPath.includes('/discount')) {
+    if (m === 'POST') return 'Create Discount Code';
+    if (m === 'PUT' || m === 'PATCH') return 'Update Discount Code';
+    if (m === 'DELETE') return 'Delete Discount Code';
+  }
+  if (cleanPath.includes('/installment-plan')) {
+    if (m === 'POST') return 'Create Installment Plan';
+    if (m === 'PUT' || m === 'PATCH') return 'Update Installment Plan';
+    if (m === 'DELETE') return 'Delete Installment Plan';
+  }
+  
+  const verbMap = { POST: 'Create', PUT: 'Update', PATCH: 'Update', DELETE: 'Delete' };
+  const verb = verbMap[m] || m;
+  const entityName = (entity || 'Item').replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  return `${verb} ${entityName}`;
+};
+
 const auditMiddleware = (req, res, next) => {
   if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) return next();
   const originalUrl = req.originalUrl || '';
@@ -99,15 +160,16 @@ const auditMiddleware = (req, res, next) => {
     const entity = rest[0] || null;
     const idSeg = rest.find((s, i) => i > 0 && /^[0-9a-f-]{1,40}$/i.test(s) && /\d/.test(s));
     const pattern = pathOnly.replace(/\/\d+(?=\/|$)/g, '/:id');
+    const humanAction = getHumanActionTitle(req.method, pathOnly, entity);
     let userName = req.user.name || null;
     logAudit({
       req,
       user: { id: req.user.id || req.user.userId, name: userName, email: req.user.email },
-      action: `${req.method} ${pattern}`,
+      action: humanAction,
       entity,
       entityId: idSeg || null,
       statusCode: res.statusCode,
-      details: { body: req.body, query: req.query },
+      details: { body: req.body, query: req.query, route: `${req.method} ${pattern}` },
     });
   });
   next();

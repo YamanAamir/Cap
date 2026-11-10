@@ -102,12 +102,17 @@ const InstallmentJobsPage = () => {
 
     setSavingJob(true);
     try {
+      const selectedStatusId = parseInt(jobModal.targetStatusId, 10);
+      const timeVal = jobModal.triggerTime || '09:00';
       const payload = {
         name: jobModal.name.trim(),
-        targetStatusId: parseInt(jobModal.targetStatusId, 10),
+        statusId: selectedStatusId,
+        targetStatusId: selectedStatusId,
         delayValue: parseInt(jobModal.delayValue, 10) || 1,
         delayUnit: jobModal.delayUnit,
-        triggerTime: jobModal.triggerTime || '09:00',
+        sendTime: timeVal,
+        triggerTime: timeVal,
+        onlyOrdersAfter: jobModal.orderDateFrom ? new Date(jobModal.orderDateFrom) : null,
         orderDateFrom: jobModal.orderDateFrom || null,
         orderDateTo: jobModal.orderDateTo || null,
         isActive: jobModal.isActive,
@@ -160,10 +165,10 @@ const InstallmentJobsPage = () => {
       isEdit: true,
       jobId: job.id,
       name: job.name,
-      targetStatusId: job.targetStatusId,
+      targetStatusId: job.targetStatusId || job.statusId,
       delayValue: job.delayValue,
       delayUnit: job.delayUnit,
-      triggerTime: job.triggerTime,
+      triggerTime: job.triggerTime || job.sendTime || '09:00',
       orderDateFrom: job.orderDateFrom ? job.orderDateFrom.substring(0, 10) : '',
       orderDateTo: job.orderDateTo ? job.orderDateTo.substring(0, 10) : '',
       isActive: job.isActive,
