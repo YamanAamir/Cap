@@ -21,6 +21,9 @@ import {
   Flame,
   ChevronLeft,
   ChevronRight,
+  Bell,
+  Save,
+  ExternalLink,
   X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -30,7 +33,9 @@ import {
   bulkDeleteBlackFridayLeads,
   broadcastBlackFridaySms,
   broadcastBlackFridayEmail,
-  exportBlackFridayCsv
+  exportBlackFridayCsv,
+  getBlackFridaySettings,
+  updateBlackFridaySettings
 } from '../services/admin.service';
 
 export default function BlackFridayPage() {
@@ -38,6 +43,11 @@ export default function BlackFridayPage() {
   const [stats, setStats] = useState({ total: 0, today: 0, smsSentTotal: 0, emailSentTotal: 0 });
   const [pagination, setPagination] = useState({ page: 1, limit: 25, totalPages: 1, totalCount: 0 });
   const [loading, setLoading] = useState(true);
+
+  // Admin Notification Settings
+  const [notifyEmail, setNotifyEmail] = useState('salg@studentlife.dk');
+  const [notifyEnabled, setNotifyEnabled] = useState(true);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -49,12 +59,51 @@ export default function BlackFridayPage() {
 
   // Modals
   const [smsModal, setSmsModal] = useState({ isOpen: false, lead: null, isAll: false, message: '', isSending: false });
-  const [emailModal, setEmailModal] = useState({ isOpen: false, lead: null, isAll: false, subject: '', html: '', isSending: false, previewMode: false });
+  const [emailModal, setEmailModal] = useState({
+    isOpen: false,
+    lead: null,
+    isAll: false,
+    subject: 'Du er på VIP-listen! 🖤',
+    headline: 'Bekræftelse efter tilmelding',
+    bodyText: 'Du er på VIP-listen! 🖤\n\nDu er nu et skridt tættere på årets Black Week-tilbud hos Student Life!\n\nHold øje med din mail og SMS. Vi sender dig dit personlige VIP-link, så snart din eksklusive adgang åbner.\n\nVi ses til Black Week!',
+    buttonText: 'BESØG STUDENT LIFE 🖤',
+    buttonUrl: 'https://studentlife.dk',
+    isSending: false
+  });
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null, isBulk: false, isDeleting: false });
   const [copiedPhone, setCopiedPhone] = useState(null);
 
   const smsTextareaRef = useRef(null);
   const emailTextareaRef = useRef(null);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await getBlackFridaySettings();
+      if (res && res.success && res.settings) {
+        setNotifyEmail(res.settings.notifyEmail || 'salg@studentlife.dk');
+        setNotifyEnabled(res.settings.notifyEnabled !== false);
+      }
+    } catch (err) {
+      console.error('Failed to load settings:', err);
+    }
+  };
+
+  const handleSaveSettings = async (e) => {
+    e.preventDefault();
+    if (notifyEnabled && (!notifyEmail || !notifyEmail.includes('@'))) {
+      return toast.error('Indtast venligst en gyldig e-mailadresse til notifikationer');
+    }
+    setSavingSettings(true);
+    try {
+      await updateBlackFridaySettings({ notifyEmail, notifyEnabled });
+      toast.success('Notifikationsindstillinger gemt!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Kunne ikke gemme indstillinger');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   const fetchLeads = async (page = pagination.page) => {
     setLoading(true);
@@ -80,6 +129,10 @@ export default function BlackFridayPage() {
   };
 
   useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  useEffect(() => {
     fetchLeads(1);
     setSelectedIds([]);
   }, [search, dateFrom, dateTo]);
@@ -101,7 +154,7 @@ export default function BlackFridayPage() {
     navigator.clipboard.writeText(phone);
     setCopiedPhone(phone);
     setTimeout(() => setCopiedPhone(null), 2000);
-    toast.success('Phone copied to clipboard');
+    toast.success('Telefonnummer kopieret');
   };
 
   // Export CSV
@@ -115,10 +168,10 @@ export default function BlackFridayPage() {
       document.body.appendChild(link);
       link.click();
       link.remove();
-      toast.success('VIP Leads exported to CSV successfully');
+      toast.success('VIP Leads eksporteret til CSV');
     } catch (err) {
       console.error(err);
-      toast.error('Failed to export CSV');
+      toast.error('Eksport fejlede');
     }
   };
 
@@ -128,17 +181,17 @@ export default function BlackFridayPage() {
     try {
       if (deleteModal.isBulk) {
         const res = await bulkDeleteBlackFridayLeads(selectedIds);
-        toast.success(res.message || `Deleted ${selectedIds.length} lead(s)`);
+        toast.success(res.message || `Slettede ${selectedIds.length} kunde(r)`);
         setSelectedIds([]);
       } else {
         await deleteBlackFridayLead(deleteModal.id);
-        toast.success('Lead deleted successfully');
+        toast.success('VIP Kunde slettet');
       }
       setDeleteModal({ isOpen: false, id: null, isBulk: false, isDeleting: false });
       fetchLeads(pagination.page);
     } catch (err) {
       console.error(err);
-      toast.error('Delete failed');
+      toast.error('Kunne ikke slette');
       setDeleteModal(prev => ({ ...prev, isDeleting: false }));
     }
   };
@@ -147,7 +200,7 @@ export default function BlackFridayPage() {
   const openSmsModal = (target = 'selected') => {
     let isAll = false;
     let targetLead = null;
-    let defaultMsg = 'Hej {{name}}! 🖤 Black Week er i gang hos Student Life! Få din VIP-rabat på din studenterhue her: https://studentlife.dk';
+    let defaultMsg = 'Hej {{name}}! 🖤 Du er nu på VIP-listen til Black Week hos Student Life. Hold øje med din SMS og mail for dit personlige VIP-link: https://studentlife.dk';
 
     if (typeof target === 'object' && target !== null) {
       targetLead = target;
@@ -180,7 +233,7 @@ export default function BlackFridayPage() {
 
   const handleSendSms = async () => {
     if (!smsModal.message.trim()) {
-      return toast.error('Please enter SMS message text');
+      return toast.error('Indtast venligst SMS beskedtekst');
     }
 
     setSmsModal(prev => ({ ...prev, isSending: true }));
@@ -200,42 +253,24 @@ export default function BlackFridayPage() {
       });
 
       if (res && res.success) {
-        toast.success(`SMS Broadcast complete! Sent: ${res.sentCount}, Failed: ${res.failedCount}`);
+        toast.success(`SMS sendt! Sendt: ${res.sentCount}, Fejlede: ${res.failedCount}`);
         setSmsModal({ isOpen: false, lead: null, isAll: false, message: '', isSending: false });
         fetchLeads(pagination.page);
       } else {
-        toast.error(res?.error || 'Broadcast failed');
+        toast.error(res?.error || 'Udsendelse fejlede');
         setSmsModal(prev => ({ ...prev, isSending: false }));
       }
     } catch (err) {
       console.error(err);
-      toast.error('Failed to send SMS broadcast');
+      toast.error('Kunne ikke sende SMS');
       setSmsModal(prev => ({ ...prev, isSending: false }));
     }
   };
 
-  // Email Broadcast
+  // Email Broadcast Modal (PURE TEXT - NO HTML NEEDED)
   const openEmailModal = (target = 'selected') => {
     let isAll = false;
     let targetLead = null;
-    let defaultSubject = '🖤 Hej {{name}} – Din VIP-adgang til Black Week er klar!';
-    let defaultHtml = `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #172225; line-height: 1.6;">
-  <div style="background-color: #053638; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0;">
-    <h1 style="color: #ffffff; margin: 0; font-size: 28px; letter-spacing: 1px;">BLACK WEEK ER I GANG! 🖤</h1>
-    <p style="color: #e8b52f; font-weight: bold; margin: 10px 0 0 0;">Eksklusiv VIP-adgang til Student Life</p>
-  </div>
-  <div style="padding: 30px; background-color: #ffffff; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;">
-    <p>Kære {{name}},</p>
-    <p>Som tilmeldt vores VIP-liste er du blandt de allerførste, der får adgang til årets største tilbud på studenterhuer og tilbehør!</p>
-    <p>Gå ind på vores webshop nu og spar stort inden tilbuddene åbner for alle andre.</p>
-    <div style="text-align: center; margin: 35px 0;">
-      <a href="https://studentlife.dk" style="background-color: #053638; color: #ffffff; padding: 15px 30px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 16px; display: inline-block;">FÅ DIT VIP-TILBUD HER 🖤</a>
-    </div>
-    <p style="font-size: 13px; color: #64748b; margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
-      Venlig hilsen,<br><strong>Student Life Teamet</strong>
-    </p>
-  </div>
-</div>`;
 
     if (typeof target === 'object' && target !== null) {
       targetLead = target;
@@ -247,10 +282,12 @@ export default function BlackFridayPage() {
       isOpen: true,
       lead: targetLead,
       isAll,
-      subject: defaultSubject,
-      html: defaultHtml,
-      isSending: false,
-      previewMode: false
+      subject: 'Du er på VIP-listen! 🖤',
+      headline: 'Bekræftelse efter tilmelding',
+      bodyText: 'Du er på VIP-listen! 🖤\n\nDu er nu et skridt tættere på årets Black Week-tilbud hos Student Life!\n\nHold øje med din mail og SMS. Vi sender dig dit personlige VIP-link, så snart din eksklusive adgang åbner.\n\nVi ses til Black Week!',
+      buttonText: 'BESØG STUDENT LIFE 🖤',
+      buttonUrl: 'https://studentlife.dk',
+      isSending: false
     });
   };
 
@@ -259,9 +296,9 @@ export default function BlackFridayPage() {
     if (!el) return;
     const start = el.selectionStart;
     const end = el.selectionEnd;
-    const text = emailModal.html;
+    const text = emailModal.bodyText;
     const newText = text.substring(0, start) + tag + text.substring(end);
-    setEmailModal(prev => ({ ...prev, html: newText }));
+    setEmailModal(prev => ({ ...prev, bodyText: newText }));
     setTimeout(() => {
       el.focus();
       el.setSelectionRange(start + tag.length, start + tag.length);
@@ -270,10 +307,10 @@ export default function BlackFridayPage() {
 
   const handleSendEmail = async () => {
     if (!emailModal.subject.trim()) {
-      return toast.error('Please enter email subject');
+      return toast.error('Indtast venligst et emne');
     }
-    if (!emailModal.html.trim()) {
-      return toast.error('Please enter email HTML body');
+    if (!emailModal.bodyText.trim()) {
+      return toast.error('Indtast venligst beskedtekst');
     }
 
     setEmailModal(prev => ({ ...prev, isSending: true }));
@@ -290,20 +327,23 @@ export default function BlackFridayPage() {
       const res = await broadcastBlackFridayEmail({
         leadIds,
         subject: emailModal.subject,
-        html: emailModal.html
+        headline: emailModal.headline,
+        bodyText: emailModal.bodyText,
+        buttonText: emailModal.buttonText,
+        buttonUrl: emailModal.buttonUrl
       });
 
       if (res && res.success) {
-        toast.success(`Email Broadcast complete! Sent: ${res.sentCount}, Failed: ${res.failedCount}`);
-        setEmailModal({ isOpen: false, lead: null, isAll: false, subject: '', html: '', isSending: false, previewMode: false });
+        toast.success(`E-mail broadcast gennemført! Sendt: ${res.sentCount}, Fejlede: ${res.failedCount}`);
+        setEmailModal(prev => ({ ...prev, isOpen: false, isSending: false }));
         fetchLeads(pagination.page);
       } else {
-        toast.error(res?.error || 'Broadcast failed');
+        toast.error(res?.error || 'Udsendelse fejlede');
         setEmailModal(prev => ({ ...prev, isSending: false }));
       }
     } catch (err) {
       console.error(err);
-      toast.error('Failed to send Email broadcast');
+      toast.error('Kunne ikke sende e-mail');
       setEmailModal(prev => ({ ...prev, isSending: false }));
     }
   };
@@ -314,43 +354,43 @@ export default function BlackFridayPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-xl border border-slate-200/80 shadow-xs">
         <div>
           <div className="flex items-center gap-2">
-            <span className="p-2 bg-slate-900 text-amber-400 rounded-lg">
+            <span className="p-2 bg-[#053638] text-amber-400 rounded-lg shadow-xs">
               <Flame className="w-5 h-5" />
             </span>
             <h1 className="text-2xl font-bold text-slate-900">Black Friday VIP Leads & Broadcast</h1>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            Registered VIP users from WordPress form with multi-channel SMS and Email broadcast capabilities.
+            VIP-tilmeldinger fra WordPress med officiel Student Life e-mail & SMS broadcast.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
           <button
             onClick={() => openSmsModal('all')}
-            className="flex items-center gap-2 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
           >
             <MessageSquare className="w-4 h-4" />
-            Broadcast SMS (All)
+            Send SMS (Alle)
           </button>
           <button
             onClick={() => openEmailModal('all')}
-            className="flex items-center gap-2 px-3.5 py-2 bg-[#053638] hover:bg-[#07474a] text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#053638] hover:bg-[#07474a] text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
           >
             <Mail className="w-4 h-4" />
-            Broadcast Email (All)
+            Send E-mail (Alle)
           </button>
           <button
             onClick={handleExportCsv}
-            className="flex items-center gap-2 px-3.5 py-2 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-medium transition-colors"
+            className="flex items-center gap-2 px-3.5 py-2.5 border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg text-xs font-medium transition-colors"
           >
             <Download className="w-4 h-4 text-slate-500" />
-            Export CSV
+            Eksportér CSV
           </button>
           <button
             onClick={() => fetchLeads()}
             disabled={loading}
-            className="p-2 border border-slate-300 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors"
-            title="Refresh"
+            className="p-2.5 border border-slate-300 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors"
+            title="Genopfrisk"
           >
             <RefreshCcw className={cn("w-4 h-4", loading && "animate-spin text-indigo-600")} />
           </button>
@@ -374,7 +414,7 @@ export default function BlackFridayPage() {
             <Calendar className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Today's Registrations</p>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Tilmeldte I Dag</p>
             <p className="text-2xl font-bold text-slate-900 mt-0.5">{stats.today.toLocaleString()}</p>
           </div>
         </div>
@@ -384,7 +424,7 @@ export default function BlackFridayPage() {
             <MessageSquare className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">SMS Broadcasts Sent</p>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">SMS Sendt</p>
             <p className="text-2xl font-bold text-slate-900 mt-0.5">{stats.smsSentTotal.toLocaleString()}</p>
           </div>
         </div>
@@ -394,11 +434,56 @@ export default function BlackFridayPage() {
             <Mail className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Emails Delivered</p>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">E-mails Leveret</p>
             <p className="text-2xl font-bold text-slate-900 mt-0.5">{stats.emailSentTotal.toLocaleString()}</p>
           </div>
         </div>
       </div>
+
+      {/* Admin Notification Settings Bar (Requested by user) */}
+      <form onSubmit={handleSaveSettings} className="bg-white p-5 rounded-xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-lg shrink-0">
+            <Bell className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">Admin E-mail Notifikation ved ny VIP tilmelding</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Modtag automatisk besked på din e-mail, hver gang en kunde tilmelder sig VIP-listen på hjemmesiden.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 select-none">
+            <input
+              type="checkbox"
+              checked={notifyEnabled}
+              onChange={(e) => setNotifyEnabled(e.target.checked)}
+              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+            />
+            <span>Aktivér notifikation</span>
+          </label>
+
+          <input
+            type="email"
+            placeholder="f.eks. salg@studentlife.dk"
+            value={notifyEmail}
+            onChange={(e) => setNotifyEmail(e.target.value)}
+            disabled={!notifyEnabled}
+            className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-50 min-w-[200px]"
+          />
+
+          <button
+            type="submit"
+            disabled={savingSettings}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors shrink-0"
+          >
+            {savingSettings ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            Gem Indstilling
+          </button>
+        </div>
+      </form>
 
       {/* Filter and Bulk Action Toolbar */}
       <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
@@ -407,7 +492,7 @@ export default function BlackFridayPage() {
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search by name, email, phone..."
+              placeholder="Søg efter navn, e-mail, telefon..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
@@ -420,22 +505,22 @@ export default function BlackFridayPage() {
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
               className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-              title="From date"
+              title="Fra dato"
             />
-            <span className="text-xs text-slate-400">to</span>
+            <span className="text-xs text-slate-400">til</span>
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
               className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-              title="To date"
+              title="Til dato"
             />
             {(search || dateFrom || dateTo) && (
               <button
                 onClick={() => { setSearch(''); setDateFrom(''); setDateTo(''); }}
                 className="text-xs text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1"
               >
-                Clear
+                Ryd
               </button>
             )}
           </div>
@@ -444,27 +529,27 @@ export default function BlackFridayPage() {
         {/* Selected Banner */}
         {selectedIds.length > 0 && (
           <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-lg text-xs text-indigo-900 font-medium animate-fadeIn">
-            <span>{selectedIds.length} lead(s) selected</span>
+            <span>{selectedIds.length} valgt(e)</span>
             <button
               onClick={() => openSmsModal('selected')}
               className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold flex items-center gap-1 shadow-xs"
             >
               <MessageSquare className="w-3 h-3" />
-              SMS Selected
+              SMS Valgte
             </button>
             <button
               onClick={() => openEmailModal('selected')}
               className="px-2.5 py-1 bg-[#053638] hover:bg-[#07474a] text-white rounded text-xs font-semibold flex items-center gap-1 shadow-xs"
             >
               <Mail className="w-3 h-3" />
-              Email Selected
+              E-mail Valgte
             </button>
             <button
               onClick={() => setDeleteModal({ isOpen: true, id: null, isBulk: true, isDeleting: false })}
               className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-semibold flex items-center gap-1 shadow-xs"
             >
               <Trash2 className="w-3 h-3" />
-              Delete Selected
+              Slet Valgte
             </button>
           </div>
         )}
@@ -484,13 +569,13 @@ export default function BlackFridayPage() {
                     className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
                   />
                 </th>
-                <th className="py-3 px-4">Lead / Customer</th>
-                <th className="py-3 px-4">Contact Details</th>
-                <th className="py-3 px-4">Registered At</th>
-                <th className="py-3 px-4 text-center">SMS Sent</th>
-                <th className="py-3 px-4 text-center">Email Sent</th>
+                <th className="py-3 px-4">Kunde / Lead</th>
+                <th className="py-3 px-4">Kontaktoplysninger</th>
+                <th className="py-3 px-4">Tilmeldt Dato</th>
+                <th className="py-3 px-4 text-center">SMS Sendt</th>
+                <th className="py-3 px-4 text-center">E-mail Sendt</th>
                 <th className="py-3 px-4">VIP Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th className="py-3 px-4 text-right">Handlinger</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -498,18 +583,18 @@ export default function BlackFridayPage() {
                 <tr>
                   <td colSpan="8" className="py-12 text-center text-slate-400">
                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-indigo-600 mb-2" />
-                    <span>Loading VIP Leads...</span>
+                    <span>Indlæser VIP-kunder...</span>
                   </td>
                 </tr>
               ) : leads.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="py-12 text-center text-slate-400">
                     <Sparkles className="w-8 h-8 mx-auto text-slate-300 mb-2" />
-                    <p className="font-semibold text-slate-600">No VIP Leads found</p>
+                    <p className="font-semibold text-slate-600">Ingen VIP-kunder fundet</p>
                     <p className="text-xs text-slate-400 mt-1">
                       {search || dateFrom || dateTo
-                        ? 'Try clearing your filters to see registered leads.'
-                        : 'Signups submitted from the WordPress Black Week page will appear here instantly.'}
+                        ? 'Prøv at rydde dine filtre for at se tilmeldte kunder.'
+                        : 'Tilmeldinger fra WordPress Black Week formularen vil automatisk dukke op her.'}
                     </p>
                   </td>
                 </tr>
@@ -537,7 +622,7 @@ export default function BlackFridayPage() {
 
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-slate-900 text-amber-400 font-bold flex items-center justify-center text-xs shrink-0 shadow-xs">
+                          <div className="w-8 h-8 rounded-full bg-[#053638] text-amber-300 font-bold flex items-center justify-center text-xs shrink-0 shadow-xs">
                             {initial}
                           </div>
                           <div>
@@ -545,7 +630,7 @@ export default function BlackFridayPage() {
                             {lead.school ? (
                               <p className="text-xs text-slate-400">{lead.school}</p>
                             ) : (
-                              <p className="text-[11px] text-slate-400">WordPress VIP Embed</p>
+                              <p className="text-[11px] text-slate-400">WordPress VIP Tilmelding</p>
                             )}
                           </div>
                         </div>
@@ -564,7 +649,7 @@ export default function BlackFridayPage() {
                             <button
                               onClick={() => handleCopyPhone(lead.phone)}
                               className="text-slate-400 hover:text-slate-700 p-0.5 rounded transition-colors"
-                              title="Copy Phone"
+                              title="Kopiér telefonnummer"
                             >
                               {copiedPhone === lead.phone ? (
                                 <Check className="w-3 h-3 text-emerald-600" />
@@ -606,8 +691,8 @@ export default function BlackFridayPage() {
                       </td>
 
                       <td className="py-3.5 px-4">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-900 text-amber-300 border border-slate-700 shadow-xs">
-                          <span>VIP MEMBER 🖤</span>
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#053638] text-amber-300 border border-[#053638] shadow-xs">
+                          <span>VIP MEDLEM 🖤</span>
                         </span>
                       </td>
 
@@ -623,14 +708,14 @@ export default function BlackFridayPage() {
                           <button
                             onClick={() => openEmailModal(lead)}
                             className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                            title="Send Email"
+                            title="Send E-mail"
                           >
                             <Mail className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => setDeleteModal({ isOpen: true, id: lead.id, isBulk: false, isDeleting: false })}
                             className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Delete Lead"
+                            title="Slet Kunde"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -648,7 +733,7 @@ export default function BlackFridayPage() {
         {pagination.totalPages > 1 && (
           <div className="p-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
             <span>
-              Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.totalCount)} of {pagination.totalCount} leads
+              Viser {((pagination.page - 1) * pagination.limit) + 1} til {Math.min(pagination.page * pagination.limit, pagination.totalCount)} af {pagination.totalCount} kunder
             </span>
             <div className="flex items-center gap-1">
               <button
@@ -659,7 +744,7 @@ export default function BlackFridayPage() {
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <span className="px-2 font-semibold text-slate-700">
-                Page {pagination.page} of {pagination.totalPages}
+                Side {pagination.page} af {pagination.totalPages}
               </span>
               <button
                 disabled={pagination.page >= pagination.totalPages}
@@ -674,10 +759,195 @@ export default function BlackFridayPage() {
       </div>
 
       {/* ─────────────────────────────────────────────────────────────
+          EMAIL BROADCAST MODAL (PURE TEXT - NO RAW HTML NEEDED!)
+      ───────────────────────────────────────────────────────────── */}
+      {emailModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-4xl w-full p-6 shadow-2xl border border-slate-100 max-h-[92vh] flex flex-col">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="p-2 bg-[#053638] text-amber-300 rounded-lg">
+                  <Mail className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    {emailModal.lead ? `Send VIP E-mail til ${emailModal.lead.name}` : emailModal.isAll ? 'Send VIP E-mail til ALLE tilmeldte' : `Send VIP E-mail til ${selectedIds.length} udvalgte`}
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    {emailModal.lead ? emailModal.lead.email : emailModal.isAll ? `${stats.total} registrerede modtagere` : `${selectedIds.length} modtagere`}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setEmailModal(prev => ({ ...prev, isOpen: false }))}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Split layout: Text fields on Left, Live Branded Email Card Preview on Right */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4 overflow-y-auto pr-1 flex-1">
+              {/* Left Column: Pure Text Form */}
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    E-mail Emnefelt (Subject)
+                  </label>
+                  <input
+                    type="text"
+                    value={emailModal.subject}
+                    onChange={(e) => setEmailModal(prev => ({ ...prev, subject: e.target.value }))}
+                    placeholder="f.eks. Du er på VIP-listen! 🖤"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#053638]/20 focus:border-[#053638]"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Overskrift / Header Banner
+                  </label>
+                  <input
+                    type="text"
+                    value={emailModal.headline}
+                    onChange={(e) => setEmailModal(prev => ({ ...prev, headline: e.target.value }))}
+                    placeholder="f.eks. Bekræftelse efter tilmelding"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#053638]/20 focus:border-[#053638]"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-slate-700">
+                      Beskedtekst (Almindelig tekst - INGEN HTML)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => insertEmailTag('{{name}}')}
+                      className="px-2 py-0.5 bg-amber-50 text-amber-800 border border-amber-200 rounded text-[11px] font-bold hover:bg-amber-100 transition-colors"
+                      title="Indsæt kundens navn dynamisk"
+                    >
+                      + {'{{name}}'}
+                    </button>
+                  </div>
+                  <textarea
+                    ref={emailTextareaRef}
+                    rows={7}
+                    value={emailModal.bodyText}
+                    onChange={(e) => setEmailModal(prev => ({ ...prev, bodyText: e.target.value }))}
+                    placeholder="Skriv din almindelige tekst her. Linjeskift og afsnit tilføjes automatisk..."
+                    className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#053638]/20 focus:border-[#053638] resize-none font-sans"
+                  />
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Du behøver ikke skrive HTML-tags. Systemet pakker automatisk din tekst ind i det officielle Student Life e-maildesign.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      Knaptekst (Valgfri)
+                    </label>
+                    <input
+                      type="text"
+                      value={emailModal.buttonText}
+                      onChange={(e) => setEmailModal(prev => ({ ...prev, buttonText: e.target.value }))}
+                      placeholder="f.eks. BESØG WEBSHOPPEN"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#053638]/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      Knap Link / URL
+                    </label>
+                    <input
+                      type="text"
+                      value={emailModal.buttonUrl}
+                      onChange={(e) => setEmailModal(prev => ({ ...prev, buttonUrl: e.target.value }))}
+                      placeholder="https://studentlife.dk"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-[#053638]/20 font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Live Visual Email Template Preview */}
+              <div>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Eye className="w-3.5 h-3.5 text-slate-400" />
+                  Live E-mail Forhåndsvisning:
+                </p>
+
+                <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-100 shadow-sm text-slate-800">
+                  {/* Email Banner Header */}
+                  <div className="bg-[#053638] p-5 text-center text-white">
+                    <div className="text-[10px] font-bold tracking-widest text-amber-400 uppercase mb-1">
+                      STUDENT LIFE &bull; BLACK WEEK
+                    </div>
+                    <h4 className="text-base font-bold text-white leading-tight">
+                      {emailModal.headline || 'Bekræftelse efter tilmelding'}
+                    </h4>
+                  </div>
+                  <div className="h-1 bg-amber-400"></div>
+
+                  {/* Email Card Body */}
+                  <div className="bg-white p-5 space-y-3 text-xs leading-relaxed">
+                    <p className="font-bold text-slate-900 text-sm">
+                      Hej {emailModal.lead ? emailModal.lead.name : 'Sarah Hansen'},
+                    </p>
+
+                    <div className="space-y-2 text-slate-700 whitespace-pre-line">
+                      {emailModal.bodyText.replace(/\{\{name\}\}/gi, emailModal.lead ? emailModal.lead.name : 'Sarah Hansen')}
+                    </div>
+
+                    {emailModal.buttonText && (
+                      <div className="pt-3 pb-1 text-center">
+                        <span className="inline-block px-5 py-2.5 bg-[#053638] text-white font-bold text-xs rounded shadow-xs tracking-wider">
+                          {emailModal.buttonText}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="pt-3 border-t border-slate-100 text-[10px] text-slate-400">
+                      Har du spørgsmål? Svar direkte på denne e-mail eller skriv til <span className="text-[#053638] font-semibold underline">info@studentlife.dk</span>.
+                    </div>
+                  </div>
+
+                  {/* Email Card Footer */}
+                  <div className="bg-slate-50 p-3 text-center border-t border-slate-100 text-[10px] text-slate-400">
+                    Student Life ApS &bull; CVR: 41234567
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setEmailModal(prev => ({ ...prev, isOpen: false }))}
+                className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold"
+              >
+                Annullér
+              </button>
+              <button
+                type="button"
+                disabled={emailModal.isSending || !emailModal.subject.trim() || !emailModal.bodyText.trim()}
+                onClick={handleSendEmail}
+                className="px-5 py-2.5 bg-[#053638] hover:bg-[#07474a] disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-colors"
+              >
+                {emailModal.isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                Send E-mail Broadcast
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────────────────────────────────────────────────────────
           SMS BROADCAST MODAL
       ───────────────────────────────────────────────────────────── */}
       {smsModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 animate-fadeIn">
           <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
               <div className="flex items-center gap-2">
@@ -686,10 +956,10 @@ export default function BlackFridayPage() {
                 </span>
                 <div>
                   <h3 className="text-base font-bold text-slate-900">
-                    {smsModal.lead ? `Send SMS to ${smsModal.lead.name}` : smsModal.isAll ? 'Broadcast SMS to ALL VIP Leads' : `Broadcast SMS to ${selectedIds.length} Selected Leads`}
+                    {smsModal.lead ? `Send SMS til ${smsModal.lead.name}` : smsModal.isAll ? 'Send SMS til ALLE VIP Tilmeldte' : `Send SMS til ${selectedIds.length} udvalgte`}
                   </h3>
                   <p className="text-xs text-slate-400">
-                    {smsModal.lead ? smsModal.lead.phone : smsModal.isAll ? `${stats.total} total registered recipients` : `${selectedIds.length} recipient(s)`}
+                    {smsModal.lead ? smsModal.lead.phone : smsModal.isAll ? `${stats.total} modtagere` : `${selectedIds.length} modtager(e)`}
                   </p>
                 </div>
               </div>
@@ -703,15 +973,15 @@ export default function BlackFridayPage() {
 
             <div className="mt-4 space-y-3">
               <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">
-                  Message Text
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  SMS Beskedtekst
                 </label>
                 <textarea
                   ref={smsTextareaRef}
                   rows={4}
                   value={smsModal.message}
                   onChange={(e) => setSmsModal(prev => ({ ...prev, message: e.target.value }))}
-                  placeholder="Skriv din besked her..."
+                  placeholder="Skriv din SMS besked her..."
                   className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 resize-none font-sans"
                 />
               </div>
@@ -729,13 +999,13 @@ export default function BlackFridayPage() {
                   </button>
                 </div>
                 <div className="text-slate-400 font-mono text-[11px]">
-                  {smsModal.message.length} chars ({Math.ceil(smsModal.message.length / 160) || 1} SMS)
+                  {smsModal.message.length} tegn ({Math.ceil(smsModal.message.length / 160) || 1} SMS)
                 </div>
               </div>
 
               {/* Message Live Preview */}
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
-                <p className="font-semibold text-slate-500 text-[10px] uppercase mb-1">Live Recipient Preview:</p>
+                <p className="font-bold text-slate-500 text-[10px] uppercase mb-1">Forhåndsvisning:</p>
                 <p className="text-slate-700 italic">
                   {smsModal.message.replace(/\{\{name\}\}/gi, smsModal.lead ? smsModal.lead.name : 'Sarah Hansen')}
                 </p>
@@ -748,140 +1018,16 @@ export default function BlackFridayPage() {
                 onClick={() => setSmsModal({ isOpen: false, lead: null, isAll: false, message: '', isSending: false })}
                 className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold"
               >
-                Cancel
+                Annullér
               </button>
               <button
                 type="button"
                 disabled={smsModal.isSending || !smsModal.message.trim()}
                 onClick={handleSendSms}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-xs transition-colors"
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-colors"
               >
                 {smsModal.isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                Send Broadcast Now
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ─────────────────────────────────────────────────────────────
-          EMAIL BROADCAST MODAL
-      ───────────────────────────────────────────────────────────── */}
-      {emailModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 animate-fadeIn">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-100 max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
-              <div className="flex items-center gap-2">
-                <span className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
-                  <Mail className="w-5 h-5" />
-                </span>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">
-                    {emailModal.lead ? `Send Email to ${emailModal.lead.name}` : emailModal.isAll ? 'Broadcast Email to ALL VIP Leads' : `Broadcast Email to ${selectedIds.length} Selected Leads`}
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    {emailModal.lead ? emailModal.lead.email : emailModal.isAll ? `${stats.total} total registered recipients` : `${selectedIds.length} recipient(s)`}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setEmailModal({ isOpen: false, lead: null, isAll: false, subject: '', html: '', isSending: false, previewMode: false })}
-                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="mt-4 space-y-3 overflow-y-auto pr-1 flex-1">
-              <div>
-                <label className="text-xs font-semibold text-slate-700 block mb-1">
-                  Email Subject
-                </label>
-                <input
-                  type="text"
-                  value={emailModal.subject}
-                  onChange={(e) => setEmailModal(prev => ({ ...prev, subject: e.target.value }))}
-                  placeholder="Indtast emne..."
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                />
-              </div>
-
-              {/* Mode Toggle: HTML Editor vs Preview */}
-              <div className="flex items-center justify-between pt-1">
-                <div className="flex items-center gap-1.5 text-xs">
-                  <span className="text-slate-400">Insert tag:</span>
-                  <button
-                    type="button"
-                    onClick={() => insertEmailTag('{{name}}')}
-                    className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded font-mono text-[11px] font-semibold transition-colors"
-                  >
-                    + {'{{name}}'}
-                  </button>
-                </div>
-
-                <div className="flex items-center bg-slate-100 p-0.5 rounded-lg text-xs font-semibold">
-                  <button
-                    type="button"
-                    onClick={() => setEmailModal(prev => ({ ...prev, previewMode: false }))}
-                    className={cn(
-                      "px-3 py-1 rounded-md transition-colors",
-                      !emailModal.previewMode ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900"
-                    )}
-                  >
-                    HTML Source
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEmailModal(prev => ({ ...prev, previewMode: true }))}
-                    className={cn(
-                      "px-3 py-1 rounded-md transition-colors flex items-center gap-1",
-                      emailModal.previewMode ? "bg-white text-slate-900 shadow-xs" : "text-slate-500 hover:text-slate-900"
-                    )}
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    Preview
-                  </button>
-                </div>
-              </div>
-
-              {!emailModal.previewMode ? (
-                <div>
-                  <textarea
-                    ref={emailTextareaRef}
-                    rows={10}
-                    value={emailModal.html}
-                    onChange={(e) => setEmailModal(prev => ({ ...prev, html: e.target.value }))}
-                    placeholder="HTML / Email content..."
-                    className="w-full p-3 border border-slate-200 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 resize-none"
-                  />
-                </div>
-              ) : (
-                <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 min-h-[220px] max-h-[350px] overflow-y-auto">
-                  <div
-                    dangerouslySetInnerHTML={{
-                      __html: emailModal.html.replace(/\{\{name\}\}/gi, emailModal.lead ? emailModal.lead.name : 'Sarah Hansen')
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-end gap-2.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setEmailModal({ isOpen: false, lead: null, isAll: false, subject: '', html: '', isSending: false, previewMode: false })}
-                className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={emailModal.isSending || !emailModal.subject.trim() || !emailModal.html.trim()}
-                onClick={handleSendEmail}
-                className="px-5 py-2 bg-[#053638] hover:bg-[#07474a] disabled:opacity-50 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-xs transition-colors"
-              >
-                {emailModal.isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                Send Email Broadcast
+                Send SMS Nu
               </button>
             </div>
           </div>
@@ -890,16 +1036,16 @@ export default function BlackFridayPage() {
 
       {/* Delete Confirmation Modal */}
       {deleteModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 animate-fadeIn">
           <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100">
             <div className="p-3 bg-red-50 text-red-600 rounded-xl w-fit mb-3">
               <Trash2 className="w-6 h-6" />
             </div>
             <h3 className="text-base font-bold text-slate-900">
-              {deleteModal.isBulk ? `Delete ${selectedIds.length} VIP Lead(s)?` : 'Delete VIP Lead?'}
+              {deleteModal.isBulk ? `Slet ${selectedIds.length} VIP Kunde(r)?` : 'Slet VIP Kunde?'}
             </h3>
             <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-              This action cannot be undone. The selected lead records will be permanently removed.
+              Denne handling kan ikke fortrydes. De valgte kunder vil blive permanent slettet fra VIP-listen.
             </p>
             <div className="mt-5 flex items-center justify-end gap-2.5">
               <button
@@ -907,7 +1053,7 @@ export default function BlackFridayPage() {
                 onClick={() => setDeleteModal({ isOpen: false, id: null, isBulk: false, isDeleting: false })}
                 className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold"
               >
-                Cancel
+                Annullér
               </button>
               <button
                 type="button"
@@ -916,7 +1062,7 @@ export default function BlackFridayPage() {
                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-xs"
               >
                 {deleteModal.isDeleting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                Confirm Delete
+                Bekræft Slet
               </button>
             </div>
           </div>
@@ -925,4 +1071,3 @@ export default function BlackFridayPage() {
     </div>
   );
 }
-

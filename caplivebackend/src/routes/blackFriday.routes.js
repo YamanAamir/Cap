@@ -8,7 +8,11 @@ const admin = [verifyToken, isAdmin];
 // Public endpoint for WordPress VIP signup
 router.post('/register', blackFridayController.registerLead);
 
-// Admin endpoints for VIP Lead Management
+// Admin: Notification & Integration Settings
+router.get('/settings', admin, blackFridayController.getSettings);
+router.post('/settings', admin, blackFridayController.updateSettings);
+
+// Admin: VIP Lead Management & Broadcasts
 router.get('/leads', admin, blackFridayController.getLeads);
 router.delete('/leads/:id', admin, blackFridayController.deleteLead);
 router.post('/leads/bulk-delete', admin, blackFridayController.bulkDeleteLeads);
@@ -17,4 +21,3 @@ router.post('/broadcast-email', admin, blackFridayController.broadcastEmail);
 router.get('/export', admin, blackFridayController.exportLeadsCsv);
 
 module.exports = router;
-

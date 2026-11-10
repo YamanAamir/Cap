@@ -88,6 +88,8 @@ export const getWebhookLog = (id) => api.get(`/admin/webhook-logs/${id}`).then(r
 export const resetUser2fa = (userId) => api.post(`/admin/users/${userId}/reset-2fa`).then(r => r.data);
 
 // ─── Black Friday / Black Week VIP Leads ───
+export const getBlackFridaySettings = () => api.get('/admin/black-friday/settings').then(r => r.data);
+export const updateBlackFridaySettings = (data) => api.post('/admin/black-friday/settings', data).then(r => r.data);
 export const getBlackFridayLeads = (params) => api.get('/admin/black-friday/leads', { params }).then(r => r.data);
 export const deleteBlackFridayLead = (id) => api.delete(`/admin/black-friday/leads/${id}`).then(r => r.data);
 export const bulkDeleteBlackFridayLeads = (ids) => api.post('/admin/black-friday/leads/bulk-delete', { ids }).then(r => r.data);
