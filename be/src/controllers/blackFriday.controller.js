@@ -53,17 +53,17 @@ function isAllowedOrigin(req) {
  * Converts plain text into clean, branded HTML email without requiring the admin to write HTML tags!
  */
 function generateOfficialStudentLifeEmailHtml({ name, headline, bodyText, buttonText, buttonUrl }) {
-  const safeName = name || 'Kære Kunde';
-  const safeHeadline = headline || 'Du er på VIP-listen! 🖤';
-  const safeButtonText = buttonText || '';
-  const safeButtonUrl = buttonUrl || '';
+  const safeName = name ? String(name).trim() : 'Kunde';
+  const safeHeadline = headline ? String(headline).trim() : '';
+  const safeButtonText = buttonText ? String(buttonText).trim() : '';
+  const safeButtonUrl = buttonUrl ? String(buttonUrl).trim() : '';
 
   // Convert plain text into clean paragraphs with line breaks preserved
   const paragraphs = (bodyText || '')
     .split(/\n\s*\n/)
     .map(p => p.trim())
     .filter(Boolean)
-    .map(p => `<p style="margin:0 0 16px; font-size:16px; line-height:1.6; color:#172225;">${p.replace(/\n/g, '<br>')}</p>`)
+    .map(p => `<p style="margin:0 0 14px 0; font-size:16px; line-height:1.6; color:#333333;">${p.replace(/\n/g, '<br>')}</p>`)
     .join('');
 
   return `<!DOCTYPE html>
@@ -71,7 +71,7 @@ function generateOfficialStudentLifeEmailHtml({ name, headline, bodyText, button
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${safeHeadline}</title>
+  <title>${safeHeadline || 'Studentlife'}</title>
   <!--[if mso]>
   <xml>
     <o:OfficeDocumentSettings>
@@ -83,51 +83,86 @@ function generateOfficialStudentLifeEmailHtml({ name, headline, bodyText, button
   <style>
     @media only screen and (max-width: 600px) {
       table[class="container"] { width: 100% !important; }
-      .content-padding { padding: 24px 18px !important; }
+      td[class="mobile-padding"] { padding: 20px 15px !important; }
     }
   </style>
 </head>
-<body style="margin:0; padding:0; background-color:#f1f5f9; font-family:Arial, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color:#333333; line-height:1.5;">
+<body style="margin:0; padding:0; background-color:#ffffff; font-family:Arial, sans-serif; color:#333333; line-height:1.4;">
 
-  <!-- Full-width outer background -->
-  <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f1f5f9; padding:30px 10px;">
+  <div style="text-align: center; padding: 20px 5px;">
+    <img src="https://elipsestudio.com/student/01.png" alt="Studentlife" style="max-width: 100%; height: auto;">
+  </div>
+
+  <table width="100%" border="0" cellpadding="0" cellspacing="0">
+    <tr>
+      <td style="height:10px; font-size:0; line-height:0;">&nbsp;</td>
+    </tr>
+  </table>
+
+  <!-- Full-width wrapper -->
+  <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#ffffff;">
     <tr>
       <td align="center">
-        <!-- Main Container (650px) -->
-        <table width="650" border="0" cellpadding="0" cellspacing="0" class="container" style="max-width:650px; width:100%; background-color:#ffffff; border-radius:10px; overflow:hidden; border:1px solid #e2e8f0; box-shadow:0 4px 14px rgba(0,0,0,0.05);">
-          
-          <!-- Header Banner (Student Life Dark Green) -->
+        <!-- Fixed-width container (700px) -->
+        <table width="700" border="0" cellpadding="0" cellspacing="0" class="container" style="max-width:700px; width:100%;">
           <tr>
-            <td style="background-color:#053638; padding:34px 28px; text-align:center;">
-              <div style="font-size:12px; font-weight:700; letter-spacing:0.28em; color:#e8b52f; text-transform:uppercase; margin-bottom:8px;">
-                STUDENT LIFE &bull; BLACK WEEK
-              </div>
-              <h1 style="margin:0; color:#ffffff; font-size:26px; font-weight:700; letter-spacing:-0.02em; line-height:1.25;">
-                ${safeHeadline}
-              </h1>
-            </td>
-          </tr>
+            <td style="padding:0 20px;">
 
-          <!-- Gold Accent Line -->
-          <tr>
-            <td height="4" style="background-color:#e8b52f; font-size:0; line-height:0;">&nbsp;</td>
-          </tr>
+              <!-- Premium Quality Banner (Official Student Life Email Header) -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f9fafb; border-top:1px solid #e5e7eb; border-bottom:1px solid #e5e7eb;">
+                <tr>
+                  <td align="center" style="padding:15px 0;">
+                    <table border="0" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="font-size:16px; font-weight:bold; color:#111827; padding:0 15px;">✓ Premium kvalitet</td>
+                        <td style="font-size:16px; font-weight:bold; color:#111827; padding:0 15px;">✓ Personligt design</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
 
-          <!-- Content Body -->
-          <tr>
-            <td class="content-padding" style="padding:36px 32px 28px; background-color:#ffffff;">
-              <p style="margin:0 0 18px; font-size:17px; font-weight:700; color:#053638;">
-                Hej ${safeName},
-              </p>
-              
-              ${paragraphs || '<p style="margin:0 0 16px; font-size:16px; line-height:1.6; color:#172225;">Du er hermed inviteret til eksklusiv Black Week VIP-adgang hos Student Life!</p>'}
-              
+              <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="height:20px; font-size:0; line-height:0;">&nbsp;</td>
+                </tr>
+              </table>
+
+              <!-- Greeting Section -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="font-size:18px; font-weight:bold; padding-bottom:15px; color:#111827;">
+                    Kære: ${safeName},
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Headline Banner if provided -->
+              ${safeHeadline ? `
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin-bottom:15px;">
+                <tr>
+                  <td style="background-color:#f2f3f2; padding:15px 20px; font-weight:bold; font-size:17px; text-align:center; color:#111827;">
+                    ${safeHeadline}
+                  </td>
+                </tr>
+              </table>
+              ` : ''}
+
+              <!-- Content Box -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f2f3f2; padding:30px 25px; margin-bottom:20px;">
+                <tr>
+                  <td style="font-size:15px; line-height:1.6; color:#333333;">
+                    ${paragraphs || '<p style="margin:0; font-size:16px; line-height:1.6;">Du er hermed tilmeldt Student Life Black Week VIP!</p>'}
+                  </td>
+                </tr>
+              </table>
+
               <!-- Optional Call-To-Action Button -->
               ${safeButtonText && safeButtonUrl ? `
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:30px 0 20px;">
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="margin:20px 0 15px;">
                 <tr>
                   <td align="center">
-                    <a href="${safeButtonUrl}" style="background-color:#053638; color:#ffffff; font-size:16px; font-weight:700; text-decoration:none; padding:16px 36px; border-radius:6px; display:inline-block; letter-spacing:0.04em; text-align:center; box-shadow:0 2px 6px rgba(5,54,56,0.25);">
+                    <a href="${safeButtonUrl}" style="background-color:#111827; color:#ffffff; font-size:16px; font-weight:bold; text-decoration:none; padding:15px 35px; display:inline-block; border-radius:4px; text-transform:uppercase; letter-spacing:0.5px;">
                       ${safeButtonText}
                     </a>
                   </td>
@@ -135,27 +170,30 @@ function generateOfficialStudentLifeEmailHtml({ name, headline, bodyText, button
               </table>
               ` : ''}
 
-              <div style="margin-top:28px; padding-top:18px; border-top:1px solid #f1f5f9; font-size:14px; color:#64748b; line-height:1.6;">
-                Har du spørgsmål til din studenterhue eller tilbuddet? Du er altid velkommen til at svare direkte på denne e-mail eller skrive til os på <a href="mailto:info@studentlife.dk" style="color:#053638; font-weight:600; text-decoration:underline;">info@studentlife.dk</a>.
-              </div>
-            </td>
-          </tr>
+              <table width="100%" border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="height:15px; font-size:0; line-height:0;">&nbsp;</td>
+                </tr>
+              </table>
 
-          <!-- Footer (Official Student Life Email Footer) -->
-          <tr>
-            <td style="background-color:#f8fafc; padding:20px 28px; text-align:center; border-top:1px solid #e2e8f0;">
-              <p style="margin:0 0 4px; font-size:12px; font-weight:600; color:#475569;">
-                Student Life ApS &bull; CVR: 41234567
-              </p>
-              <p style="margin:0; font-size:11px; color:#94a3b8; line-height:1.4;">
-                Du modtager denne bekræftelse, fordi du har tilmeldt dig vores Black Week VIP-liste på studentlife.dk.
-              </p>
+              <!-- Official Signature (Matches Order Confirmation Email) -->
+              <table width="100%" border="0" cellpadding="0" cellspacing="0" style="border-top:1px solid #cdcdcd; margin-top:20px;">
+                <tr>
+                  <td style="font-size:14px; padding-top:15px; color:#333333; line-height:1.5;">
+                    <p style="margin:0 0 10px 0;">Er du i tvivl om noget? Kundeservice altid klar, hvis du har brug for hjælp.</p>
+                    <p style="margin:0 0 10px 0;">Vi ønsker dig en dejlig dag,</p>
+                    <p style="margin:0; font-weight:bold;">Studentlife 😊</p>
+                  </td>
+                </tr>
+              </table>
+
             </td>
           </tr>
         </table>
       </td>
     </tr>
   </table>
+
 </body>
 </html>`;
 }
