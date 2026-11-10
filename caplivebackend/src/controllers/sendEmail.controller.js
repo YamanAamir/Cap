@@ -2981,7 +2981,20 @@ const sendCapEmail = async (req, res) => {
       installmentDetails,
     } = req.body;
 
-    let finalInstallmentDetails = installmentDetails;
+    let parsedCustomerDetails = customerDetails;
+    if (typeof parsedCustomerDetails === 'string') {
+      try { parsedCustomerDetails = JSON.parse(parsedCustomerDetails); } catch (e) { }
+    }
+    let parsedSelectedOptions = selectedOptions;
+    if (typeof parsedSelectedOptions === 'string') {
+      try { parsedSelectedOptions = JSON.parse(parsedSelectedOptions); } catch (e) { }
+    }
+    let parsedInstallmentDetails = installmentDetails;
+    if (typeof parsedInstallmentDetails === 'string') {
+      try { parsedInstallmentDetails = JSON.parse(parsedInstallmentDetails); } catch (e) { }
+    }
+
+    let finalInstallmentDetails = parsedInstallmentDetails;
     if (!finalInstallmentDetails && orderNumber) {
       try {
         const dbOrder = await prisma.order.findUnique({
@@ -2989,7 +3002,9 @@ const sendCapEmail = async (req, res) => {
           select: { installmentDetails: true }
         });
         if (dbOrder?.installmentDetails) {
-          finalInstallmentDetails = dbOrder.installmentDetails;
+          finalInstallmentDetails = typeof dbOrder.installmentDetails === 'string'
+            ? JSON.parse(dbOrder.installmentDetails)
+            : dbOrder.installmentDetails;
         }
       } catch (e) {}
     }
@@ -3013,7 +3028,7 @@ const sendCapEmail = async (req, res) => {
     const capAttachments = buildCapAttachments(capImages);
 
     // Validate required fields
-    if (!customerDetails || !selectedOptions || !email) {
+    if (!parsedCustomerDetails || !parsedSelectedOptions || !email) {
       return res.status(400).json({
         message: 'Missing required fields: customerDetails, selectedOptions, and email are required'
       });
@@ -3021,8 +3036,8 @@ const sendCapEmail = async (req, res) => {
 
     const transporter = createEmailTransporter();
     const emailContent = capOrderEmail({
-      customerDetails,
-      selectedOptions,
+      customerDetails: parsedCustomerDetails,
+      selectedOptions: parsedSelectedOptions,
       totalPrice: totalPrice || '299.00',
       currency: currency || 'DKK',
       orderNumber: orderNumber || `CAP-${Date.now()}`,
@@ -3033,8 +3048,8 @@ const sendCapEmail = async (req, res) => {
       installmentDetails: finalInstallmentDetails
     });
     const emailContentAdmin = capOrderAdminEmail({
-      customerDetails,
-      selectedOptions,
+      customerDetails: parsedCustomerDetails,
+      selectedOptions: parsedSelectedOptions,
       totalPrice: totalPrice || '299.00',
       currency: currency || 'DKK',
       orderNumber: orderNumber || `CAP-${Date.now()}`,
@@ -3045,8 +3060,8 @@ const sendCapEmail = async (req, res) => {
       installmentDetails: finalInstallmentDetails
     });
     const emailContentFactory = await factoryOrderEmail({
-      customerDetails,
-      selectedOptions,
+      customerDetails: parsedCustomerDetails,
+      selectedOptions: parsedSelectedOptions,
       totalPrice: totalPrice || '299.00',
       currency: currency || 'DKK',
       orderNumber: orderNumber || `CAP-${Date.now()}`,
@@ -3239,11 +3254,21 @@ const processSuccessfulCapOrder = async (tempOrderId, orderDataOverride = null) 
       }
     }
 
+    const stringifyIfObject = (val) => {
+      if (val === null || val === undefined) return null;
+      return typeof val === 'object' ? JSON.stringify(val) : String(val);
+    };
+
+    const customerDetailsStr = stringifyIfObject(orderData.customerDetails) || '{}';
+    const selectedOptionsStr = stringifyIfObject(orderData.selectedOptions) || '{}';
+    const capImagesStr = stringifyIfObject(orderData.capImages);
+    const installmentDetailsStr = stringifyIfObject(finalInstallmentDetails);
+
     const order = await prisma.order.create({
       data: {
-        customerDetails: orderData.customerDetails,
-        selectedOptions: orderData.selectedOptions,
-        totalPrice: orderData.finalPrice,
+        customerDetails: customerDetailsStr,
+        selectedOptions: selectedOptionsStr,
+        totalPrice: parseFloat(orderData.finalPrice) || 0,
         currency: orderData.currency || 'DKK',
         orderNumber: orderData.orderNumber,
         orderDate: orderData.orderDate || new Date(),
@@ -3253,10 +3278,11 @@ const processSuccessfulCapOrder = async (tempOrderId, orderDataOverride = null) 
         packageName: orderData.packageName,
         program: orderData.program,
         customerId: orderData.customerId,
-        capImages: orderData.capImages || null,
+        capImages: capImagesStr,
         discountCodeId: orderData.discountRecord?.id || null,
         discountAmount: orderData.discountAmount,
-        installmentDetails: finalInstallmentDetails,
+        installmentPlanId: orderData.installmentPlanId ? parseInt(orderData.installmentPlanId) : null,
+        installmentDetails: installmentDetailsStr,
       },
     });
 
@@ -3278,8 +3304,8 @@ const processSuccessfulCapOrder = async (tempOrderId, orderDataOverride = null) 
     await sendCapEmail(
       {
         body: {
-          customerDetails: order.customerDetails,
-          selectedOptions: order.selectedOptions,
+          customerDetails: orderData.customerDetails,
+          selectedOptions: orderData.selectedOptions,
           totalPrice: order.totalPrice,
           currency: order.currency,
           orderNumber: order.orderNumber,
@@ -4486,14 +4512,19 @@ const createInstallmentOrder = async (req, res) => {
       });
     }
 
+    const stringifyIfObject = (val) => {
+      if (val === null || val === undefined) return null;
+      return typeof val === 'object' ? JSON.stringify(val) : String(val);
+    };
+
     const defaultStatus = await prisma.orderStatus.findFirst({ where: { isActive: true } });
 
     const order = await prisma.order.create({
       data: {
         orderNumber: orderNumber || `CAP-${Date.now()}`,
         customerEmail: email,
-        customerDetails,
-        selectedOptions,
+        customerDetails: stringifyIfObject(customerDetails) || '{}',
+        selectedOptions: stringifyIfObject(selectedOptions) || '{}',
         totalPrice: parseFloat(totalPrice) || 0,
         currency,
         orderDate: orderDate ? new Date(orderDate) : new Date(),
@@ -4502,9 +4533,9 @@ const createInstallmentOrder = async (req, res) => {
         packageName: packageName || null,
         program: program || null,
         customerId: customer.id,
-        capImages: capImages || null,
+        capImages: stringifyIfObject(capImages),
         installmentPlanId: installmentPlanId ? parseInt(installmentPlanId) : null,
-        installmentDetails: installmentDetails || null,
+        installmentDetails: stringifyIfObject(installmentDetails),
       },
     });
 
