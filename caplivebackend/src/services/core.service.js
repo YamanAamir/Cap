@@ -459,6 +459,7 @@ const sendCustomerStatusEmail = async (orderId, emailTemplateId) => {
       subject,
       text: body,
       html: body.includes('<') && body.includes('>') ? body : body.replace(/\n/g, '<br/>'),
+      __logMeta: { orderNumber: order.orderNumber },
     });
     console.log(`[EMAIL] Successfully sent customer status email to ${order.customerEmail} for order ${order.orderNumber}`);
   } catch (error) {
@@ -466,7 +467,7 @@ const sendCustomerStatusEmail = async (orderId, emailTemplateId) => {
   }
 };
 
-const sendOrderEmail = async (to, subject, htmlBody) => {
+const sendOrderEmail = async (to, subject, htmlBody, orderNumber = null) => {
   const { getTransporter } = require('../utils/mailer');
   const transporter = getTransporter();
 
@@ -476,6 +477,7 @@ const sendOrderEmail = async (to, subject, htmlBody) => {
       to,
       subject,
       html: htmlBody,
+      __logMeta: orderNumber ? { orderNumber } : undefined,
     });
   } catch (error) {
     console.error('Failed to send order email:', error);

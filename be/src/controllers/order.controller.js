@@ -693,6 +693,7 @@ const resendOrderEmails = async (req, res) => {
             html: emailContent.html,
             text: emailContent.text,
             attachments: capAttachments,
+            __logMeta: { orderNumber: order.orderNumber },
           });
           sentResults.push(`Kunde (${targetEmail})`);
         } catch (err) {
@@ -713,6 +714,7 @@ const resendOrderEmails = async (req, res) => {
           subject: emailContentAdmin.subject,
           html: emailContentAdmin.html,
           text: emailContentAdmin.text,
+          __logMeta: { orderNumber: order.orderNumber },
         });
         sentResults.push(`Admin (${targetAdminEmail})`);
       } catch (err) {
@@ -733,6 +735,7 @@ const resendOrderEmails = async (req, res) => {
           subject: emailContentFactory.subject,
           html: emailContentFactory.html,
           text: emailContentFactory.text,
+          __logMeta: { orderNumber: order.orderNumber },
         });
         sentResults.push(`Fabrik (${targetFactoryEmail})`);
       } catch (err) {

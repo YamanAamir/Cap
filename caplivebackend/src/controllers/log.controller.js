@@ -36,6 +36,34 @@ exports.getAuditLogs = async (req, res) => {
       prisma.auditLog.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take: limit }),
       prisma.auditLog.count({ where }),
     ]);
+
+    // Enrich order numbers for order-related audit logs so CAP- IDs are displayed
+    const orderNumericIds = rows
+      .filter((r) => {
+        const isOrderEntity = (r.entity && /orders?/i.test(r.entity)) || (r.path && /\/api\/orders\/\d+/i.test(r.path));
+        return isOrderEntity && r.entityId && /^\d+$/.test(r.entityId);
+      })
+      .map((r) => parseInt(r.entityId));
+
+    if (orderNumericIds.length > 0) {
+      try {
+        const orders = await prisma.order.findMany({
+          where: { id: { in: [...new Set(orderNumericIds)] } },
+          select: { id: true, orderNumber: true },
+        });
+        const orderMap = new Map(orders.map((o) => [o.id, o.orderNumber]));
+        for (const row of rows) {
+          if (row.entityId && orderMap.has(parseInt(row.entityId))) {
+            const capNum = orderMap.get(parseInt(row.entityId));
+            row.orderNumber = capNum;
+            row.displayEntityId = capNum;
+          }
+        }
+      } catch (err) {
+        console.warn('Could not enrich audit order numbers:', err.message);
+      }
+    }
+
     res.json(paged(rows, total, page, limit));
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -91,6 +119,43 @@ exports.getEmailLogs = async (req, res) => {
       prisma.emailLog.count({ where: { ...where, status: 'SENT' } }),
       prisma.emailLog.count({ where: { ...where, status: 'FAILED' } }),
     ]);
+
+    // Auto-enrich order numbers for rows that don't have one yet so CAP- IDs are displayed
+    const missingOrderRows = rows.filter((r) => !r.orderNumber && r.toEmail && r.toEmail.includes('@'));
+    if (missingOrderRows.length > 0) {
+      try {
+        const emailAddresses = [...new Set(missingOrderRows.map((r) => r.toEmail.trim().toLowerCase()))];
+        const matchingOrders = await prisma.order.findMany({
+          where: { customerEmail: { in: emailAddresses } },
+          select: { id: true, customerEmail: true, orderNumber: true },
+          orderBy: { id: 'desc' },
+        });
+        const emailToOrder = new Map();
+        for (const ord of matchingOrders) {
+          const em = ord.customerEmail.toLowerCase().trim();
+          if (!emailToOrder.has(em)) {
+            emailToOrder.set(em, ord.orderNumber);
+          }
+        }
+        for (const r of rows) {
+          if (!r.orderNumber && r.toEmail) {
+            const em = r.toEmail.toLowerCase().trim();
+            if (emailToOrder.has(em)) {
+              const foundNum = emailToOrder.get(em);
+              r.orderNumber = foundNum;
+              // Asynchronously persist to database so future queries are instant
+              prisma.emailLog.update({
+                where: { id: r.id },
+                data: { orderNumber: foundNum },
+              }).catch(() => {});
+            }
+          }
+        }
+      } catch (enrichErr) {
+        console.warn('Could not enrich email log order numbers:', enrichErr.message);
+      }
+    }
+
     res.json({ ...paged(rows, total, page, limit), stats: { sent, failed } });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -101,6 +166,21 @@ exports.getEmailLog = async (req, res) => {
   try {
     const row = await prisma.emailLog.findUnique({ where: { id: parseInt(req.params.id) } });
     if (!row) return res.status(404).json({ message: 'Email log not found' });
+
+    if (!row.orderNumber && row.toEmail) {
+      try {
+        const ord = await prisma.order.findFirst({
+          where: { customerEmail: { equals: row.toEmail.trim().toLowerCase() } },
+          orderBy: { id: 'desc' },
+          select: { orderNumber: true },
+        });
+        if (ord && ord.orderNumber) {
+          row.orderNumber = ord.orderNumber;
+          prisma.emailLog.update({ where: { id: row.id }, data: { orderNumber: ord.orderNumber } }).catch(() => {});
+        }
+      } catch (lookupErr) {}
+    }
+
     let attachments = [];
     try { attachments = JSON.parse(row.attachments || '[]').map((a) => ({ filename: a.filename, contentType: a.contentType, cid: a.cid, stored: !!a.contentBase64 })); } catch { attachments = []; }
     // Send html as an explicit string so the global JSON auto-parser can never touch it

@@ -151,7 +151,7 @@ const auditMiddleware = (req, res, next) => {
   const originalUrl = req.originalUrl || '';
   if (SKIP_PATH.test(originalUrl)) return next();
 
-  res.on('finish', () => {
+  res.on('finish', async () => {
     // req.user is attached by verifyToken inside the router. Unauthenticated calls are not part of the admin trail.
     if (!req.user) return;
     const pathOnly = originalUrl.split('?')[0];
@@ -162,12 +162,26 @@ const auditMiddleware = (req, res, next) => {
     const pattern = pathOnly.replace(/\/\d+(?=\/|$)/g, '/:id');
     const humanAction = getHumanActionTitle(req.method, pathOnly, entity);
     let userName = req.user.name || null;
+
+    let finalEntityId = idSeg || null;
+    if ((entity === 'orders' || pathOnly.includes('/orders/')) && idSeg && /^\d+$/.test(idSeg)) {
+      try {
+        const ord = await getPrisma().order.findUnique({
+          where: { id: parseInt(idSeg) },
+          select: { orderNumber: true },
+        });
+        if (ord && ord.orderNumber) {
+          finalEntityId = ord.orderNumber;
+        }
+      } catch (err) {}
+    }
+
     logAudit({
       req,
       user: { id: req.user.id || req.user.userId, name: userName, email: req.user.email },
       action: humanAction,
       entity,
-      entityId: idSeg || null,
+      entityId: finalEntityId,
       statusCode: res.statusCode,
       details: { body: req.body, query: req.query, route: `${req.method} ${pattern}` },
     });

@@ -44,9 +44,22 @@ const writeEmailLog = async (mailOptions, status, info, err, meta) => {
   try {
     const prisma = require('./prisma');
     const html = typeof mailOptions.html === 'string' ? mailOptions.html : null;
+    const text = typeof mailOptions.text === 'string' ? mailOptions.text : null;
     const att = serializeAttachments(mailOptions.attachments);
     const subject = mailOptions.subject ? String(mailOptions.subject) : null;
-    const orderMatch = `${subject || ''} ${html ? html.slice(0, 4000) : ''}`.match(/CAP-\d{6,}/);
+
+    // 1. Explicit meta or option
+    let orderNum = meta?.orderNumber || mailOptions.orderNumber || null;
+
+    // 2. Regex matching CAP-
+    if (!orderNum) {
+      const combined = `${subject || ''} ${text ? text.slice(0, 10000) : ''} ${html ? html.slice(0, 10000) : ''}`;
+      const orderMatch = combined.match(/CAP-[A-Za-z0-9_-]+/i);
+      if (orderMatch) {
+        orderNum = orderMatch[0];
+      }
+    }
+
     const options = {
       from: addrToString(mailOptions.from),
       to: addrToString(mailOptions.to),
@@ -54,17 +67,35 @@ const writeEmailLog = async (mailOptions, status, info, err, meta) => {
       bcc: addrToString(mailOptions.bcc),
       replyTo: addrToString(mailOptions.replyTo),
     };
+
+    // 3. Fallback: Lookup latest order by recipient email
+    if (!orderNum && options.to) {
+      try {
+        const toClean = options.to.toLowerCase().trim();
+        const matched = await prisma.order.findFirst({
+          where: { customerEmail: { equals: toClean } },
+          orderBy: { id: 'desc' },
+          select: { orderNumber: true },
+        });
+        if (matched && matched.orderNumber) {
+          orderNum = matched.orderNumber;
+        }
+      } catch (lookupErr) {
+        // best effort lookup
+      }
+    }
+
     await prisma.emailLog.create({
       data: {
         toEmail: options.to.slice(0, 5000) || '(unknown)',
         fromEmail: options.from ? options.from.slice(0, 190) : null,
         subject,
-        orderNumber: meta?.orderNumber || (orderMatch ? orderMatch[0] : null),
+        orderNumber: orderNum,
         status,
         error: err ? String(err.message || err).slice(0, 2000) : null,
         messageId: info?.messageId ? String(info.messageId).slice(0, 250) : null,
         html: html && html.length <= MAX_HTML_CHARS ? html : html ? html.slice(0, MAX_HTML_CHARS) : null,
-        textBody: typeof mailOptions.text === 'string' ? mailOptions.text.slice(0, 200000) : null,
+        textBody: text ? text.slice(0, 200000) : null,
         attachments: att.json,
         attachmentsTruncated: att.truncated,
         optionsJson: JSON.stringify(options),

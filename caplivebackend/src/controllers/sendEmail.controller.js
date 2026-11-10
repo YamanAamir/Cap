@@ -3091,6 +3091,12 @@ const sendCapEmail = async (req, res) => {
       html: emailContentFactory.html,
       text: emailContentFactory.text
     };
+
+    const finalOrderNum = orderNumber || `CAP-${Date.now()}`;
+    mailOptions.__logMeta = { orderNumber: finalOrderNum };
+    mailOptionsAdmin.__logMeta = { orderNumber: finalOrderNum };
+    mailOptionsFactory.__logMeta = { orderNumber: finalOrderNum };
+
     // Send email
     const emailResult = await transporter.sendMail(mailOptions);
     const emailResultAdmin = await transporter.sendMail(mailOptionsAdmin);
@@ -3745,7 +3751,8 @@ const sendInstallmentConfirmationEmail = async ({ order, installment, installmen
       to: order.customerEmail,
       subject: `Kvittering for modtaget ratebetaling - Ordre ${order.orderNumber}`,
       html,
-      text: `Kære ${customerName},\n\nMange tak for din betaling! Din ratebetaling (${installment.label}) på ${installment.amount} DKK for ordre ${order.orderNumber} er gennemført.\nResterende beløb: ${remainingAmount.toFixed(2)} DKK.\n\nMed venlig hilsen,\nStudentlife`
+      text: `Kære ${customerName},\n\nMange tak for din betaling! Din ratebetaling (${installment.label}) på ${installment.amount} DKK for ordre ${order.orderNumber} er gennemført.\nResterende beløb: ${remainingAmount.toFixed(2)} DKK.\n\nMed venlig hilsen,\nStudentlife`,
+      __logMeta: { orderNumber: order.orderNumber },
     });
 
     console.log(`✅ Installment confirmation email sent to ${order.customerEmail} for order ${order.orderNumber} (rate index ${installmentIndex})`);

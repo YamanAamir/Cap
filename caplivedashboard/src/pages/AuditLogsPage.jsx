@@ -354,11 +354,24 @@ const AuditLogsPage = () => {
 
                       <td className="px-4 py-3 whitespace-nowrap text-xs">
                         <span className="font-semibold text-gray-800">{parsed.entityName}</span>
-                        {log.entityId && (
-                          <span className="text-gray-500 font-mono ml-1.5 bg-gray-100 px-1.5 py-0.5 rounded text-[11px] border border-gray-200">
-                            #{log.entityId}
-                          </span>
-                        )}
+                        {(() => {
+                          const orderNum = log.orderNumber || log.displayEntityId || (log.entityId && log.entityId.startsWith('CAP-') ? log.entityId : null);
+                          if (orderNum) {
+                            return (
+                              <span className="font-mono ml-1.5 bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded text-[11px] border border-indigo-200 inline-flex items-center tracking-tight shadow-2xs">
+                                {orderNum}
+                              </span>
+                            );
+                          }
+                          if (log.entityId) {
+                            return (
+                              <span className="text-gray-500 font-mono ml-1.5 bg-gray-100 px-1.5 py-0.5 rounded text-[11px] border border-gray-200">
+                                #{log.entityId}
+                              </span>
+                            );
+                          }
+                          return null;
+                        })()}
                       </td>
 
                       <td className="px-4 py-3 whitespace-nowrap">
@@ -479,7 +492,27 @@ const AuditLogsPage = () => {
                   </div>
                   <div>
                     <span className="text-gray-500 block">Entity:</span>
-                    <span className="font-semibold text-gray-900">{parsedModal.entityName} {selectedLog.entityId ? `(#${selectedLog.entityId})` : ''}</span>
+                    <span className="font-semibold text-gray-900">
+                      {parsedModal.entityName}{' '}
+                      {(() => {
+                        const oNum = selectedLog.orderNumber || selectedLog.displayEntityId || (selectedLog.entityId && selectedLog.entityId.startsWith('CAP-') ? selectedLog.entityId : null);
+                        if (oNum) {
+                          return (
+                            <span className="font-mono text-indigo-700 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 ml-1">
+                              {oNum}
+                            </span>
+                          );
+                        }
+                        if (selectedLog.entityId) {
+                          return (
+                            <span className="font-mono text-gray-500 ml-1">
+                              (#{selectedLog.entityId})
+                            </span>
+                          );
+                        }
+                        return '';
+                      })()}
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-500 block">Status:</span>

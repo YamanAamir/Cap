@@ -327,11 +327,13 @@ const EmailLogsPage = () => {
                       <td className="py-3 px-3 text-slate-700 max-w-[280px] truncate" title={log.subject}>
                         {log.subject || '(no subject)'}
                       </td>
-                      <td className="py-3 px-3 font-mono font-semibold text-slate-600">
+                      <td className="py-3 px-3 font-mono font-semibold text-slate-600 whitespace-nowrap">
                         {log.orderNumber ? (
-                          <span className="bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">{log.orderNumber}</span>
+                          <span className="inline-flex items-center bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded text-xs font-bold tracking-tight">
+                            {log.orderNumber}
+                          </span>
                         ) : (
-                          '—'
+                          <span className="text-slate-400 font-sans">—</span>
                         )}
                       </td>
                       <td className="py-3 px-3 text-slate-500 whitespace-nowrap">
@@ -404,8 +406,14 @@ const EmailLogsPage = () => {
                   {viewLoading ? 'Loading Email...' : viewLog?.subject || '(No Subject)'}
                 </h3>
                 {viewLog && (
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    To: <strong>{viewLog.toEmail}</strong> • Sent: {new Date(viewLog.createdAt).toLocaleString()}
+                  <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
+                    <span>To: <strong>{viewLog.toEmail}</strong></span>
+                    {viewLog.orderNumber && (
+                      <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-1.5 py-0.5 rounded font-mono font-bold text-[11px]">
+                        {viewLog.orderNumber}
+                      </span>
+                    )}
+                    <span>• Sent: {new Date(viewLog.createdAt).toLocaleString()}</span>
                   </p>
                 )}
               </div>
@@ -538,3 +546,4 @@ const EmailLogsPage = () => {
 };
 
 export default EmailLogsPage;
+
