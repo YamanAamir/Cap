@@ -342,16 +342,8 @@ const sendProductionBatch = async (batchId, adminUserId, overrides = {}) => {
     sentStatus = await prisma.orderStatus.findUnique({ where: { id: parseInt(overrides.targetStatusId) } });
   }
 
-  const nodemailer = require('nodemailer');
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.simply.com',
-    port: 465,
-    secure: true,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
+  const { getTransporter } = require('../utils/mailer');
+  const transporter = getTransporter();
 
   const recipient = overrides.recipientEmail || batch.recipientEmail;
   const subject = overrides.emailSubject || batch.emailSubject;
@@ -430,16 +422,8 @@ const sendCustomerStatusEmail = async (orderId, emailTemplateId) => {
   });
   if (!template) return;
 
-  const nodemailer = require('nodemailer');
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.simply.com',
-    port: 465,
-    secure: true,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
+  const { getTransporter } = require('../utils/mailer');
+  const transporter = getTransporter();
 
   let customerDetails = {};
   try {
@@ -483,16 +467,8 @@ const sendCustomerStatusEmail = async (orderId, emailTemplateId) => {
 };
 
 const sendOrderEmail = async (to, subject, htmlBody) => {
-  const nodemailer = require('nodemailer');
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.simply.com',
-    port: 465,
-    secure: true,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
+  const { getTransporter } = require('../utils/mailer');
+  const transporter = getTransporter();
 
   try {
     await transporter.sendMail({

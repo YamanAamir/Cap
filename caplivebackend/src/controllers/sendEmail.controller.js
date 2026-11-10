@@ -23,16 +23,10 @@ const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 //   });
 // };
 
+const { getTransporter } = require("../utils/mailer");
+
 const createEmailTransporter = () => {
-  return nodemailer.createTransport({
-    host: "smtp.simply.com",
-    port: 465,
-    secure: true,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS, // must be an App Password
-    },
-  });
+  return getTransporter();
 };
 
 
@@ -3889,11 +3883,14 @@ const stripePayment = async (req, res) => {
 
     const { frontendUrl } = req.body;
     let clientUrl = frontendUrl || req.headers.origin || 'http://localhost:5173/devstudentlife';
-    if (clientUrl.endsWith('/')) {
-      clientUrl = clientUrl.slice(0, -1);
-    }
-    if (!clientUrl.includes('/devstudentlife') && !clientUrl.includes('/studentlife')) {
-      clientUrl = `${clientUrl}/devstudentlife`;
+    clientUrl = clientUrl || 'https://studenterhue.studentlife.dk/studentlife';
+    if (typeof clientUrl === 'string') {
+      if (clientUrl.endsWith('/')) {
+        clientUrl = clientUrl.slice(0, -1);
+      }
+      if (!clientUrl.includes('/devstudentlife') && !clientUrl.includes('/studentlife')) {
+        clientUrl = `${clientUrl}/devstudentlife`;
+      }
     }
 
     // 🌟 FLATPAY / FRISBII GATEWAY
@@ -4032,11 +4029,14 @@ const payInstallment = async (req, res) => {
       }
     }
 
-    if (clientUrl.endsWith('/')) {
-      clientUrl = clientUrl.slice(0, -1);
-    }
-    if (!clientUrl.includes('/devstudentlife') && !clientUrl.includes('/studentlife')) {
-      clientUrl = `${clientUrl}/devstudentlife`;
+    clientUrl = clientUrl || 'https://studenterhue.studentlife.dk/studentlife';
+    if (typeof clientUrl === 'string') {
+      if (clientUrl.endsWith('/')) {
+        clientUrl = clientUrl.slice(0, -1);
+      }
+      if (!clientUrl.includes('/devstudentlife') && !clientUrl.includes('/studentlife')) {
+        clientUrl = `${clientUrl}/devstudentlife`;
+      }
     }
 
     if (installment.status === 'Paid') {
