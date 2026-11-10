@@ -94,7 +94,7 @@ async function checkAndSyncExistingOrders() {
   for (const email of FRISBII_PAID_EMAILS) {
     const existingOrders = await prisma.order.findMany({
       where: {
-        customerEmail: { equals: email, mode: 'insensitive' }
+        customerEmail: email
       },
       orderBy: { id: 'desc' }
     });
@@ -168,7 +168,7 @@ async function recoverFromTempOrders() {
         where: {
           OR: [
             { orderNumber: orderData.orderNumber },
-            { customerEmail: { equals: orderEmail, mode: 'insensitive' } }
+            { customerEmail: orderEmail }
           ]
         }
       });
