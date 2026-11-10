@@ -1,57 +1,52 @@
 /**
- * Targeted Order Recovery & Installment Sync Script
+ * Comprehensive Order Recovery & Installment Status Sync Script
  * 
- * Specifically handles the Frisbii-paid customers:
- * - Ismael Kanj (issodal16@gmail.com)
- * - Mila yildiz (milae08@hotmail.com)
- * - Wania Ali (waniaaliakbar@gmail.com)
- * - Felix Bach Damholdt (felixbachdamholdt@gmail.com)
- * - Amal khalid (amaldana2009@icloud.com)
- * - Perle mikkelsen (perlemikkelsen@gmail.com)
- * - Eva Kahwi (hajarelkahwi@gmail.com)
- * - sabina jusufi (sabinamckjusufi@gmail.com)
- * - Kacper Dryjanski (ciufi8576@gmail.com)
- * - Fritz Anne Gara Gudmandsen (fritzannegudmandsen@gmail.com)
- * - Esma Suzan Kara (esmasuzan696@gmail.com)
- * - Ahmad Assaad (ahmadassaad204@gmail.com)
- * - Hiroko Ruiz (weryne@mailinator.com)
+ * 1. INSTALLMENT STATUS CORRECTION:
+ *    - ONLY the verified customers who actually paid Installment 2 will have Installment 2 marked as 'Paid':
+ *      * issodal16@gmail.com
+ *      * rory@staehr.dk
+ *      * waniaaliakbar@gmail.com
+ *      * amaldana2009@icloud.com
+ *      * hajarelkahwi@gmail.com
+ *      * ciufi8576@gmail.com
+ *    - ALL OTHER ORDERS that had Installment 2 or 3 accidentally marked as 'Paid' (e.g. milae08@hotmail.com,
+ *      sabinamckjusufi@gmail.com, etc.) are REVERTED BACK to 'Pending' (with paidAt: null).
+ *    - Installment 3 is reverted to 'Pending' for ALL orders.
  * 
- * SAFETY RULES:
- * 1. ONLY Installment 2 (index 1) can be marked Paid.
- * 2. Automatically REVERTS any accidental Paid status on Installment 3+ back to 'Pending'.
- * 3. Never creates duplicate orders for customers who already have an order in the database.
- * 4. Recovers missing orders from TempOrder or PM2 logs (with robust ~ and Danish key cleaning).
+ * 2. ORDER RECOVERY FOR FAILED CHECKOUTS:
+ *    - Specifically recovers the 5 failed orders provided by user:
+ *      * felixbachdamholdt@gmail.com  (725.00 DKK)
+ *      * perlemikkelsen@gmail.com    (1,929.00 DKK) - already in DB (ID: 257)
+ *      * fritzannegudmandsen@gmail.com (1,929.00 DKK)
+ *      * esmasuzan696@gmail.com       (971.00 DKK)
+ *      * ahmadassaad204@gmail.com     (396.00 DKK)
  */
 
 const fs = require('fs');
 const path = require('path');
 const prisma = require('../src/utils/prisma');
-const {
-  sendCapEmail,
-  processSuccessfulInstallmentPayment,
-  sendInstallmentConfirmationEmail
-} = require('../src/controllers/sendEmail.controller');
-const { sendOrderEmail } = require('../src/services/core.service');
+const { sendCapEmail } = require('../src/controllers/sendEmail.controller');
 
-// Target Frisbii paid customer emails provided by the user
-const FRISBII_PAID_EMAILS = [
+// Exactly the customers who paid Installment 2
+const LEGIT_INSTALLMENT_2_PAID_EMAILS = [
   'issodal16@gmail.com',
-  'milae08@hotmail.com',
+  'rory@staehr.dk',
   'waniaaliakbar@gmail.com',
-  'felixbachdamholdt@gmail.com',
   'amaldana2009@icloud.com',
-  'perlemikkelsen@gmail.com',
   'hajarelkahwi@gmail.com',
-  'sabinamckjusufi@gmail.com',
-  'ciufi8576@gmail.com',
-  'fritzannegudmandsen@gmail.com',
-  'esmasuzan696@gmail.com',
-  'ahmadassaad204@gmail.com',
-  'weryne@mailinator.com'
+  'ciufi8576@gmail.com'
 ].map(e => e.trim().toLowerCase());
 
-// Set of emails whose orders are already in DB or have been created in this run
-const HANDLED_CUSTOMER_EMAILS = new Set();
+// Target failed orders to recover
+const TARGET_FAILED_ORDERS = [
+  { email: 'felixbachdamholdt@gmail.com', expectedAmount: 725.00 },
+  { email: 'perlemikkelsen@gmail.com', expectedAmount: 1929.00 },
+  { email: 'fritzannegudmandsen@gmail.com', expectedAmount: 1929.00 },
+  { email: 'esmasuzan696@gmail.com', expectedAmount: 971.00 },
+  { email: 'ahmadassaad204@gmail.com', expectedAmount: 396.00 }
+];
+
+const TARGET_EMAILS = TARGET_FAILED_ORDERS.map(o => o.email.toLowerCase());
 
 const stringifyIfObject = (val) => {
   if (val === null || val === undefined) return null;
@@ -80,99 +75,126 @@ async function getOrCreateCustomer(customerEmail, customerDetails = {}) {
 }
 
 /**
- * STEP 0: Check Existing Orders for Frisbii Paid Customers
- * - Ensures ONLY Installment 2 (index 1) is Paid.
- * - Automatically REVERTS accidental Rate 3+ back to 'Pending'!
- * - Avoids any duplicate order creation.
+ * STEP 0: Correct All Installment Statuses in Database
  */
-async function checkAndSyncExistingOrders() {
+async function fixAllInstallmentStatuses() {
   console.log('\n==================================================');
-  console.log('🔍 STEP 0: Checking Existing Orders for Frisbii Paid Customers...');
+  console.log('🔧 STEP 0: Syncing & Correcting Installment Statuses...');
   console.log('==================================================');
 
-  for (const email of FRISBII_PAID_EMAILS) {
+  const orders = await prisma.order.findMany({
+    where: {
+      installmentDetails: { not: null }
+    }
+  });
+
+  console.log(`Found ${orders.length} order(s) with installment details in database.`);
+
+  let updatedCount = 0;
+  for (const order of orders) {
+    let details = order.installmentDetails;
+    if (typeof details === 'string') {
+      try { details = JSON.parse(details); } catch (e) { continue; }
+    }
+
+    if (!details || !Array.isArray(details.installments) || details.installments.length === 0) {
+      continue;
+    }
+
+    const orderEmail = (order.customerEmail || '').trim().toLowerCase();
+    const isLegitPaid = LEGIT_INSTALLMENT_2_PAID_EMAILS.includes(orderEmail);
+
+    let changed = false;
+
+    // Check Installment 2 (index 1)
+    if (details.installments[1]) {
+      if (isLegitPaid) {
+        if (details.installments[1].status !== 'Paid') {
+          console.log(`💳 Marking Installment 2 as PAID for ${orderEmail} (Order #${order.orderNumber})...`);
+          details.installments[1].status = 'Paid';
+          if (!details.installments[1].paidAt) {
+            details.installments[1].paidAt = new Date().toISOString();
+          }
+          changed = true;
+        } else {
+          console.log(`✓ Installment 2 is already PAID for verified customer ${orderEmail} (Order #${order.orderNumber}).`);
+        }
+      } else {
+        // Customer is NOT in the verified paid list -> must be PENDING!
+        if (details.installments[1].status === 'Paid') {
+          console.log(`🔄 REVERTING Installment 2 back to PENDING for ${orderEmail} (Order #${order.orderNumber})...`);
+          details.installments[1].status = 'Pending';
+          details.installments[1].paidAt = null;
+          changed = true;
+        }
+      }
+    }
+
+    // Safety: ALL Installment 3 and beyond (index 2+) must ALWAYS be PENDING!
+    for (let i = 2; i < details.installments.length; i++) {
+      if (details.installments[i].status === 'Paid') {
+        console.log(`🔄 REVERTING accidental Rate ${i + 1} back to PENDING for ${orderEmail} (Order #${order.orderNumber})...`);
+        details.installments[i].status = 'Pending';
+        details.installments[i].paidAt = null;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { installmentDetails: JSON.stringify(details) }
+      });
+      updatedCount++;
+    }
+  }
+
+  console.log(`🏁 Step 0 finished. Updated and corrected ${updatedCount} installment order(s).`);
+}
+
+/**
+ * STEP 1: Check existing orders for the 5 target failed orders
+ */
+async function checkExistingTargetOrders() {
+  console.log('\n==================================================');
+  console.log('🔍 STEP 1: Checking Existing Orders for 5 Target Customers...');
+  console.log('==================================================');
+
+  const pendingRecovery = [];
+
+  for (const target of TARGET_FAILED_ORDERS) {
     const existingOrders = await prisma.order.findMany({
-      where: {
-        customerEmail: email
-      },
+      where: { customerEmail: target.email },
       orderBy: { id: 'desc' }
     });
 
     if (existingOrders && existingOrders.length > 0) {
       const order = existingOrders[0];
-      console.log(`\n📌 Customer ${email} ALREADY HAS Order #${order.orderNumber} (ID: ${order.id}) in database.`);
-      HANDLED_CUSTOMER_EMAILS.add(email);
-
-      let details = order.installmentDetails;
-      if (typeof details === 'string') {
-        try { details = JSON.parse(details); } catch (e) { details = {}; }
-      }
-
-      if (details && Array.isArray(details.installments) && details.installments.length > 0) {
-        // ONLY sync Installment 2 (index 1)
-        const inst2 = details.installments[1];
-        if (inst2) {
-          if (inst2.status !== 'Paid') {
-            console.log(`💳 Order #${order.orderNumber} has pending Installment 2 (${inst2.label || 'Rate 2'}). Updating to PAID...`);
-            inst2.status = 'Paid';
-            inst2.paidAt = new Date().toISOString();
-            await prisma.order.update({
-              where: { id: order.id },
-              data: { installmentDetails: JSON.stringify(details) }
-            });
-            await sendInstallmentConfirmationEmail({
-              order,
-              installment: inst2,
-              installmentIndex: 1,
-              details
-            }).catch(err => console.error("Error sending installment email:", err));
-            console.log(`✅ SUCCESS: Installment 2 marked as PAID and confirmation receipt sent to ${email}!`);
-          } else {
-            console.log(`ℹ️ Order #${order.orderNumber} (${email}) already has Installment 2 marked as Paid.`);
-          }
-        }
-
-        // SAFETY: Revert any accidental Paid status on Installment 3 or later back to 'Pending'!
-        let detailsChanged = false;
-        for (let i = 2; i < details.installments.length; i++) {
-          if (details.installments[i].status === 'Paid') {
-            console.log(`🔄 REVERTING accidental Paid status on Installment ${i + 1} for Order #${order.orderNumber} (ID: ${order.id})...`);
-            details.installments[i].status = 'Pending';
-            details.installments[i].paidAt = null;
-            detailsChanged = true;
-          }
-        }
-        if (detailsChanged) {
-          await prisma.order.update({
-            where: { id: order.id },
-            data: { installmentDetails: JSON.stringify(details) }
-          });
-          console.log(`✅ Order #${order.orderNumber} (ID: ${order.id}) Installment 3+ successfully reverted to Pending!`);
-        }
-      } else {
-        console.log(`ℹ️ Order #${order.orderNumber} (${email}) is a full-payment order already in database. WILL NOT duplicate.`);
-      }
+      console.log(`✅ Order #${order.orderNumber} (ID: ${order.id}) already exists for ${target.email} (Total: ${order.totalPrice} DKK). No recovery needed.`);
     } else {
-      console.log(`❓ Customer ${email} has NO existing order in database. Needs new order creation from TempOrder/Logs.`);
+      console.log(`🚨 Missing order for ${target.email} (Expected Amount: ${target.expectedAmount} DKK). Will recover in Step 2/3.`);
+      pendingRecovery.push(target);
     }
   }
 
-  console.log(`\n🏁 Step 0 finished. ${HANDLED_CUSTOMER_EMAILS.size} of ${FRISBII_PAID_EMAILS.length} customer(s) already have existing orders.`);
+  return pendingRecovery;
 }
 
 /**
- * STEP 1: Recover missing orders from TempOrder table
+ * STEP 2: Recover missing orders from TempOrder table
  */
-async function recoverFromTempOrders() {
+async function recoverFromTempOrders(pendingTargets) {
+  if (pendingTargets.length === 0) return [];
   console.log('\n==================================================');
-  console.log('🔍 STEP 1: Recovering Missing Orders from TempOrder...');
+  console.log('🔍 STEP 2: Checking TempOrder Table for missing orders...');
   console.log('==================================================');
+
+  const remaining = [...pendingTargets];
 
   try {
     const tempRows = await prisma.$queryRaw`SELECT * FROM TempOrder ORDER BY createdAt DESC`;
     console.log(`Scanning ${tempRows.length} total rows in TempOrder...`);
 
-    let recoveredCount = 0;
     for (const row of tempRows) {
       let orderData = row.orderData;
       if (typeof orderData === 'string') {
@@ -183,49 +205,23 @@ async function recoverFromTempOrders() {
 
       const orderEmail = (orderData.email || orderData.customerEmail || orderData.customerDetails?.email || '').trim().toLowerCase();
 
-      // ONLY process if this order belongs to one of the Frisbii paid customers!
-      if (!FRISBII_PAID_EMAILS.includes(orderEmail)) {
-        continue;
-      }
+      const targetIdx = remaining.findIndex(t => t.email === orderEmail);
+      if (targetIdx === -1) continue;
 
-      // STRICT GUARD: If customer already has an order in DB, DO NOT create a duplicate order!
-      if (HANDLED_CUSTOMER_EMAILS.has(orderEmail)) {
-        console.log(`⏩ Skipping TempOrder ${orderData.orderNumber} for ${orderEmail} (customer already has order in DB).`);
-        continue;
-      }
+      const target = remaining[targetIdx];
 
-      const exists = await prisma.order.findFirst({
-        where: {
-          OR: [
-            { orderNumber: orderData.orderNumber },
-            { customerEmail: orderEmail }
-          ]
-        }
-      });
-
-      if (exists) {
-        console.log(`ℹ️ Order ${orderData.orderNumber} or customer ${orderEmail} already exists in database (ID: ${exists.id}). Skipping.`);
-        HANDLED_CUSTOMER_EMAILS.add(orderEmail);
-        continue;
-      }
-
-      console.log(`🚀 Recovering missing Frisbii paid order ${orderData.orderNumber} for ${orderEmail}...`);
+      console.log(`🚀 Recovering order ${orderData.orderNumber} for ${orderEmail} from TempOrder...`);
 
       const paidStatus = await prisma.orderStatus.findUnique({ where: { slug: 'paid' } });
       const validCustomerId = await getOrCreateCustomer(orderEmail, orderData.customerDetails || {});
-
-      const customerDetailsStr = stringifyIfObject(orderData.customerDetails) || '{}';
-      const selectedOptionsStr = stringifyIfObject(orderData.selectedOptions) || '{}';
-      const capImagesStr = stringifyIfObject(orderData.capImages);
-      const installmentDetailsStr = stringifyIfObject(orderData.installmentDetails);
 
       const newOrder = await prisma.order.create({
         data: {
           orderNumber: orderData.orderNumber,
           customerEmail: orderEmail,
-          customerDetails: customerDetailsStr,
-          selectedOptions: selectedOptionsStr,
-          totalPrice: parseFloat(orderData.finalPrice || orderData.totalPrice) || 0,
+          customerDetails: stringifyIfObject(orderData.customerDetails) || '{}',
+          selectedOptions: stringifyIfObject(orderData.selectedOptions) || '{}',
+          totalPrice: parseFloat(orderData.finalPrice || orderData.totalPrice || target.expectedAmount) || 0,
           currency: orderData.currency || 'DKK',
           orderDate: orderData.orderDate ? new Date(orderData.orderDate) : new Date(),
           status: paidStatus ? paidStatus.name.toUpperCase().replace(/\s+/g, '_') : 'PAID',
@@ -233,16 +229,15 @@ async function recoverFromTempOrders() {
           packageName: orderData.packageName || null,
           program: orderData.program || null,
           customerId: validCustomerId,
-          capImages: capImagesStr,
+          capImages: stringifyIfObject(orderData.capImages),
           discountCodeId: orderData.discountRecord?.id || null,
           discountAmount: orderData.discountAmount || null,
           installmentPlanId: orderData.installmentPlanId ? parseInt(orderData.installmentPlanId) : null,
-          installmentDetails: installmentDetailsStr,
+          installmentDetails: stringifyIfObject(orderData.installmentDetails),
         }
       });
 
-      console.log(`✅ SUCCESS: Created Order ${newOrder.orderNumber} with ID ${newOrder.id}! Sending confirmation emails...`);
-      HANDLED_CUSTOMER_EMAILS.add(orderEmail);
+      console.log(`🎉 SUCCESS: Created Order ${newOrder.orderNumber} (ID: ${newOrder.id}) for ${orderEmail}! Sending confirmation email...`);
 
       await sendCapEmail(
         {
@@ -263,18 +258,17 @@ async function recoverFromTempOrders() {
         { status: () => ({ json: () => {} }) }
       ).catch(err => console.error(`❌ Email error for ${newOrder.orderNumber}:`, err.message));
 
-      recoveredCount++;
+      remaining.splice(targetIdx, 1);
     }
-
-    console.log(`🏁 Step 1 finished. Recovered ${recoveredCount} missing order(s) from TempOrder.`);
   } catch (err) {
-    console.error('❌ Error in recoverFromTempOrders:', err.message);
+    console.error('❌ Error checking TempOrders:', err.message);
   }
+
+  return remaining;
 }
 
 /**
  * Robustly parses a JS object literal extracted from Node util.inspect/Prisma logs.
- * Handles Prisma error tildes, diff markers, and Danish keys with spaces.
  */
 function cleanAndParseLogBlock(raw) {
   let cleaned = raw.replace(/^\s*\d+\|cap-live\s*\|\s*/gm, '');
@@ -312,11 +306,16 @@ function cleanAndParseLogBlock(raw) {
 }
 
 /**
- * STEP 2: Recover any remaining missing orders from PM2 error logs
+ * STEP 3: Recover remaining missing orders from PM2 error logs
  */
-async function recoverFromPm2Logs(logFilePath) {
+async function recoverFromPm2Logs(pendingTargets, logFilePath) {
+  if (pendingTargets.length === 0) {
+    console.log('✓ All target orders have already been recovered!');
+    return;
+  }
+
   console.log('\n==================================================');
-  console.log('🔍 STEP 2: Checking PM2 Error Logs for remaining missing orders...');
+  console.log('🔍 STEP 3: Checking PM2 Error Logs for remaining missing orders...');
   console.log('==================================================');
 
   const defaultPaths = [
@@ -344,24 +343,24 @@ async function recoverFromPm2Logs(logFilePath) {
   const orderNumRegex = /orderNumber:\s*['"](CAP-\d+)['"]/g;
   let match;
   const matches = [];
+  const seenOrderNums = new Set();
+
   while ((match = orderNumRegex.exec(content)) !== null) {
-    matches.push({ orderNumber: match[1], index: match.index });
+    const num = match[1];
+    if (!seenOrderNums.has(num)) {
+      seenOrderNums.add(num);
+      matches.push({ orderNumber: num, index: match.index });
+    }
   }
 
-  console.log(`Found ${matches.length} orderNumber occurrence(s) in log.`);
+  console.log(`Found ${matches.length} unique orderNumber occurrence(s) in log.`);
 
-  let recoveredCount = 0;
+  const remaining = [...pendingTargets];
+
   for (const m of matches) {
+    if (remaining.length === 0) break;
+
     const orderNum = m.orderNumber;
-
-    const exists = await prisma.order.findFirst({
-      where: { orderNumber: orderNum }
-    });
-
-    if (exists) {
-      continue;
-    }
-
     const orderIdx = m.index;
     const startIdx = content.lastIndexOf('data: {', orderIdx);
     if (startIdx === -1) continue;
@@ -371,6 +370,7 @@ async function recoverFromPm2Logs(logFilePath) {
     let inString = false;
     let escape = false;
 
+    // Fixed brace matching logic: decrements first, then checks openBraces === 0
     for (let i = startIdx + 6; i < content.length; i++) {
       const ch = content[i];
       if (escape) {
@@ -387,13 +387,14 @@ async function recoverFromPm2Logs(logFilePath) {
         continue;
       }
       if (!inString) {
-        if (ch === '{') openBraces++;
-        else if (ch === '}') {
+        if (ch === '{') {
+          openBraces++;
+        } else if (ch === '}') {
+          openBraces--;
           if (openBraces === 0) {
             endIdx = i + 1;
             break;
           }
-          openBraces--;
         }
       }
     }
@@ -414,16 +415,29 @@ async function recoverFromPm2Logs(logFilePath) {
 
     const orderEmail = (parsedOrder.customerEmail || parsedOrder.email || parsedOrder.customerDetails?.email || '').trim().toLowerCase();
 
-    // Check if customer belongs to paid list
-    if (!FRISBII_PAID_EMAILS.includes(orderEmail)) {
+    // Check if this parsed order matches one of our pending targets
+    const targetIdx = remaining.findIndex(t => t.email === orderEmail);
+    if (targetIdx === -1) continue;
+
+    const target = remaining[targetIdx];
+
+    // Check if order already in DB
+    const exists = await prisma.order.findFirst({
+      where: {
+        OR: [
+          { orderNumber: parsedOrder.orderNumber },
+          { customerEmail: orderEmail }
+        ]
+      }
+    });
+
+    if (exists) {
+      console.log(`ℹ️ Order for ${orderEmail} already exists in database (ID: ${exists.id}). Skipping.`);
+      remaining.splice(targetIdx, 1);
       continue;
     }
 
-    // STRICT GUARD: If customer already has an order in DB, DO NOT create a duplicate order!
-    if (HANDLED_CUSTOMER_EMAILS.has(orderEmail)) {
-      console.log(`⏩ Skipping log recovery for ${orderEmail} (customer already has order in DB).`);
-      continue;
-    }
+    console.log(`🚀 Recovering order ${parsedOrder.orderNumber} for ${orderEmail} (${parsedOrder.totalPrice || target.expectedAmount} DKK)...`);
 
     const paidStatus = await prisma.orderStatus.findUnique({ where: { slug: 'paid' } });
     const validCustomerId = await getOrCreateCustomer(orderEmail, parsedOrder.customerDetails || {});
@@ -434,7 +448,7 @@ async function recoverFromPm2Logs(logFilePath) {
         customerEmail: orderEmail,
         customerDetails: stringifyIfObject(parsedOrder.customerDetails) || '{}',
         selectedOptions: stringifyIfObject(parsedOrder.selectedOptions) || '{}',
-        totalPrice: parseFloat(parsedOrder.totalPrice || parsedOrder.finalPrice) || 0,
+        totalPrice: parseFloat(parsedOrder.totalPrice || parsedOrder.finalPrice || target.expectedAmount) || 0,
         currency: parsedOrder.currency || 'DKK',
         orderDate: parsedOrder.orderDate ? new Date(parsedOrder.orderDate) : new Date(),
         status: paidStatus ? paidStatus.name.toUpperCase().replace(/\s+/g, '_') : 'PAID',
@@ -450,8 +464,7 @@ async function recoverFromPm2Logs(logFilePath) {
       }
     });
 
-    console.log(`🎉 SUCCESS: Recovered order ${newOrder.orderNumber} (ID: ${newOrder.id}) for ${orderEmail}! Sending confirmation emails...`);
-    HANDLED_CUSTOMER_EMAILS.add(orderEmail);
+    console.log(`🎉 SUCCESS: Created Order ${newOrder.orderNumber} (ID: ${newOrder.id}) for ${orderEmail}! Sending confirmation email...`);
 
     await sendCapEmail(
       {
@@ -472,26 +485,32 @@ async function recoverFromPm2Logs(logFilePath) {
       { status: () => ({ json: () => {} }) }
     ).catch(err => console.error(`❌ Email error for ${newOrder.orderNumber}:`, err.message));
 
-    recoveredCount++;
+    remaining.splice(targetIdx, 1);
   }
 
-  console.log(`🏁 Step 2 finished. Recovered ${recoveredCount} missing order(s) from PM2 logs.`);
+  if (remaining.length > 0) {
+    console.log(`⚠️ Could not find log entries for: ${remaining.map(r => r.email).join(', ')}`);
+  } else {
+    console.log(`✨ All target failed orders have been successfully recovered!`);
+  }
 }
 
 async function main() {
   const logPathArg = process.argv[2];
-  console.log('🚀 STARTING TARGETED ORDER RECOVERY FOR FRISBII PAID CUSTOMERS...');
+  console.log('🚀 STARTING ACCURATE ORDER RECOVERY & INSTALLMENT SYNC...');
   console.log('Time:', new Date().toISOString());
-  console.log('Target Emails:', FRISBII_PAID_EMAILS);
 
-  // Step 0: Check existing orders first (sync ONLY Installment 2, REVERT accidental Installment 3+, avoid duplicate creation)
-  await checkAndSyncExistingOrders();
+  // Step 0: Fix all installment statuses (keep ONLY legit 6 as Paid, revert all others to Pending)
+  await fixAllInstallmentStatuses();
 
-  // Step 1: Recover only missing orders from TempOrder
-  await recoverFromTempOrders();
+  // Step 1: Check existing orders for target customers
+  const pendingTargets = await checkExistingTargetOrders();
 
-  // Step 2: Recover any remaining missing orders from PM2 logs
-  await recoverFromPm2Logs(logPathArg);
+  // Step 2: Recover from TempOrder
+  const remainingAfterTemp = await recoverFromTempOrders(pendingTargets);
+
+  // Step 3: Recover from PM2 logs
+  await recoverFromPm2Logs(remainingAfterTemp, logPathArg);
 
   console.log('\n==================================================');
   console.log('✨ ALL PROCESSING COMPLETED SUCCESSFULLY!');
