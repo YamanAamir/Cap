@@ -1,7 +1,7 @@
 /**
- * Targeted Order Recovery & Email Sync Script
+ * Targeted Order Recovery & Installment Sync Script
  * 
- * Specifically recovers the Frisbii-paid orders:
+ * Specifically handles the Frisbii-paid customers:
  * - Ismael Kanj (issodal16@gmail.com)
  * - Mila yildiz (milae08@hotmail.com)
  * - Wania Ali (waniaaliakbar@gmail.com)
@@ -15,14 +15,24 @@
  * - Esma Suzan Kara (esmasuzan696@gmail.com)
  * - Ahmad Assaad (ahmadassaad204@gmail.com)
  * - Hiroko Ruiz (weryne@mailinator.com)
+ * 
+ * SAFETY RULES:
+ * 1. Checks if customer ALREADY has an order in database:
+ *    - If YES: DOES NOT create duplicate order! Instead, if installment 2/rate is pending,
+ *      marks it as PAID and sends installment confirmation receipt.
+ * 2. If NO: recovers the missing order from TempOrder or PM2 logs, creates order in DB,
+ *    and sends order confirmation email.
  */
 
 const fs = require('fs');
 const path = require('path');
 const prisma = require('../src/utils/prisma');
-const { sendCapEmail } = require('../src/controllers/sendEmail.controller');
+const {
+  sendCapEmail,
+  processSuccessfulInstallmentPayment,
+  sendInstallmentConfirmationEmail
+} = require('../src/controllers/sendEmail.controller');
 const { sendOrderEmail } = require('../src/services/core.service');
-const { buildInstallmentPaymentRequestEmail } = require('../src/controllers/sendEmail.controller');
 
 // Target Frisbii paid customer emails provided by the user
 const FRISBII_PAID_EMAILS = [
@@ -40,6 +50,9 @@ const FRISBII_PAID_EMAILS = [
   'ahmadassaad204@gmail.com',
   'weryne@mailinator.com'
 ].map(e => e.trim().toLowerCase());
+
+// Set of emails whose orders are already in DB or have been created in this run
+const HANDLED_CUSTOMER_EMAILS = new Set();
 
 const stringifyIfObject = (val) => {
   if (val === null || val === undefined) return null;
@@ -67,14 +80,67 @@ async function getOrCreateCustomer(customerEmail, customerDetails = {}) {
   return customer ? customer.id : null;
 }
 
+/**
+ * STEP 0: Check Existing Orders for Frisbii Paid Customers
+ * If an order already exists:
+ * - DO NOT create a duplicate order!
+ * - If installment 2 / pending rate is unpaid, mark as Paid and send receipt email.
+ */
+async function checkAndSyncExistingOrders() {
+  console.log('\n==================================================');
+  console.log('🔍 STEP 0: Checking Existing Orders for Frisbii Paid Customers...');
+  console.log('==================================================');
+
+  for (const email of FRISBII_PAID_EMAILS) {
+    const existingOrders = await prisma.order.findMany({
+      where: {
+        customerEmail: { equals: email, mode: 'insensitive' }
+      },
+      orderBy: { id: 'desc' }
+    });
+
+    if (existingOrders && existingOrders.length > 0) {
+      const order = existingOrders[0];
+      console.log(`\n📌 Customer ${email} ALREADY HAS Order #${order.orderNumber} (ID: ${order.id}) in database.`);
+      HANDLED_CUSTOMER_EMAILS.add(email);
+
+      let details = order.installmentDetails;
+      if (typeof details === 'string') {
+        try { details = JSON.parse(details); } catch (e) { details = {}; }
+      }
+
+      if (details && Array.isArray(details.installments) && details.installments.length > 0) {
+        const unpaidIdx = details.installments.findIndex(inst => inst.status !== 'Paid');
+        if (unpaidIdx !== -1) {
+          const inst = details.installments[unpaidIdx];
+          console.log(`💳 Order #${order.orderNumber} has pending installment ${unpaidIdx + 1} (${inst.label || 'Rate ' + (unpaidIdx + 1)}). Updating to PAID...`);
+          await processSuccessfulInstallmentPayment(order.id, unpaidIdx);
+          console.log(`✅ SUCCESS: Installment ${unpaidIdx + 1} marked as PAID and confirmation receipt sent to ${email}!`);
+        } else {
+          console.log(`ℹ️ Order #${order.orderNumber} (${email}) already has all installments marked as Paid. No action needed.`);
+        }
+      } else {
+        console.log(`ℹ️ Order #${order.orderNumber} (${email}) is a full-payment order already in database. WILL NOT duplicate.`);
+      }
+    } else {
+      console.log(`❓ Customer ${email} has NO existing order in database. Needs new order creation from TempOrder/Logs.`);
+    }
+  }
+
+  console.log(`\n🏁 Step 0 finished. ${HANDLED_CUSTOMER_EMAILS.size} of ${FRISBII_PAID_EMAILS.length} customer(s) already have existing orders.`);
+}
+
+/**
+ * STEP 1: Recover missing orders from TempOrder table
+ */
 async function recoverFromTempOrders() {
   console.log('\n==================================================');
-  console.log('🔍 STEP 1: Recovering Frisbii Paid Orders from TempOrder...');
+  console.log('🔍 STEP 1: Recovering Missing Orders from TempOrder...');
   console.log('==================================================');
 
   try {
     const tempRows = await prisma.$queryRaw`SELECT * FROM TempOrder ORDER BY createdAt DESC`;
-    console.log(`Scanning ${tempRows.length} total rows in TempOrder for paid customer emails...`);
+    console.log(`Scanning ${tempRows.length} total rows in TempOrder...`);
 
     let recoveredCount = 0;
     for (const row of tempRows) {
@@ -92,16 +158,28 @@ async function recoverFromTempOrders() {
         continue;
       }
 
-      const exists = await prisma.order.findFirst({
-        where: { orderNumber: orderData.orderNumber }
-      });
-
-      if (exists) {
-        console.log(`ℹ️ Order ${orderData.orderNumber} (${orderEmail}) already exists in database (ID: ${exists.id}).`);
+      // STRICT GUARD: If customer already has an order in DB, DO NOT create a duplicate order!
+      if (HANDLED_CUSTOMER_EMAILS.has(orderEmail)) {
+        console.log(`⏩ Skipping TempOrder ${orderData.orderNumber} for ${orderEmail} (customer already has order in DB).`);
         continue;
       }
 
-      console.log(`🚀 Recovering Frisbii paid order ${orderData.orderNumber} for ${orderEmail}...`);
+      const exists = await prisma.order.findFirst({
+        where: {
+          OR: [
+            { orderNumber: orderData.orderNumber },
+            { customerEmail: { equals: orderEmail, mode: 'insensitive' } }
+          ]
+        }
+      });
+
+      if (exists) {
+        console.log(`ℹ️ Order ${orderData.orderNumber} or customer ${orderEmail} already exists in database (ID: ${exists.id}). Skipping.`);
+        HANDLED_CUSTOMER_EMAILS.add(orderEmail);
+        continue;
+      }
+
+      console.log(`🚀 Recovering missing Frisbii paid order ${orderData.orderNumber} for ${orderEmail}...`);
 
       const paidStatus = await prisma.orderStatus.findUnique({ where: { slug: 'paid' } });
       const validCustomerId = await getOrCreateCustomer(orderEmail, orderData.customerDetails || {});
@@ -134,6 +212,7 @@ async function recoverFromTempOrders() {
       });
 
       console.log(`✅ SUCCESS: Created Order ${newOrder.orderNumber} with ID ${newOrder.id}! Sending confirmation emails...`);
+      HANDLED_CUSTOMER_EMAILS.add(orderEmail);
 
       await sendCapEmail(
         {
@@ -157,94 +236,88 @@ async function recoverFromTempOrders() {
       recoveredCount++;
     }
 
-    console.log(`🏁 Step 1 finished. Recovered ${recoveredCount} Frisbii-paid order(s) from TempOrder.`);
+    console.log(`🏁 Step 1 finished. Recovered ${recoveredCount} missing order(s) from TempOrder.`);
   } catch (err) {
-    console.error('Error in recoverFromTempOrders:', err.message);
+    console.error('❌ Error in recoverFromTempOrders:', err.message);
   }
 }
 
-function cleanAndParseLogBlock(block) {
-  let cleaned = block;
-  cleaned = cleaned.replace(/^\s*\d+\|[\w-]+\s*\|\s*/gm, '');
-  cleaned = cleaned.replace(/^\s*~+\s*$/gm, '');
-  cleaned = cleaned.replace(/^\s*[\+\?]\s+.*$/gm, '');
+/**
+ * Robustly parses a JS object literal extracted from Node util.inspect/Prisma logs.
+ */
+function cleanAndParseLogBlock(raw) {
+  let cleaned = raw.replace(/^\s*\d+\|cap-live\s*\|\s*/gm, '');
 
-  cleaned = cleaned.trim();
-  if (!cleaned.startsWith('{')) cleaned = '{ ' + cleaned;
-  if (!cleaned.endsWith('}')) cleaned = cleaned + ' }';
-
-  // Quote unquoted keys (including those with spaces and danish characters)
-  cleaned = cleaned.replace(/([{,\s])([a-zA-Z\u00C0-\u024F0-9_ -]+?)\s*:/g, (match, prefix, key) => {
-    const trimmed = key.trim();
-    if (!trimmed) return match;
-    if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
-      return match;
+  let processed = cleaned.replace(
+    /([{,\s])([a-zA-Z\u00C0-\u024F0-9_ -]+?)\s*:/g,
+    (match, prefix, key) => {
+      const trimmedKey = key.trim();
+      if ((trimmedKey.startsWith('"') && trimmedKey.endsWith('"')) ||
+          (trimmedKey.startsWith("'") && trimmedKey.endsWith("'"))) {
+        return `${prefix}${trimmedKey}:`;
+      }
+      return `${prefix}"${trimmedKey}":`;
     }
-    return `${prefix}"${trimmed}":`;
-  });
+  );
 
-  const fn = new Function(`return (${cleaned});`);
-  return fn();
+  return (new Function(`return (${processed});`))();
 }
 
+/**
+ * STEP 2: Recover any remaining missing orders from PM2 error logs
+ */
 async function recoverFromPm2Logs(logFilePath) {
   console.log('\n==================================================');
-  console.log('🔍 STEP 2: Scanning PM2 Error Logs for failed orders...');
+  console.log('🔍 STEP 2: Checking PM2 Error Logs for remaining missing orders...');
   console.log('==================================================');
 
   const defaultPaths = [
     logFilePath,
     '/home/studentlife-app/.pm2/logs/cap-live-backend-error.log',
-    path.join(process.env.HOME || '', '.pm2/logs/cap-live-backend-error.log')
+    '/root/.pm2/logs/cap-live-backend-error.log'
   ].filter(Boolean);
 
-  let targetPath = null;
+  let targetLog = null;
   for (const p of defaultPaths) {
     if (fs.existsSync(p)) {
-      targetPath = p;
+      targetLog = p;
       break;
     }
   }
 
-  if (!targetPath) {
-    console.log('⚠️ PM2 error log file not found at default paths.');
+  if (!targetLog) {
+    console.log('ℹ️ PM2 error log not found at default paths. Skipping log scan.');
     return;
   }
 
-  console.log(`📖 Reading log file: ${targetPath}`);
-  const content = fs.readFileSync(targetPath, 'utf8');
+  console.log(`Reading PM2 error log: ${targetLog}...`);
+  const content = fs.readFileSync(targetLog, 'utf8');
 
-  // Search for failed order blocks in the log
-  const orderNumberMatches = [...content.matchAll(/orderNumber:\s*["'](CAP-\d+)["']/g)];
-  console.log(`Found ${orderNumberMatches.length} orderNumber occurrence(s) in log.`);
+  const orderNumRegex = /orderNumber:\s*['"](CAP-\d+)['"]/g;
+  let match;
+  const matches = [];
+  while ((match = orderNumRegex.exec(content)) !== null) {
+    matches.push({ orderNumber: match[1], index: match.index });
+  }
 
-  const seenOrderNumbers = new Set();
+  console.log(`Found ${matches.length} orderNumber occurrence(s) in log.`);
+
   let recoveredCount = 0;
-
-  for (const m of orderNumberMatches) {
-    const orderNum = m[1];
-    if (seenOrderNumbers.has(orderNum)) continue;
-    seenOrderNumbers.add(orderNum);
+  for (const m of matches) {
+    const orderNum = m.orderNumber;
 
     const exists = await prisma.order.findFirst({
       where: { orderNumber: orderNum }
     });
 
     if (exists) {
-      console.log(`ℹ️ Order ${orderNum} already exists in database (ID: ${exists.id}). Skipping.`);
       continue;
     }
-
-    console.log(`🚨 Order ${orderNum} was found in error logs but NOT in database! Extracting payload...`);
 
     const orderIdx = m.index;
     const startIdx = content.lastIndexOf('data: {', orderIdx);
-    if (startIdx === -1) {
-      console.warn(`Could not find start of data block for ${orderNum}`);
-      continue;
-    }
+    if (startIdx === -1) continue;
 
-    // Bracket-matching to extract the exact data object block
     let openBraces = 0;
     let endIdx = -1;
     let inString = false;
@@ -277,10 +350,7 @@ async function recoverFromPm2Logs(logFilePath) {
       }
     }
 
-    if (endIdx === -1) {
-      console.warn(`Could not find closing brace for order ${orderNum}`);
-      continue;
-    }
+    if (endIdx === -1) continue;
 
     const rawBlock = content.substring(startIdx + 6, endIdx);
 
@@ -295,6 +365,17 @@ async function recoverFromPm2Logs(logFilePath) {
     if (!parsedOrder || !parsedOrder.orderNumber) continue;
 
     const orderEmail = (parsedOrder.customerEmail || parsedOrder.email || parsedOrder.customerDetails?.email || '').trim().toLowerCase();
+
+    // Check if customer belongs to paid list
+    if (!FRISBII_PAID_EMAILS.includes(orderEmail)) {
+      continue;
+    }
+
+    // STRICT GUARD: If customer already has an order in DB, DO NOT create a duplicate order!
+    if (HANDLED_CUSTOMER_EMAILS.has(orderEmail)) {
+      console.log(`⏩ Skipping log recovery for ${orderEmail} (customer already has order in DB).`);
+      continue;
+    }
 
     const paidStatus = await prisma.orderStatus.findUnique({ where: { slug: 'paid' } });
     const validCustomerId = await getOrCreateCustomer(orderEmail, parsedOrder.customerDetails || {});
@@ -322,6 +403,7 @@ async function recoverFromPm2Logs(logFilePath) {
     });
 
     console.log(`🎉 SUCCESS: Recovered order ${newOrder.orderNumber} (ID: ${newOrder.id}) for ${orderEmail}! Sending confirmation emails...`);
+    HANDLED_CUSTOMER_EMAILS.add(orderEmail);
 
     await sendCapEmail(
       {
@@ -345,7 +427,7 @@ async function recoverFromPm2Logs(logFilePath) {
     recoveredCount++;
   }
 
-  console.log(`🏁 Step 2 finished. Recovered ${recoveredCount} order(s) from PM2 logs.`);
+  console.log(`🏁 Step 2 finished. Recovered ${recoveredCount} missing order(s) from PM2 logs.`);
 }
 
 async function main() {
@@ -354,11 +436,17 @@ async function main() {
   console.log('Time:', new Date().toISOString());
   console.log('Target Emails:', FRISBII_PAID_EMAILS);
 
+  // Step 0: Check existing orders first (sync installment 2 if paid, avoid any duplicate creation)
+  await checkAndSyncExistingOrders();
+
+  // Step 1: Recover only missing orders from TempOrder
   await recoverFromTempOrders();
+
+  // Step 2: Recover any remaining missing orders from PM2 logs
   await recoverFromPm2Logs(logPathArg);
 
   console.log('\n==================================================');
-  console.log('✨ TARGETED ORDER RECOVERY COMPLETED SUCCESSFULLY!');
+  console.log('✨ ALL PROCESSING COMPLETED SUCCESSFULLY!');
   console.log('==================================================');
   process.exit(0);
 }
