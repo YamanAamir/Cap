@@ -60,6 +60,16 @@ const startScheduledJobs = () => {
     }
   }, { timezone: 'Europe/Copenhagen' });
 
+  // Payment Receipts retry runner – automatically retries failed/pending admin receipts every 5 minutes
+  cron.schedule('*/5 * * * *', async () => {
+    try {
+      const { retryFailedReceipts } = require('../services/paymentReceipt.service');
+      await retryFailedReceipts();
+    } catch (err) {
+      console.error('[CRON] Payment receipts retry error:', err.message);
+    }
+  });
+
   // Nightly cleanup of old log rows
   cron.schedule('30 3 * * *', async () => {
     await cleanupOldLogs();

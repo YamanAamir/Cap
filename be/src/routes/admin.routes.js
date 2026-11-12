@@ -7,6 +7,7 @@ const installmentController = require('../controllers/installment.controller');
 const installmentJobController = require('../controllers/installmentJob.controller');
 const twoFactorController = require('../controllers/twofactor.controller');
 const logController = require('../controllers/log.controller');
+const paymentReceiptController = require('../controllers/paymentReceipt.controller');
 const { verifyToken, isAdmin, isAdminOrProduction } = require('../middleware/auth.middleware');
 
 
@@ -104,5 +105,14 @@ router.get('/email-logs/:id', admin, logController.getEmailLog);
 router.post('/email-logs/:id/resend', admin, logController.resendEmail);
 router.get('/webhook-logs', admin, logController.getWebhookLogs);
 router.get('/webhook-logs/:id', admin, logController.getWebhookLog);
+
+// Payment Receipts & Tracking
+router.get('/payment-receipts', admin, paymentReceiptController.getPaymentReceipts);
+router.get('/payment-receipts/settings', admin, paymentReceiptController.getReceiptSettings);
+router.put('/payment-receipts/settings', admin, paymentReceiptController.updateReceiptSettings);
+router.post('/payment-receipts/settings', admin, paymentReceiptController.updateReceiptSettings);
+router.get('/payment-receipts/:id', admin, paymentReceiptController.getPaymentReceiptById);
+router.get('/payment-receipts/:id/preview', admin, paymentReceiptController.previewReceipt);
+router.post('/payment-receipts/:id/resend', admin, paymentReceiptController.resendPaymentReceipt);
 
 module.exports = router;

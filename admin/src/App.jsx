@@ -8,6 +8,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import Security2faPage from './pages/Security2faPage';
 import EmailLogsPage from './pages/EmailLogsPage';
 import WebhookLogsPage from './pages/WebhookLogsPage';
+import PaymentReceiptsPage from './pages/PaymentReceiptsPage';
 import AuditLogsPage from './pages/AuditLogsPage';
 import LoginHistoryPage from './pages/LoginHistoryPage';
 import InstallmentJobsPage from './pages/InstallmentJobsPage';
@@ -89,6 +90,8 @@ function App() {
             <Route path="excel" element={<ExcelConfigPage />} />
             <Route path="emails" element={<EmailTemplatesPage />} />
             <Route path="logs/emails" element={<EmailLogsPage />} />
+            <Route path="logs/payment-receipts" element={<PaymentReceiptsPage />} />
+            <Route path="payment-receipts" element={<PaymentReceiptsPage />} />
             <Route path="logs/webhooks" element={<WebhookLogsPage />} />
             <Route path="logs/audit" element={<AuditLogsPage />} />
             <Route path="logs/logins" element={<LoginHistoryPage />} />

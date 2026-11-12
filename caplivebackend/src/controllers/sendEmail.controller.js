@@ -3320,6 +3320,43 @@ const processSuccessfulCapOrder = async (tempOrderId, orderDataOverride = null) 
       { status: () => ({ json: () => { } }) }
     ).catch(err => console.error("❌ Email sending error in processSuccessfulCapOrder:", err.message));
 
+    // Send automatic Admin Payment Receipt Email for Frisbii / Flatpay
+    try {
+      const { sendOrQueuePaymentReceipt } = require('../services/paymentReceipt.service');
+      const isInst = Boolean(order.installmentPlanId || finalInstallmentDetails);
+      const custObj = typeof orderData.customerDetails === 'object' ? orderData.customerDetails : {};
+      const customerFullName = `${custObj.firstName || ''} ${custObj.lastName || ''}`.trim() || 'Kunde';
+      
+      const chargeAmount = isInst && finalInstallmentDetails?.downPayment
+        ? parseFloat(finalInstallmentDetails.downPayment)
+        : parseFloat(order.totalPrice);
+
+      const lineItemDesc = isInst
+        ? `Cap Order (1. betaling - Rate 1) : ${order.orderNumber} × 1`
+        : `Cap Order : ${order.orderNumber} × 1`;
+
+      sendOrQueuePaymentReceipt({
+        orderNumber: order.orderNumber,
+        orderId: order.id,
+        orderType: 'CAP_ORDER',
+        amount: chargeAmount,
+        currency: order.currency || 'DKK',
+        paymentDate: order.orderDate || new Date(),
+        transactionId: tempOrderId,
+        receiptNumber: tempOrderId,
+        customerName: customerFullName,
+        customerEmail: order.customerEmail,
+        lineItems: [
+          {
+            description: lineItemDesc,
+            amount: chargeAmount
+          }
+        ]
+      }).catch(rErr => console.error("Error queueing admin payment receipt:", rErr.message));
+    } catch (receiptErr) {
+      console.error("Error triggering payment receipt for cap order:", receiptErr.message);
+    }
+
     console.log(`✅ Order ${order.orderNumber} successfully processed and confirmed.`);
     return order;
   } catch (err) {
@@ -3802,6 +3839,40 @@ const processSuccessfulInstallmentPayment = async (orderId, installmentIndex) =>
           installmentIndex: idx,
           details
         }).catch(err => console.error("Error sending installment confirmation email:", err));
+
+        // Send automatic Admin Payment Receipt Email for Frisbii / Flatpay
+        try {
+          const { sendOrQueuePaymentReceipt } = require('../services/paymentReceipt.service');
+          let custObj = order.customerDetails;
+          if (typeof custObj === 'string') {
+            try { custObj = JSON.parse(custObj); } catch (e) { custObj = {}; }
+          }
+          const customerFullName = `${custObj?.firstName || ''} ${custObj?.lastName || ''}`.trim() || 'Kunde';
+          const instHandle = `inst_${order.id}_${idx}`;
+          const instAmount = parseFloat(targetInstallment.amount) || 0;
+          const instLabel = targetInstallment.label || `${idx + 1}. rate`;
+
+          sendOrQueuePaymentReceipt({
+            orderNumber: order.orderNumber,
+            orderId: order.id,
+            orderType: 'INSTALLMENT',
+            amount: instAmount,
+            currency: order.currency || 'DKK',
+            paymentDate: new Date(),
+            transactionId: instHandle,
+            receiptNumber: instHandle,
+            customerName: customerFullName,
+            customerEmail: order.customerEmail,
+            lineItems: [
+              {
+                description: `Installment Rate : ${instLabel} (${order.orderNumber})`,
+                amount: instAmount
+              }
+            ]
+          }).catch(rErr => console.error("Error queueing installment admin payment receipt:", rErr.message));
+        } catch (receiptErr) {
+          console.error("Error triggering payment receipt for installment:", receiptErr.message);
+        }
       }
     }
   } catch (err) {

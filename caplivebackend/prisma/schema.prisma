@@ -502,3 +502,34 @@ model BlackFridayLead {
   @@index([phone])
   @@index([createdAt])
 }
+
+// ─── Logs: Administrator Payment Receipts for Frisbii payments ───
+model PaymentReceiptLog {
+  id             Int       @id @default(autoincrement())
+  orderNumber    String
+  orderId        Int?
+  orderType      String    @default("CAP_ORDER") // CAP_ORDER, INSTALLMENT, WEBSHOP
+  transactionId  String?
+  receiptNumber  String?
+  amount         Float
+  currency       String    @default("DKK")
+  paymentMethod  String?
+  customerName   String?
+  customerEmail  String?
+  recipientEmail String
+  status         String    @default("PENDING") // PENDING, SENT, FAILED, RETRYING
+  error          String?   @db.Text
+  retryCount     Int       @default(0)
+  maxRetries     Int       @default(3)
+  lastAttemptAt  DateTime?
+  sentAt         DateTime?
+  paymentDate    DateTime  @default(now())
+  metadata       String?   @db.LongText
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([orderNumber])
+  @@index([status])
+  @@index([recipientEmail])
+  @@index([createdAt])
+}

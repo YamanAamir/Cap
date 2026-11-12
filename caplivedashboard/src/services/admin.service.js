@@ -97,3 +97,12 @@ export const broadcastBlackFridaySms = (data) => api.post('/admin/black-friday/b
 export const broadcastBlackFridayEmail = (data) => api.post('/admin/black-friday/broadcast-email', data).then(r => r.data);
 export const exportBlackFridayCsv = () => api.get('/admin/black-friday/export', { responseType: 'blob' }).then(r => r.data);
 
+// ─── Payment Receipts & Logs ───
+export const getPaymentReceipts = (params) => api.get('/admin/payment-receipts', { params }).then(r => r.data);
+export const getPaymentReceiptById = (id) => api.get(`/admin/payment-receipts/${id}`).then(r => r.data);
+export const resendPaymentReceipt = (id, overrideEmail = null) => api.post(`/admin/payment-receipts/${id}/resend`, { overrideEmail }).then(r => r.data);
+export const getPaymentReceiptSettings = () => api.get('/admin/payment-receipts/settings').then(r => r.data);
+export const updatePaymentReceiptSettings = (data) => api.post('/admin/payment-receipts/settings', data).then(r => r.data);
+export const getPaymentReceiptPreviewUrl = (id) => `/api/admin/payment-receipts/${id}/preview`;
+
+

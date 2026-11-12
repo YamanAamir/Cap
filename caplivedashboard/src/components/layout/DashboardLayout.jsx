@@ -5,7 +5,7 @@ import {
   LayoutDashboard, ShoppingCart, LogOut, Menu, Flag, Users, Factory,
   ListOrdered, Tag, MessageSquare, FileSpreadsheet, Mail, Settings, CreditCard,
   Image as ImageIcon, ShoppingBag, Globe, Clock, MailCheck, Webhook,
-  ShieldCheck, History, KeyRound, ChevronDown, Megaphone, Flame
+  ShieldCheck, History, KeyRound, ChevronDown, Megaphone, Flame, Receipt
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -29,6 +29,7 @@ const getNavConfig = (role, mode) => {
           icon: ShieldCheck,
           items: [
             { title: 'Security & 2FA', icon: KeyRound, path: '/dashboard/security' },
+            { title: 'Payment Receipts', icon: Receipt, path: '/dashboard/logs/payment-receipts' },
             { title: 'Email Logs', icon: MailCheck, path: '/dashboard/logs/emails' },
             { title: 'Webhook Logs', icon: Webhook, path: '/dashboard/logs/webhooks' },
           ],
@@ -89,6 +90,7 @@ const getNavConfig = (role, mode) => {
         items: [
           { title: 'Auto Installment Jobs', icon: Clock, path: '/dashboard/installment-jobs' },
           { title: 'Security & 2FA', icon: KeyRound, path: '/dashboard/security' },
+          { title: 'Payment Receipts', icon: Receipt, path: '/dashboard/logs/payment-receipts' },
           { title: 'Email Logs', icon: MailCheck, path: '/dashboard/logs/emails' },
           { title: 'Webhook Logs', icon: Webhook, path: '/dashboard/logs/webhooks' },
           { title: 'Audit Trail', icon: ShieldCheck, path: '/dashboard/logs/audit' },
@@ -113,6 +115,8 @@ const pageTitles = {
   '/dashboard/discounts': 'Discount Codes',
   '/dashboard/installments': 'Installment Plans',
   '/dashboard/installment-jobs': 'Auto Installment Jobs',
+  '/dashboard/logs/payment-receipts': 'Payment Receipts & Logs',
+  '/dashboard/payment-receipts': 'Payment Receipts & Logs',
   '/dashboard/logs/emails': 'Email Delivery Logs',
   '/dashboard/logs/webhooks': 'Webhook Logs',
   '/dashboard/logs/audit': 'Audit Logs',
@@ -147,6 +151,8 @@ const pageSubtitles = {
   '/dashboard/discounts': 'StudentLife Coupon Listing',
   '/dashboard/installments': 'Manage Installment Plans',
   '/dashboard/installment-jobs': 'Scheduled & delayed rate status triggers',
+  '/dashboard/logs/payment-receipts': 'Automatic Frisbii payment confirmation receipts sent to administrator',
+  '/dashboard/payment-receipts': 'Automatic Frisbii payment confirmation receipts sent to administrator',
   '/dashboard/logs/emails': 'Outgoing email logs, status & resend',
   '/dashboard/logs/webhooks': 'Frisbii / Flatpay and Stripe incoming webhooks',
   '/dashboard/logs/audit': 'Administrative action audit trail',

@@ -504,6 +504,34 @@ exports.handleWebshopCheckoutSuccess = async (session) => {
       console.error('Error sending webshop order confirmation email:', emailErr);
     }
 
+    // 6. Send automatic Admin Payment Receipt Email for Frisbii / Flatpay
+    try {
+      const { sendOrQueuePaymentReceipt } = require('../services/paymentReceipt.service');
+      const webshopItems = Array.isArray(items) ? items : [];
+      const lineItems = webshopItems.length > 0
+        ? webshopItems.map(item => ({
+            description: `${item.title || item.name || 'Webshop Product'} × ${item.quantity || 1}`,
+            amount: (parseFloat(item.price || 0) * (parseInt(item.quantity) || 1))
+          }))
+        : [{ description: `Webshop Order : ${order.orderNumber}`, amount: order.totalAmount }];
+
+      sendOrQueuePaymentReceipt({
+        orderNumber: order.orderNumber,
+        orderId: order.id,
+        orderType: 'WEBSHOP',
+        amount: order.totalAmount,
+        currency: order.currency || 'DKK',
+        paymentDate: order.orderDate || new Date(),
+        transactionId: sessionId,
+        receiptNumber: sessionId,
+        customerName: name,
+        customerEmail: email,
+        lineItems: lineItems
+      }).catch(rErr => console.error("Error queueing webshop admin payment receipt:", rErr.message));
+    } catch (receiptErr) {
+      console.error("Error triggering payment receipt for webshop order:", receiptErr.message);
+    }
+
   } catch (error) {
     console.error('Error handling webshop checkout webhook success:', error);
   }
