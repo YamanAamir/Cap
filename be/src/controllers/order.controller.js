@@ -862,6 +862,59 @@ const resendInstallmentEmail = async (req, res) => {
   }
 };
 
+/**
+ * Manually mark an installment as Paid in the database (without sending email)
+ */
+exports.markInstallmentPaid = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { installmentIndex, paidAt, status = 'Paid' } = req.body;
+
+    const order = await prisma.order.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Ordre ikke fundet' });
+    }
+
+    let details = order.installmentDetails;
+    if (typeof details === 'string') {
+      try { details = JSON.parse(details); } catch (e) { details = {}; }
+    }
+
+    if (!details || !Array.isArray(details.installments)) {
+      return res.status(400).json({ success: false, message: 'Ingen afdragsordning fundet for denne ordre.' });
+    }
+
+    const idx = parseInt(installmentIndex);
+    if (isNaN(idx) || idx < 0 || idx >= details.installments.length) {
+      return res.status(400).json({ success: false, message: 'Ugyldigt rate-indeks angivet.' });
+    }
+
+    const targetInstallment = details.installments[idx];
+    targetInstallment.status = status;
+    targetInstallment.paidAt = paidAt ? new Date(paidAt).toISOString() : new Date().toISOString();
+
+    await prisma.order.update({
+      where: { id: order.id },
+      data: {
+        installmentDetails: JSON.stringify(details)
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `${targetInstallment.label || `Rate ${idx + 1}`} er nu markeret som Betalt.`,
+      installment: targetInstallment,
+      installmentIndex: idx
+    });
+  } catch (error) {
+    console.error('Error in markInstallmentPaid:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Fejl under opdatering af rate' });
+  }
+};
+
 module.exports = {
   getOrders,
   getOrderById,
@@ -872,5 +925,6 @@ module.exports = {
   deleteOrder,
   resendOrderEmails,
   resendInstallmentEmail,
+  markInstallmentPaid: exports.markInstallmentPaid,
   processSingleOrderStatusUpdate,
 };

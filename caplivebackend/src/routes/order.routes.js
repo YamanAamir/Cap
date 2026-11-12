@@ -10,6 +10,7 @@ router.get('/:id', verifyToken, orderController.getOrderById);
 router.patch('/:id/status', verifyToken, orderController.updateOrderStatus);
 router.post('/:id/resend-email', verifyToken, orderController.resendOrderEmails);
 router.post('/:id/resend-installment-email', verifyToken, orderController.resendInstallmentEmail);
+router.post('/:id/mark-installment-paid', verifyToken, orderController.markInstallmentPaid);
 router.put('/:id', verifyToken, orderController.updateOrder);
 router.delete('/:id', verifyToken, orderController.deleteOrder);
 

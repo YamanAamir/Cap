@@ -14,6 +14,7 @@ import ConfirmModal from '../components/common/ConfirmModal';
 import OrderHistoryTimeline from '../components/orders/OrderHistoryTimeline';
 import SendOrderEmailsModal from '../components/orders/SendOrderEmailsModal';
 import ResendInstallmentEmailModal from '../components/orders/ResendInstallmentEmailModal';
+import MarkInstallmentPaidModal from '../components/orders/MarkInstallmentPaidModal';
 import { formatDenmarkDateTime } from '../utils/dateUtils';
 
 const OrderDetailPage = () => {
@@ -45,6 +46,21 @@ const OrderDetailPage = () => {
 
   const handleOpenResendInstallmentModal = (inst, index) => {
     setResendInstallmentModal({
+      isOpen: true,
+      installment: inst,
+      installmentIndex: index,
+    });
+  };
+
+  // Mark Installment Paid Modal
+  const [markPaidModal, setMarkPaidModal] = useState({
+    isOpen: false,
+    installment: null,
+    installmentIndex: null,
+  });
+
+  const handleOpenMarkPaidModal = (inst, index) => {
+    setMarkPaidModal({
       isOpen: true,
       installment: inst,
       installmentIndex: index,
@@ -379,8 +395,8 @@ const OrderDetailPage = () => {
                               </span>
                             </div>
                           </div>
-                          {isPaid && (
-                            <div className="mt-2 flex justify-end">
+                          <div className="mt-2 flex justify-end gap-2">
+                            {isPaid ? (
                               <button
                                 type="button"
                                 onClick={() => handleOpenResendInstallmentModal(inst, i)}
@@ -390,8 +406,18 @@ const OrderDetailPage = () => {
                                 <Mail className="h-3 w-3 text-emerald-600" />
                                 <span>Resend Payment Success Email</span>
                               </button>
-                            </div>
-                          )}
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenMarkPaidModal(inst, i)}
+                                className="text-[11px] font-semibold text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-md flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                                title="Marker denne rate som Betalt"
+                              >
+                                <CheckCircle2 className="h-3 w-3 text-blue-600" />
+                                <span>Mark as Paid</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
@@ -550,6 +576,15 @@ const OrderDetailPage = () => {
         installment={resendInstallmentModal.installment}
         installmentIndex={resendInstallmentModal.installmentIndex}
         onSuccess={(msg) => toast.success(msg || 'Payment success email resent successfully!')}
+      />
+
+      <MarkInstallmentPaidModal
+        isOpen={markPaidModal.isOpen}
+        onClose={() => setMarkPaidModal(prev => ({ ...prev, isOpen: false }))}
+        order={order}
+        installment={markPaidModal.installment}
+        installmentIndex={markPaidModal.installmentIndex}
+        onSuccess={fetchOrder}
       />
 
       <ConfirmModal
