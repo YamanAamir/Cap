@@ -12,7 +12,6 @@ import {
   getPaymentReceiptPreviewHtml
 } from '../services/admin.service';
 import { Button, Input } from '../components/ui';
-import { getDenmarkDateTimeParts, formatDenmarkDateTime } from '../utils/dateUtils';
 import toast from 'react-hot-toast';
 
 const PaymentReceiptsPage = () => {
@@ -400,8 +399,8 @@ const PaymentReceiptsPage = () => {
                 logs.map((log) => (
                   <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="py-3.5 px-4 whitespace-nowrap text-xs text-slate-500">
-                      <div>{getDenmarkDateTimeParts(log.paymentDate || log.createdAt).date}</div>
-                      <div className="text-[11px] text-slate-400">{getDenmarkDateTimeParts(log.paymentDate || log.createdAt).time}</div>
+                      <div>{new Date(log.paymentDate || log.createdAt).toLocaleDateString('da-DK')}</div>
+                      <div className="text-[11px] text-slate-400">{new Date(log.paymentDate || log.createdAt).toLocaleTimeString('da-DK')}</div>
                     </td>
 
                     <td className="py-3.5 px-4">
@@ -608,7 +607,7 @@ const PaymentReceiptsPage = () => {
                     <p className="text-[11px] text-slate-500">
                       To: <span className="font-medium text-slate-700">{previewModal.log.recipientEmail}</span>
                       {previewModal.log.sentAt && (
-                        <span> • Sent: {formatDenmarkDateTime(previewModal.log.sentAt, { includeSeconds: true })}</span>
+                        <span> • Sent: {new Date(previewModal.log.sentAt).toLocaleDateString('da-DK')} {new Date(previewModal.log.sentAt).toLocaleTimeString('da-DK')}</span>
                       )}
                     </p>
                   )}

@@ -103,13 +103,17 @@ const updateReceiptSettings = async ({ recipientEmail, enabled }) => {
   return { recipientEmail: cleanEmail, enabled: isEnabled };
 };
 
+const getAppTimezone = () => {
+  return process.env.TIMEZONE || process.env.TZ || 'Asia/Karachi';
+};
+
 /**
- * Format date for receipt (e.g. "Feb 20, 2026, 3:29:36 PM")
+ * Format date for receipt (e.g. "Nov 12, 2026, 6:41:32 PM")
  */
 const formatReceiptDate = (date) => {
   const d = date ? new Date(date) : new Date();
   return d.toLocaleString('en-US', {
-    timeZone: 'Europe/Copenhagen',
+    timeZone: getAppTimezone(),
     month: 'short',
     day: 'numeric',
     year: 'numeric',
