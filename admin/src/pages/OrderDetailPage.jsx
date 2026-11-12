@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import {
   ChevronLeft, Loader2, User, Mail, Package, Calendar,
   MapPin, Phone, School, Truck, Settings2,
-  AlertCircle, Code, CheckCircle2, Tag, ImageIcon, ChevronRight, X, CreditCard
+  AlertCircle, Code, CheckCircle2, Tag, ImageIcon, ChevronRight, X, CreditCard, Send
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ConfigBlueprintCards from '../components/orders/ConfigBlueprintCards';
