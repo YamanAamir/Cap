@@ -3,11 +3,11 @@ const { getTransporter } = require('../utils/mailer');
 const flatpayService = require('./flatpay.service');
 
 // Default admin notification email
-const DEFAULT_ADMIN_EMAIL = process.env.ADMIN_PAYMENT_RECEIPT_EMAIL || 'salg@studentlife.dk';
+const DEFAULT_ADMIN_EMAIL = process.env.ADMIN_PAYMENT_RECEIPT_EMAIL || 'info@studentlife.dk';
 const SETTINGS_KEY = 'payment_receipt_settings';
 
 /**
- * Ensure PaymentReceiptLog table exists in the database
+ * Ensure PaymentReceiptLog and SystemSetting tables exist in the database
  * Safe and idempotent for all environments
  */
 let tableChecked = false;
@@ -45,6 +45,17 @@ const ensureTableExists = async () => {
         INDEX \`PaymentReceiptLog_createdAt_idx\` (\`createdAt\`)
       ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
     `);
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS \`SystemSetting\` (
+        \`id\` INT NOT NULL AUTO_INCREMENT,
+        \`key\` VARCHAR(191) NOT NULL,
+        \`value\` LONGTEXT NOT NULL,
+        PRIMARY KEY (\`id\`),
+        UNIQUE INDEX \`SystemSetting_key_key\` (\`key\`)
+      ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    `);
+
     tableChecked = true;
   } catch (err) {
     // If table already exists or user has limited DDL permissions, ignore
@@ -56,6 +67,7 @@ const ensureTableExists = async () => {
  * Retrieve admin payment receipt notification settings
  */
 const getReceiptSettings = async () => {
+  await ensureTableExists();
   try {
     const setting = await prisma.systemSetting.findUnique({
       where: { key: SETTINGS_KEY }
@@ -85,6 +97,7 @@ const getReceiptSettings = async () => {
  * Update admin payment receipt notification settings
  */
 const updateReceiptSettings = async ({ recipientEmail, enabled }) => {
+  await ensureTableExists();
   const cleanEmail = (recipientEmail || DEFAULT_ADMIN_EMAIL).trim();
   const isEnabled = enabled !== false;
 

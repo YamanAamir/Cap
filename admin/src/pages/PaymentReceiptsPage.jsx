@@ -23,7 +23,7 @@ const PaymentReceiptsPage = () => {
   const [loading, setLoading] = useState(true);
 
   // Settings State
-  const [settings, setSettings] = useState({ recipientEmail: 'salg@studentlife.dk', enabled: true });
+  const [settings, setSettings] = useState({ recipientEmail: 'info@studentlife.dk', enabled: true });
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
 
@@ -57,7 +57,7 @@ const PaymentReceiptsPage = () => {
       const data = await getPaymentReceiptSettings();
       if (data) {
         setSettings({
-          recipientEmail: data.recipientEmail || 'salg@studentlife.dk',
+          recipientEmail: data.recipientEmail || 'info@studentlife.dk',
           enabled: data.enabled !== false
         });
       }
@@ -125,7 +125,7 @@ const PaymentReceiptsPage = () => {
     setResendModal({
       isOpen: true,
       log,
-      customEmail: log.recipientEmail || settings.recipientEmail || 'salg@studentlife.dk'
+      customEmail: log.recipientEmail || settings.recipientEmail || 'info@studentlife.dk'
     });
   };
 
@@ -561,7 +561,7 @@ const PaymentReceiptsPage = () => {
                     value={resendModal.customEmail}
                     onChange={(e) => setResendModal(m => ({ ...m, customEmail: e.target.value }))}
                     className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="salg@studentlife.dk"
+                    placeholder="info@studentlife.dk"
                   />
                 </div>
                 <p className="text-[11px] text-slate-500 mt-1">
