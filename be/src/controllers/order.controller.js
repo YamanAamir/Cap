@@ -915,6 +915,9 @@ exports.markInstallmentPaid = async (req, res) => {
   }
 };
 
+// In-memory debounce lock to prevent accidental duplicate sends from rapid clicks
+const activeLinkDispatches = new Map();
+
 /**
  * Manually send installment payment link email to customer from admin dashboard
  */
@@ -954,6 +957,29 @@ exports.sendInstallmentPaymentLink = async (req, res) => {
       });
     }
 
+    // Debounce check: prevent duplicate send if triggered within last 5 seconds for the same order & installment
+    const dispatchKey = `${order.id}_${idx}`;
+    const now = Date.now();
+    const lastSent = activeLinkDispatches.get(dispatchKey);
+    if (lastSent && (now - lastSent) < 5000) {
+      console.warn(`[sendInstallmentPaymentLink] Blocked duplicate trigger for ${dispatchKey} (${now - lastSent}ms ago)`);
+      return res.status(200).json({
+        success: true,
+        message: `Betalingslink for ${targetInstallment.label || `Rate ${idx + 1}`} er allerede sendt`,
+        recipient: recipientEmail || order.customerEmail,
+        alreadySent: true
+      });
+    }
+    activeLinkDispatches.set(dispatchKey, now);
+
+    // Housekeeping: prevent memory leak
+    if (activeLinkDispatches.size > 500) {
+      const cutoff = now - 60000;
+      for (const [k, v] of activeLinkDispatches.entries()) {
+        if (v < cutoff) activeLinkDispatches.delete(k);
+      }
+    }
+
     // Determine target recipient email
     const targetEmail = (recipientEmail || order.customerEmail || '').trim();
     if (!targetEmail || !targetEmail.includes('@')) {
@@ -985,36 +1011,18 @@ exports.sendInstallmentPaymentLink = async (req, res) => {
     const { getTransporter } = require('../utils/mailer');
     const transporter = getTransporter();
 
-    const info = await transporter.sendMail({
+    // Send mail - mailer.js automatically writes one clean record to prisma.emailLog with __logMeta
+    await transporter.sendMail({
       from: `"Studentlife" <${process.env.EMAIL_USER || 'info@studentlife.dk'}>`,
       to: targetEmail,
       subject: subject,
-      html: html
+      html: html,
+      __logMeta: {
+        orderNumber: order.orderNumber,
+        type: 'installment_payment_link',
+        installmentIndex: idx
+      }
     });
-
-    // Log to EmailLog
-    try {
-      await prisma.emailLog.create({
-        data: {
-          toEmail: targetEmail,
-          fromEmail: process.env.EMAIL_USER || 'info@studentlife.dk',
-          subject: subject,
-          orderNumber: order.orderNumber,
-          status: 'SENT',
-          messageId: info.messageId || null,
-          html: html,
-          optionsJson: JSON.stringify({
-            type: 'installment_payment_link',
-            orderId: order.id,
-            installmentIndex: idx,
-            amount: targetInstallment.amount,
-            paymentLink
-          })
-        }
-      });
-    } catch (logErr) {
-      console.warn('Could not record to EmailLog:', logErr.message);
-    }
 
     return res.status(200).json({
       success: true,

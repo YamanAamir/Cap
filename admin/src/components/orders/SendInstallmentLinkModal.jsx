@@ -17,19 +17,23 @@ const SendInstallmentLinkModal = ({
   const [recipientEmail, setRecipientEmail] = useState(defaultEmail);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
+  const sendingRef = React.useRef(false);
 
   useEffect(() => {
     setRecipientEmail(defaultEmail);
     setError(null);
+    sendingRef.current = false;
   }, [isOpen, order, installment, defaultEmail]);
 
   const handleSend = async (e) => {
     if (e) e.preventDefault();
+    if (sendingRef.current || sending) return;
     if (!recipientEmail || !recipientEmail.trim() || !recipientEmail.includes('@')) {
       setError('Indtast venligst en gyldig modtager e-mailadresse.');
       return;
     }
 
+    sendingRef.current = true;
     setSending(true);
     setError(null);
 
@@ -51,6 +55,7 @@ const SendInstallmentLinkModal = ({
       setError(msg);
       toast.error(msg);
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   };

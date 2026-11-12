@@ -9,9 +9,10 @@ import {
   resendPaymentReceipt,
   getPaymentReceiptSettings,
   updatePaymentReceiptSettings,
-  getPaymentReceiptPreviewUrl
+  getPaymentReceiptPreviewHtml
 } from '../services/admin.service';
 import { Button, Input } from '../components/ui';
+import { getDenmarkDateTimeParts, formatDenmarkDateTime } from '../utils/dateUtils';
 import toast from 'react-hot-toast';
 
 const PaymentReceiptsPage = () => {
@@ -35,8 +36,20 @@ const PaymentReceiptsPage = () => {
   // Modals
   const [resendModal, setResendModal] = useState({ isOpen: false, log: null, customEmail: '' });
   const [resendLoading, setResendLoading] = useState(false);
-  const [previewModal, setPreviewModal] = useState({ isOpen: false, log: null });
+  const [previewModal, setPreviewModal] = useState({ isOpen: false, log: null, html: '', loading: false });
   const [errorModal, setErrorModal] = useState({ isOpen: false, log: null });
+
+  const handleOpenPreview = async (log) => {
+    setPreviewModal({ isOpen: true, log, html: '', loading: true });
+    try {
+      const html = await getPaymentReceiptPreviewHtml(log.id);
+      setPreviewModal({ isOpen: true, log, html, loading: false });
+    } catch (err) {
+      console.error('Failed to load preview:', err);
+      toast.error('Failed to load receipt preview');
+      setPreviewModal({ isOpen: false, log: null, html: '', loading: false });
+    }
+  };
 
   // Load Settings
   const loadSettings = async () => {
@@ -387,8 +400,8 @@ const PaymentReceiptsPage = () => {
                 logs.map((log) => (
                   <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="py-3.5 px-4 whitespace-nowrap text-xs text-slate-500">
-                      <div>{new Date(log.paymentDate || log.createdAt).toLocaleDateString('da-DK')}</div>
-                      <div className="text-[11px] text-slate-400">{new Date(log.paymentDate || log.createdAt).toLocaleTimeString('da-DK')}</div>
+                      <div>{getDenmarkDateTimeParts(log.paymentDate || log.createdAt).date}</div>
+                      <div className="text-[11px] text-slate-400">{getDenmarkDateTimeParts(log.paymentDate || log.createdAt).time}</div>
                     </td>
 
                     <td className="py-3.5 px-4">
@@ -446,7 +459,7 @@ const PaymentReceiptsPage = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setPreviewModal({ isOpen: true, log })}
+                          onClick={() => handleOpenPreview(log)}
                           title="Preview Branded Receipt Email"
                           className="h-8 w-8 p-0 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
                         >
@@ -587,21 +600,39 @@ const PaymentReceiptsPage = () => {
             <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/75">
               <div className="flex items-center gap-2">
                 <Receipt className="w-5 h-5 text-indigo-600" />
-                <h3 className="font-semibold text-slate-900">
-                  Payment Receipt Preview — {previewModal.log?.orderNumber}
-                </h3>
+                <div>
+                  <h3 className="font-semibold text-slate-900 text-sm">
+                    Payment Receipt Preview — {previewModal.log?.orderNumber}
+                  </h3>
+                  {previewModal.log && (
+                    <p className="text-[11px] text-slate-500">
+                      To: <span className="font-medium text-slate-700">{previewModal.log.recipientEmail}</span>
+                      {previewModal.log.sentAt && (
+                        <span> • Sent: {formatDenmarkDateTime(previewModal.log.sentAt, { includeSeconds: true })}</span>
+                      )}
+                    </p>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-2">
-                <a
-                  href={getPaymentReceiptPreviewUrl(previewModal.log?.id)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs text-indigo-600 hover:underline flex items-center gap-1 mr-2"
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!previewModal.html) return;
+                    const w = window.open('', '_blank');
+                    if (w) {
+                      w.document.open();
+                      w.document.write(previewModal.html);
+                      w.document.close();
+                    }
+                  }}
+                  disabled={previewModal.loading || !previewModal.html}
+                  className="text-xs text-indigo-600 hover:text-indigo-800 flex items-center gap-1 font-medium cursor-pointer disabled:opacity-50 mr-2"
                 >
                   <ExternalLink className="w-3.5 h-3.5" /> Open in New Tab
-                </a>
+                </button>
                 <button
-                  onClick={() => setPreviewModal({ isOpen: false, log: null })}
+                  onClick={() => setPreviewModal({ isOpen: false, log: null, html: '', loading: false })}
                   className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
                 >
                   <X className="w-5 h-5" />
@@ -609,12 +640,19 @@ const PaymentReceiptsPage = () => {
               </div>
             </div>
 
-            <div className="flex-1 bg-slate-100 p-4 overflow-auto flex justify-center">
-              <iframe
-                title="Payment Receipt Preview"
-                src={getPaymentReceiptPreviewUrl(previewModal.log?.id)}
-                className="w-full max-w-[620px] h-full bg-white rounded-lg shadow-sm border border-slate-200"
-              />
+            <div className="flex-1 bg-slate-100 p-4 overflow-auto flex justify-center items-center">
+              {previewModal.loading ? (
+                <div className="flex flex-col items-center justify-center p-12 text-slate-400">
+                  <Loader2 className="w-8 h-8 animate-spin text-indigo-600 mb-2" />
+                  <span className="text-xs font-medium">Henter receipt preview...</span>
+                </div>
+              ) : (
+                <iframe
+                  title="Payment Receipt Preview"
+                  srcDoc={previewModal.html}
+                  className="w-full max-w-[620px] h-full bg-white rounded-lg shadow-sm border border-slate-200"
+                />
+              )}
             </div>
           </div>
         </div>

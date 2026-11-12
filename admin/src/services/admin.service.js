@@ -104,5 +104,6 @@ export const resendPaymentReceipt = (id, overrideEmail = null) => api.post(`/adm
 export const getPaymentReceiptSettings = () => api.get('/admin/payment-receipts/settings').then(r => r.data);
 export const updatePaymentReceiptSettings = (data) => api.post('/admin/payment-receipts/settings', data).then(r => r.data);
 export const getPaymentReceiptPreviewUrl = (id) => `/api/admin/payment-receipts/${id}/preview`;
+export const getPaymentReceiptPreviewHtml = (id) => api.get(`/admin/payment-receipts/${id}/preview`).then(r => r.data);
 
 

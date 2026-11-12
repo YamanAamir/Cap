@@ -109,6 +109,7 @@ const updateReceiptSettings = async ({ recipientEmail, enabled }) => {
 const formatReceiptDate = (date) => {
   const d = date ? new Date(date) : new Date();
   return d.toLocaleString('en-US', {
+    timeZone: 'Europe/Copenhagen',
     month: 'short',
     day: 'numeric',
     year: 'numeric',
