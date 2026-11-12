@@ -915,6 +915,124 @@ exports.markInstallmentPaid = async (req, res) => {
   }
 };
 
+/**
+ * Manually send installment payment link email to customer from admin dashboard
+ */
+exports.sendInstallmentPaymentLink = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { installmentIndex, recipientEmail } = req.body;
+
+    const order = await prisma.order.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Ordre ikke fundet' });
+    }
+
+    let details = order.installmentDetails;
+    if (typeof details === 'string') {
+      try { details = JSON.parse(details); } catch (e) { details = {}; }
+    }
+
+    if (!details || !Array.isArray(details.installments)) {
+      return res.status(400).json({ success: false, message: 'Ingen afdragsordning fundet for denne ordre.' });
+    }
+
+    const idx = parseInt(installmentIndex);
+    if (isNaN(idx) || idx < 0 || idx >= details.installments.length) {
+      return res.status(400).json({ success: false, message: 'Ugyldigt rate-indeks angivet.' });
+    }
+
+    const targetInstallment = details.installments[idx];
+    const isPaid = String(targetInstallment.status || '').toLowerCase() === 'paid';
+    if (isPaid) {
+      return res.status(400).json({
+        success: false,
+        message: 'Denne rate er allerede betalt. Brug i stedet gensend kvittering.'
+      });
+    }
+
+    // Determine target recipient email
+    const targetEmail = (recipientEmail || order.customerEmail || '').trim();
+    if (!targetEmail || !targetEmail.includes('@')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Indtast venligst en gyldig modtager e-mailadresse.'
+      });
+    }
+
+    // Determine protocol and host for payment link
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+    const host = req.headers['x-forwarded-host'] || req.get('host') || 'localhost';
+    const rawUrl = process.env.API_BASE_URL || process.env.VITE_API_BASE_URL || `${protocol}://${host}`;
+    const apiRoot = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl.replace(/\/$/, '')}/api`;
+    const frontendParam = (details && details.frontendUrl) ? `&frontendUrl=${encodeURIComponent(details.frontendUrl)}` : '';
+    const paymentLink = `${apiRoot}/sendEmail/pay-installment?orderId=${order.id}&installmentIndex=${idx}${frontendParam}`;
+
+    const { buildInstallmentPaymentRequestEmail } = require('./sendEmail.controller');
+    const emailData = buildInstallmentPaymentRequestEmail({
+      order,
+      installment: targetInstallment,
+      installmentIndex: idx,
+      paymentLink
+    });
+
+    const subject = emailData?.subject || `Din næste rate for ordre ${order.orderNumber} er klar til betaling`;
+    const html = emailData?.html;
+
+    const { getTransporter } = require('../utils/mailer');
+    const transporter = getTransporter();
+
+    const info = await transporter.sendMail({
+      from: `"Studentlife" <${process.env.EMAIL_USER || 'info@studentlife.dk'}>`,
+      to: targetEmail,
+      subject: subject,
+      html: html
+    });
+
+    // Log to EmailLog
+    try {
+      await prisma.emailLog.create({
+        data: {
+          toEmail: targetEmail,
+          fromEmail: process.env.EMAIL_USER || 'info@studentlife.dk',
+          subject: subject,
+          orderNumber: order.orderNumber,
+          status: 'SENT',
+          messageId: info.messageId || null,
+          html: html,
+          optionsJson: JSON.stringify({
+            type: 'installment_payment_link',
+            orderId: order.id,
+            installmentIndex: idx,
+            amount: targetInstallment.amount,
+            paymentLink
+          })
+        }
+      });
+    } catch (logErr) {
+      console.warn('Could not record to EmailLog:', logErr.message);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Betalingslink for ${targetInstallment.label || `Rate ${idx + 1}`} er sendt til ${targetEmail}`,
+      recipient: targetEmail,
+      paymentLink,
+      installmentLabel: targetInstallment.label || `Rate ${idx + 1}`,
+      amount: targetInstallment.amount
+    });
+  } catch (error) {
+    console.error('Error in sendInstallmentPaymentLink:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Fejl under afsendelse af betalingslink'
+    });
+  }
+};
+
 module.exports = {
   getOrders,
   getOrderById,
@@ -926,5 +1044,6 @@ module.exports = {
   resendOrderEmails,
   resendInstallmentEmail,
   markInstallmentPaid: exports.markInstallmentPaid,
+  sendInstallmentPaymentLink: exports.sendInstallmentPaymentLink,
   processSingleOrderStatusUpdate,
 };

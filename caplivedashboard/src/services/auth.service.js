@@ -120,6 +120,11 @@ export const resendInstallmentEmail = async (id, data = {}) => {
   return response.data;
 };
 
+export const sendInstallmentPaymentLink = async (id, data = {}) => {
+  const response = await api.post(`/orders/${id}/send-installment-link`, data);
+  return response.data;
+};
+
 export const markInstallmentPaid = async (id, data = {}) => {
   const response = await api.post(`/orders/${id}/mark-installment-paid`, data);
   return response.data;

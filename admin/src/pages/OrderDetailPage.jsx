@@ -15,6 +15,7 @@ import OrderHistoryTimeline from '../components/orders/OrderHistoryTimeline';
 import SendOrderEmailsModal from '../components/orders/SendOrderEmailsModal';
 import ResendInstallmentEmailModal from '../components/orders/ResendInstallmentEmailModal';
 import MarkInstallmentPaidModal from '../components/orders/MarkInstallmentPaidModal';
+import SendInstallmentLinkModal from '../components/orders/SendInstallmentLinkModal';
 import { formatDenmarkDateTime } from '../utils/dateUtils';
 
 const OrderDetailPage = () => {
@@ -61,6 +62,21 @@ const OrderDetailPage = () => {
 
   const handleOpenMarkPaidModal = (inst, index) => {
     setMarkPaidModal({
+      isOpen: true,
+      installment: inst,
+      installmentIndex: index,
+    });
+  };
+
+  // Send Installment Link Modal
+  const [sendLinkModal, setSendLinkModal] = useState({
+    isOpen: false,
+    installment: null,
+    installmentIndex: null,
+  });
+
+  const handleOpenSendLinkModal = (inst, index) => {
+    setSendLinkModal({
       isOpen: true,
       installment: inst,
       installmentIndex: index,
@@ -407,15 +423,26 @@ const OrderDetailPage = () => {
                                 <span>Resend Payment Success Email</span>
                               </button>
                             ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleOpenMarkPaidModal(inst, i)}
-                                className="text-[11px] font-semibold text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-md flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
-                                title="Marker denne rate som Betalt"
-                              >
-                                <CheckCircle2 className="h-3 w-3 text-blue-600" />
-                                <span>Mark as Paid</span>
-                              </button>
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenSendLinkModal(inst, i)}
+                                  className="text-[11px] font-semibold text-indigo-700 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2.5 py-1 rounded-md flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                                  title="Send betalingslink på e-mail til kunden"
+                                >
+                                  <Send className="h-3 w-3 text-indigo-600" />
+                                  <span>Send Payment Link</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenMarkPaidModal(inst, i)}
+                                  className="text-[11px] font-semibold text-blue-700 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-md flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                                  title="Marker denne rate som Betalt"
+                                >
+                                  <CheckCircle2 className="h-3 w-3 text-blue-600" />
+                                  <span>Mark as Paid</span>
+                                </button>
+                              </>
                             )}
                           </div>
                         </div>
@@ -585,6 +612,15 @@ const OrderDetailPage = () => {
         installment={markPaidModal.installment}
         installmentIndex={markPaidModal.installmentIndex}
         onSuccess={fetchOrder}
+      />
+
+      <SendInstallmentLinkModal
+        isOpen={sendLinkModal.isOpen}
+        onClose={() => setSendLinkModal(prev => ({ ...prev, isOpen: false }))}
+        order={order}
+        installment={sendLinkModal.installment}
+        installmentIndex={sendLinkModal.installmentIndex}
+        onSuccess={() => {}}
       />
 
       <ConfirmModal
