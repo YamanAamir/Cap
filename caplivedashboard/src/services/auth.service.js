@@ -115,6 +115,11 @@ export const resendOrderEmails = async (id, data = {}) => {
   return response.data;
 };
 
+export const resendInstallmentEmail = async (id, data = {}) => {
+  const response = await api.post(`/orders/${id}/resend-installment-email`, data);
+  return response.data;
+};
+
 export const updateOrder = async (id, data) => {
   const response = await api.put(`/orders/${id}`, data);
   return response.data;

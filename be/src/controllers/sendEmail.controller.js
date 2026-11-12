@@ -268,8 +268,8 @@ const factoryOrderEmail = async (orderData, columnsConfig = null) => {
             }
           }
           const isPassthrough = RAW_PASSTHROUGH_FIELDS.has(subKey) ||
-                                RAW_PASSTHROUGH_FIELDS.has(`${catKey}.${subKey}`) ||
-                                RAW_PASSTHROUGH_FIELDS.has(`options.${catKey}.${subKey}`);
+            RAW_PASSTHROUGH_FIELDS.has(`${catKey}.${subKey}`) ||
+            RAW_PASSTHROUGH_FIELDS.has(`options.${catKey}.${subKey}`);
           return {
             label: translateFactoryValue(subKey),
             value: isPassthrough ? (valueToUse || 'Not Chosen') : (translateFactoryValue(valueToUse) || 'Not Chosen')
@@ -3000,7 +3000,7 @@ const sendCapEmail = async (req, res) => {
             ? JSON.parse(dbOrder.installmentDetails)
             : dbOrder.installmentDetails;
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     const buildCapAttachments = (images) => {
@@ -3195,7 +3195,7 @@ const processSuccessfulCapOrder = async (tempOrderId, orderDataOverride = null) 
     // 2. ATOMIC CLAIM: Delete from TempOrder immediately BEFORE doing DB create or sending emails!
     // This guarantees that any concurrent webhook or redirect thread that reaches this point
     // will find 0 rows in TempOrder and cannot re-process!
-    await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${tempOrderId}`.catch(() => {});
+    await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${tempOrderId}`.catch(() => { });
 
     // 3. Guard against duplicate order creation if already exists in DB
     if (orderData.orderNumber) {
@@ -3568,7 +3568,7 @@ const buildInstallmentPaymentRequestEmail = ({ order, installment, installmentIn
 /**
  * Branded Installment Confirmation Email (sent when customer pays a rate)
  */
-const sendInstallmentConfirmationEmail = async ({ order, installment, installmentIndex, details }) => {
+const sendInstallmentConfirmationEmail = async ({ order, installment, installmentIndex, details, overrideRecipientEmail }) => {
   try {
     const transporter = createEmailTransporter();
 
@@ -3746,18 +3746,25 @@ const sendInstallmentConfirmationEmail = async ({ order, installment, installmen
 </html>
     `;
 
-    await transporter.sendMail({
+    const targetEmail = (overrideRecipientEmail || order.customerEmail || '').trim();
+    if (!targetEmail) {
+      throw new Error('No valid recipient email address found for this order');
+    }
+
+    const mailResult = await transporter.sendMail({
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-      to: order.customerEmail,
+      to: targetEmail,
       subject: `Kvittering for modtaget ratebetaling - Ordre ${order.orderNumber}`,
       html,
       text: `Kære ${customerName},\n\nMange tak for din betaling! Din ratebetaling (${installment.label}) på ${installment.amount} DKK for ordre ${order.orderNumber} er gennemført.\nResterende beløb: ${remainingAmount.toFixed(2)} DKK.\n\nMed venlig hilsen,\nStudentlife`,
       __logMeta: { orderNumber: order.orderNumber },
     });
 
-    console.log(`✅ Installment confirmation email sent to ${order.customerEmail} for order ${order.orderNumber} (rate index ${installmentIndex})`);
+    console.log(`✅ Installment confirmation email sent to ${targetEmail} for order ${order.orderNumber} (rate index ${installmentIndex})`);
+    return { success: true, recipient: targetEmail, messageId: mailResult?.messageId };
   } catch (err) {
     console.error("❌ Error sending installment confirmation email:", err);
+    throw err;
   }
 };
 
@@ -4021,7 +4028,7 @@ const payInstallment = async (req, res) => {
       if (!ref.includes('mail.') && !ref.includes('google.') && !ref.includes('outlook.') && !ref.includes('yahoo.')) {
         try {
           clientUrl = new URL(ref).origin;
-        } catch (e) {}
+        } catch (e) { }
       }
     }
 
@@ -4154,7 +4161,7 @@ const getSessionDetails = async (req, res) => {
         tempOrderData = typeof tempOrders[0].orderData === 'string'
           ? JSON.parse(tempOrders[0].orderData)
           : tempOrders[0].orderData;
-      } catch (e) {}
+      } catch (e) { }
     }
 
     // 3. If it looks like a Stripe checkout session ID (starts with cs_test_ or cs_live_)
@@ -4198,19 +4205,19 @@ const getSessionDetails = async (req, res) => {
         line_items: {
           data: (invoiceData.order_lines && invoiceData.order_lines.length > 0)
             ? invoiceData.order_lines.map(line => ({
-                id: line.id || '1',
-                description: line.ordertext || `Cap Order : ${orderNumber}`,
-                quantity: line.quantity || 1,
-                amount_total: line.amount || amountTotal
-              }))
+              id: line.id || '1',
+              description: line.ordertext || `Cap Order : ${orderNumber}`,
+              quantity: line.quantity || 1,
+              amount_total: line.amount || amountTotal
+            }))
             : [
-                {
-                  id: '1',
-                  description: `Cap Order : ${orderNumber}`,
-                  quantity: 1,
-                  amount_total: amountTotal
-                }
-              ]
+              {
+                id: '1',
+                description: `Cap Order : ${orderNumber}`,
+                quantity: 1,
+                amount_total: amountTotal
+              }
+            ]
         }
       });
     }
@@ -4345,7 +4352,7 @@ const frisbiiWebhook = async (req, res) => {
             }
           });
 
-          await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${invoice}`.catch(() => {});
+          await prisma.$executeRaw`DELETE FROM TempOrder WHERE id = ${invoice}`.catch(() => { });
         }
         return res.json({ received: true });
       }
@@ -4384,7 +4391,7 @@ const stripeWebhook = async (req, res) => {
     try {
       const raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : req.body;
       bodyJson = typeof raw === 'string' ? JSON.parse(raw) : raw;
-    } catch (e) {}
+    } catch (e) { }
     if (bodyJson && (bodyJson.event_type || bodyJson.signature)) {
       req.body = bodyJson;
       return frisbiiWebhook(req, res);

@@ -3568,7 +3568,7 @@ const buildInstallmentPaymentRequestEmail = ({ order, installment, installmentIn
 /**
  * Branded Installment Confirmation Email (sent when customer pays a rate)
  */
-const sendInstallmentConfirmationEmail = async ({ order, installment, installmentIndex, details }) => {
+const sendInstallmentConfirmationEmail = async ({ order, installment, installmentIndex, details, overrideRecipientEmail }) => {
   try {
     const transporter = createEmailTransporter();
 
@@ -3746,18 +3746,25 @@ const sendInstallmentConfirmationEmail = async ({ order, installment, installmen
 </html>
     `;
 
-    await transporter.sendMail({
+    const targetEmail = (overrideRecipientEmail || order.customerEmail || '').trim();
+    if (!targetEmail) {
+      throw new Error('No valid recipient email address found for this order');
+    }
+
+    const mailResult = await transporter.sendMail({
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-      to: order.customerEmail,
+      to: targetEmail,
       subject: `Kvittering for modtaget ratebetaling - Ordre ${order.orderNumber}`,
       html,
       text: `Kære ${customerName},\n\nMange tak for din betaling! Din ratebetaling (${installment.label}) på ${installment.amount} DKK for ordre ${order.orderNumber} er gennemført.\nResterende beløb: ${remainingAmount.toFixed(2)} DKK.\n\nMed venlig hilsen,\nStudentlife`,
       __logMeta: { orderNumber: order.orderNumber },
     });
 
-    console.log(`✅ Installment confirmation email sent to ${order.customerEmail} for order ${order.orderNumber} (rate index ${installmentIndex})`);
+    console.log(`✅ Installment confirmation email sent to ${targetEmail} for order ${order.orderNumber} (rate index ${installmentIndex})`);
+    return { success: true, recipient: targetEmail, messageId: mailResult?.messageId };
   } catch (err) {
     console.error("❌ Error sending installment confirmation email:", err);
+    throw err;
   }
 };
 

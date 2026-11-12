@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getOrder, updateOrderStatus } from '../services/auth.service';
 import { getOrderStatuses } from '../services/admin.service';
+import toast from 'react-hot-toast';
 import {
   ChevronLeft, Loader2, User, Mail, Package, Calendar,
   MapPin, Phone, School, Truck, Settings2,
@@ -12,6 +13,7 @@ import ConfigBlueprintCards from '../components/orders/ConfigBlueprintCards';
 import ConfirmModal from '../components/common/ConfirmModal';
 import OrderHistoryTimeline from '../components/orders/OrderHistoryTimeline';
 import SendOrderEmailsModal from '../components/orders/SendOrderEmailsModal';
+import ResendInstallmentEmailModal from '../components/orders/ResendInstallmentEmailModal';
 import { formatDenmarkDateTime } from '../utils/dateUtils';
 
 const OrderDetailPage = () => {
@@ -33,6 +35,21 @@ const OrderDetailPage = () => {
 
   // Send Emails Modal
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+
+  // Resend Installment Receipt Modal
+  const [resendInstallmentModal, setResendInstallmentModal] = useState({
+    isOpen: false,
+    installment: null,
+    installmentIndex: null,
+  });
+
+  const handleOpenResendInstallmentModal = (inst, index) => {
+    setResendInstallmentModal({
+      isOpen: true,
+      installment: inst,
+      installmentIndex: index,
+    });
+  };
 
   const fetchOrder = async () => {
     setLoading(true);
@@ -345,21 +362,39 @@ const OrderDetailPage = () => {
                   <span className="text-[10px] font-bold uppercase text-emerald-600 tracking-widest block mb-2 flex items-center gap-1">
                     <CreditCard className="h-3 w-3" /> Installment History
                   </span>
-                  <div className="space-y-2">
-                    {order.installmentDetails.installments.map((inst, i) => (
-                      <div key={i} className="flex justify-between items-center text-sm border-b border-slate-100 last:border-0 pb-2 last:pb-0">
-                        <div>
-                          <p className="font-bold text-slate-700">{inst.label}</p>
-                          <p className="text-xs text-slate-500">{inst.paidAt ? new Date(inst.paidAt).toLocaleDateString() : 'Pending'}</p>
+                  <div className="space-y-3">
+                    {order.installmentDetails.installments.map((inst, i) => {
+                      const isPaid = String(inst.status || '').toLowerCase() === 'paid' || i === 0;
+                      return (
+                        <div key={i} className="border-b border-slate-100 last:border-0 pb-2.5 last:pb-0">
+                          <div className="flex justify-between items-center text-sm">
+                            <div>
+                              <p className="font-bold text-slate-700">{inst.label}</p>
+                              <p className="text-xs text-slate-500">{inst.paidAt ? new Date(inst.paidAt).toLocaleDateString() : (isPaid ? 'Paid' : 'Pending')}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-slate-900">{inst.amount} DKK</p>
+                              <span className={cn("text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded", isPaid ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700")}>
+                                {inst.status || (isPaid ? 'Paid' : 'Pending')}
+                              </span>
+                            </div>
+                          </div>
+                          {isPaid && (
+                            <div className="mt-2 flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenResendInstallmentModal(inst, i)}
+                                className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-md flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                                title="Resend Payment Success Email"
+                              >
+                                <Mail className="h-3 w-3 text-emerald-600" />
+                                <span>Resend Payment Success Email</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold text-slate-900">{inst.amount} DKK</p>
-                          <span className={cn("text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded", inst.status === 'Paid' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700")}>
-                            {inst.status}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -506,6 +541,15 @@ const OrderDetailPage = () => {
         onClose={() => setIsEmailModalOpen(false)}
         order={order}
         onSuccess={() => fetchOrder()}
+      />
+
+      <ResendInstallmentEmailModal
+        isOpen={resendInstallmentModal.isOpen}
+        onClose={() => setResendInstallmentModal(prev => ({ ...prev, isOpen: false }))}
+        order={order}
+        installment={resendInstallmentModal.installment}
+        installmentIndex={resendInstallmentModal.installmentIndex}
+        onSuccess={(msg) => toast.success(msg || 'Payment success email resent successfully!')}
       />
 
       <ConfirmModal

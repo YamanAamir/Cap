@@ -781,6 +781,87 @@ const resendOrderEmails = async (req, res) => {
   }
 };
 
+const resendInstallmentEmail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { installmentIndex, recipientEmail } = req.body;
+
+    if (installmentIndex === undefined || installmentIndex === null) {
+      return res.status(400).json({ success: false, message: 'installmentIndex er påkrævet' });
+    }
+
+    const idx = parseInt(installmentIndex, 10);
+    if (isNaN(idx) || idx < 0) {
+      return res.status(400).json({ success: false, message: 'Ugyldigt installmentIndex' });
+    }
+
+    const order = await prisma.order.findUnique({
+      where: { id: parseInt(id, 10) },
+      include: { orderStatus: true, customer: true, installmentPlan: true }
+    });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Ordre ikke fundet' });
+    }
+
+    let details = order.installmentDetails;
+    if (typeof details === 'string') {
+      try { details = JSON.parse(details); } catch (e) { details = {}; }
+    }
+
+    if (!details || !Array.isArray(details.installments) || !details.installments[idx]) {
+      return res.status(404).json({ 
+        success: false, 
+        message: `Rate på indeks ${idx} blev ikke fundet på denne ordre.` 
+      });
+    }
+
+    const targetInstallment = details.installments[idx];
+
+    // Must be paid to resend payment success email
+    const isPaid = String(targetInstallment.status || '').toLowerCase() === 'paid' || idx === 0;
+    if (!isPaid) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Kan ikke gensende betalingskvittering for en rate, der endnu ikke er betalt.' 
+      });
+    }
+
+    // Determine target email
+    const targetEmail = (recipientEmail || order.customerEmail || order.customer?.email || '').trim();
+    if (!targetEmail || !targetEmail.includes('@')) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Indtast venligst en gyldig modtager e-mailadresse.' 
+      });
+    }
+
+    const { sendInstallmentConfirmationEmail } = require('./sendEmail.controller');
+
+    await sendInstallmentConfirmationEmail({
+      order,
+      installment: targetInstallment,
+      installmentIndex: idx,
+      details,
+      overrideRecipientEmail: targetEmail
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Kvittering for ${targetInstallment.label || `Rate ${idx + 1}`} er succesfuldt sendt til ${targetEmail}`,
+      recipient: targetEmail,
+      installmentLabel: targetInstallment.label || `Rate ${idx + 1}`,
+      amount: targetInstallment.amount
+    });
+  } catch (error) {
+    console.error('Error in resendInstallmentEmail:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message || 'Fejl under afsendelse af ratekvittering' 
+    });
+  }
+};
+
 module.exports = {
   getOrders,
   getOrderById,
@@ -790,5 +871,6 @@ module.exports = {
   updateOrder,
   deleteOrder,
   resendOrderEmails,
+  resendInstallmentEmail,
   processSingleOrderStatusUpdate,
 };
