@@ -3617,6 +3617,11 @@ const sendInstallmentConfirmationEmail = async ({ order, installment, installmen
       ? `${custDetails.firstName} ${custDetails.lastName || ''}`.trim()
       : 'Kunde';
 
+    const formatDkkAmount = (val) => {
+      const num = parseFloat(val) || 0;
+      return num % 1 === 0 ? num.toString() : num.toFixed(2);
+    };
+
     const installments = (details && Array.isArray(details.installments)) ? details.installments : [];
     let totalPaid = 0;
     installments.forEach(inst => {
@@ -3636,7 +3641,7 @@ const sendInstallmentConfirmationEmail = async ({ order, installment, installmen
 
       const paidDateStr = inst.paidAt
         ? `<div style="font-size: 11px; color: #6b7280;">Betalt: ${new Date(inst.paidAt).toLocaleDateString('da-DK')}</div>`
-        : (inst.dueDate ? `<div style="font-size: 11px; color: #9ca3af;">Forfald: ${new Date(inst.dueDate).toLocaleDateString('da-DK')}</div>` : '');
+        : '';
 
       return `
         <tr style="border-bottom: 1px solid #e5e7eb;">
@@ -3645,7 +3650,7 @@ const sendInstallmentConfirmationEmail = async ({ order, installment, installmen
             ${paidDateStr}
           </td>
           <td style="padding: 10px 12px; font-size: 14px; text-align: right; color: #111827; font-weight: bold;">
-            ${inst.amount} DKK
+            ${formatDkkAmount(inst.amount)} DKK
           </td>
           <td style="padding: 10px 12px; text-align: right;">
             ${statusBadge}
@@ -3653,6 +3658,9 @@ const sendInstallmentConfirmationEmail = async ({ order, installment, installmen
         </tr>
       `;
     }).join('');
+
+    const paidDateForCard = installment.paidAt ? new Date(installment.paidAt) : new Date();
+    const formattedPaidDate = paidDateForCard.toLocaleDateString('da-DK');
 
     const html = `
 <!DOCTYPE html>
@@ -3707,9 +3715,9 @@ const sendInstallmentConfirmationEmail = async ({ order, installment, installmen
                 <tr>
                   <td>
                     <div style="font-size:12px; color:#166534; text-transform:uppercase; font-weight:bold; letter-spacing:0.5px;">✓ Betaling gennemført</div>
-                    <div style="font-size:24px; font-weight:bold; color:#15803d; margin:6px 0 2px 0;">${installment.amount} DKK</div>
+                    <div style="font-size:24px; font-weight:bold; color:#15803d; margin:6px 0 2px 0;">${formatDkkAmount(installment.amount)} DKK</div>
                     <div style="font-size:15px; color:#166534; font-weight:bold;">${installment.label || 'Rate'}</div>
-                    <div style="font-size:13px; color:#15803d; margin-top:4px;">Dato: ${new Date().toLocaleDateString('da-DK')}</div>
+                    <div style="font-size:13px; color:#15803d; margin-top:4px;">Dato: ${formattedPaidDate}</div>
                   </td>
                 </tr>
               </table>
@@ -3755,9 +3763,9 @@ const sendInstallmentConfirmationEmail = async ({ order, installment, installmen
               <table width="100%" border="0" cellpadding="0" cellspacing="0" style="background-color:#f2f3f2; padding:20px; border-radius:6px; margin-bottom:25px;">
                 <tr>
                   <td>
-                    <div style="font-size:15px; font-weight:bold; color:#111827; margin-bottom:6px;">Samlet ordre: ${totalPrice} DKK</div>
-                    <div style="font-size:14px; color:#166534; font-weight:bold; margin-bottom:4px;">✓ Samlet betalt: ${totalPaid} DKK</div>
-                    <div style="font-size:14px; color:#b45309; font-weight:bold;">Resterende beløb: ${remainingAmount.toFixed(2)} DKK</div>
+                    <div style="font-size:15px; font-weight:bold; color:#111827; margin-bottom:6px;">Samlet ordre: ${formatDkkAmount(totalPrice)} DKK</div>
+                    <div style="font-size:14px; color:#166534; font-weight:bold; margin-bottom:4px;">✓ Samlet betalt: ${formatDkkAmount(totalPaid)} DKK</div>
+                    <div style="font-size:14px; color:#b45309; font-weight:bold;">Resterende beløb: ${formatDkkAmount(remainingAmount)} DKK</div>
                   </td>
                 </tr>
               </table>
