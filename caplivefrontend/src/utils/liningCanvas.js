@@ -10,7 +10,7 @@ export const LINING_OVAL_RY = LINING_CH / 2 - 14;
 export const EXPORT_SIZE = 850;
 export const EXPORT_CX = EXPORT_SIZE / 2;
 export const EXPORT_CY = EXPORT_SIZE / 2;
-export const EXPORT_CIRCLE_R = Math.round(EXPORT_SIZE * 0.55);
+export const EXPORT_CIRCLE_R = Math.round(EXPORT_SIZE * 0.5);
 
 export const PREVIEW_CIRCLE_R = (EXPORT_CIRCLE_R / EXPORT_SIZE) * LINING_CW;
 
@@ -20,9 +20,12 @@ export const clipLiningOval = (ctx, cx, cy, rx, ry) => {
     ctx.clip();
 };
 
+/** Cap lining is oval: width = height * LINING_WIDTH_RATIO (lower = narrower) */
+export const LINING_WIDTH_RATIO = 0.86;
+
 export const clipLiningCircle = (ctx, cx, cy, r) => {
     ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy, r * LINING_WIDTH_RATIO, r, 0, 0, Math.PI * 2);
     ctx.clip();
 };
 
@@ -40,7 +43,7 @@ export const strokeLiningOval = (ctx, cx, cy, rx, ry, style = {}) => {
 export const getFitScale = (img, circleR, padding = 0.88) => {
     const iw = img.naturalWidth || img.width || 1;
     const ih = img.naturalHeight || img.height || 1;
-    const maxW = circleR * 2 * padding;
+    const maxW = circleR * 2 * padding * LINING_WIDTH_RATIO;
     const maxH = circleR * 2 * padding;
     return Math.min(maxW / iw, maxH / ih);
 };
