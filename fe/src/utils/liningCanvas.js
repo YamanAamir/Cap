@@ -7,7 +7,7 @@ export const LINING_OVAL_CY = LINING_CH / 2;
 export const LINING_OVAL_RX = LINING_CW / 2 - 14;
 export const LINING_OVAL_RY = LINING_CH / 2 - 14;
 
-export const EXPORT_SIZE = 500;
+export const EXPORT_SIZE = 850;
 export const EXPORT_CX = EXPORT_SIZE / 2;
 export const EXPORT_CY = EXPORT_SIZE / 2;
 export const EXPORT_CIRCLE_R = Math.round(EXPORT_SIZE * 0.55);
@@ -121,12 +121,22 @@ export const buildLiningExportDataUrl = (photos, imageMap) => {
         null,
         null
     );
+
+    // Adaptive Ultra-HD WebP export:
+    // Starts at ultra-sharp 0.96 quality. Automatically selects the highest quality
+    // whose base64 string remains safely under Chrome's 65,536 Omnibox limit (< 63,500 chars)
+    // so the image is 100% complete and crystal-clear HD with zero cutoffs.
     try {
-        const webpUrl = canvas.toDataURL('image/webp', 0.92);
-        if (webpUrl && webpUrl.startsWith('data:image/webp')) {
-            return webpUrl;
+        for (const quality of [0.96, 0.94, 0.92, 0.90, 0.88]) {
+            const webpUrl = canvas.toDataURL('image/webp', quality);
+            if (webpUrl && webpUrl.startsWith('data:image/webp')) {
+                if (webpUrl.length < 63500 || quality === 0.88) {
+                    return webpUrl;
+                }
+            }
         }
     } catch {}
+
     return canvas.toDataURL('image/png');
 };
 

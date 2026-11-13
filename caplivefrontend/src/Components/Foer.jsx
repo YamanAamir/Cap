@@ -460,7 +460,7 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, vi
         []
     );
 
-    const processUploadedImage = (file, maxDim = 1200) => {
+    const processUploadedImage = (file, maxDim = 2600) => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -492,7 +492,7 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, vi
 
                         const isPng = file.type === 'image/png' || (typeof rawUrl === 'string' && rawUrl.startsWith('data:image/png'));
                         const mime = isPng ? 'image/png' : 'image/jpeg';
-                        const quality = isPng ? undefined : 0.92;
+                        const quality = isPng ? undefined : 0.98;
                         const optimizedUrl = canvas.toDataURL(mime, quality);
 
                         const optimizedImg = new Image();
