@@ -7,10 +7,10 @@ export const LINING_OVAL_CY = LINING_CH / 2;
 export const LINING_OVAL_RX = LINING_CW / 2 - 14;
 export const LINING_OVAL_RY = LINING_CH / 2 - 14;
 
-export const EXPORT_SIZE = 1000;
+export const EXPORT_SIZE = 500;
 export const EXPORT_CX = EXPORT_SIZE / 2;
 export const EXPORT_CY = EXPORT_SIZE / 2;
-export const EXPORT_CIRCLE_R = 550;
+export const EXPORT_CIRCLE_R = Math.round(EXPORT_SIZE * 0.55);
 
 export const PREVIEW_CIRCLE_R = (EXPORT_CIRCLE_R / EXPORT_SIZE) * LINING_CW;
 
@@ -38,17 +38,21 @@ export const strokeLiningOval = (ctx, cx, cy, rx, ry, style = {}) => {
 
 /** Fit image inside circle; returns multiplier where 1.0 = perfect fit */
 export const getFitScale = (img, circleR, padding = 0.88) => {
+    const iw = img.naturalWidth || img.width || 1;
+    const ih = img.naturalHeight || img.height || 1;
     const maxW = circleR * 2 * padding;
     const maxH = circleR * 2 * padding;
-    return Math.min(maxW / img.width, maxH / img.height);
+    return Math.min(maxW / iw, maxH / ih);
 };
 
 export const getPhotoDrawSize = (img, photo, circleR) => {
     const fit = getFitScale(img, circleR);
     const userScale = photo.scale ?? 1;
+    const iw = img.naturalWidth || img.width || 1;
+    const ih = img.naturalHeight || img.height || 1;
     return {
-        w: img.width * fit * userScale,
-        h: img.height * fit * userScale,
+        w: iw * fit * userScale,
+        h: ih * fit * userScale,
     };
 };
 
@@ -78,6 +82,9 @@ export const drawLiningPhotos = (
 
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, width, height);
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
     photos.forEach((photo) => {
         const img = imageMap[photo.id];
@@ -114,7 +121,13 @@ export const buildLiningExportDataUrl = (photos, imageMap) => {
         null,
         null
     );
-    return canvas.toDataURL('image/png', 0.92);
+    try {
+        const webpUrl = canvas.toDataURL('image/webp', 0.92);
+        if (webpUrl && webpUrl.startsWith('data:image/webp')) {
+            return webpUrl;
+        }
+    } catch {}
+    return canvas.toDataURL('image/png');
 };
 
 /** @deprecated use getFitScale — kept for uploads default scale = 1 */

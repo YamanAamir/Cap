@@ -460,31 +460,88 @@ const Foer = ({ selectedOptions = {}, onOptionChange, currentEmblem, program, vi
         []
     );
 
-    const handlePhotoUpload = (e) => {
-        const files = Array.from(e.target.files);
-        if (files.length > 0) {
-            files.forEach(file => {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const newPhoto = {
-                            id: Date.now() + Math.random(),
-                            url: event.target.result,
-                            x: 0.5,
-                            y: 0.5,
-                            scale: 1,
-                            rotation: 0,
-                            width: img.width,
-                            height: img.height
+    const processUploadedImage = (file, maxDim = 1200) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const rawUrl = e.target.result;
+                const img = new Image();
+                img.onload = async () => {
+                    try {
+                        if (img.decode) {
+                            await img.decode().catch(() => {});
+                        }
+                        const nw = img.naturalWidth || img.width || 1;
+                        const nh = img.naturalHeight || img.height || 1;
+
+                        if (nw <= maxDim && nh <= maxDim) {
+                            return resolve({ url: rawUrl, width: nw, height: nh, img });
+                        }
+
+                        const scale = Math.min(maxDim / nw, maxDim / nh);
+                        const tw = Math.max(1, Math.round(nw * scale));
+                        const th = Math.max(1, Math.round(nh * scale));
+
+                        const canvas = document.createElement('canvas');
+                        canvas.width = tw;
+                        canvas.height = th;
+                        const ctx = canvas.getContext('2d');
+                        ctx.imageSmoothingEnabled = true;
+                        ctx.imageSmoothingQuality = 'high';
+                        ctx.drawImage(img, 0, 0, tw, th);
+
+                        const isPng = file.type === 'image/png' || (typeof rawUrl === 'string' && rawUrl.startsWith('data:image/png'));
+                        const mime = isPng ? 'image/png' : 'image/jpeg';
+                        const quality = isPng ? undefined : 0.92;
+                        const optimizedUrl = canvas.toDataURL(mime, quality);
+
+                        const optimizedImg = new Image();
+                        optimizedImg.onload = () => {
+                            resolve({ url: optimizedUrl, width: tw, height: th, img: optimizedImg });
                         };
-                        setLiningPhotos(prev => [...prev, newPhoto]);
-                        setSelectedPhotoId(newPhoto.id);
-                    };
-                    img.src = event.target.result;
+                        optimizedImg.onerror = () => {
+                            resolve({ url: optimizedUrl, width: tw, height: th, img });
+                        };
+                        optimizedImg.src = optimizedUrl;
+                    } catch {
+                        resolve({ url: rawUrl, width: img.naturalWidth || img.width || 1, height: img.naturalHeight || img.height || 1, img });
+                    }
                 };
-                reader.readAsDataURL(file);
-            });
+                img.onerror = () => reject(new Error('Failed to load image'));
+                img.src = rawUrl;
+            };
+            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.readAsDataURL(file);
+        });
+    };
+
+    const handlePhotoUpload = async (e) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        // Reset input value so re-uploading the same file works
+        e.target.value = '';
+
+        for (const file of files) {
+            try {
+                const { url, width, height, img } = await processUploadedImage(file, 1200);
+                const photoId = Date.now() + Math.random();
+                const newPhoto = {
+                    id: photoId,
+                    url,
+                    x: 0.5,
+                    y: 0.5,
+                    scale: 1,
+                    rotation: 0,
+                    width,
+                    height
+                };
+                setImageObjects((prev) => ({ ...prev, [photoId]: img }));
+                setLiningPhotos((prev) => [...prev, newPhoto]);
+                setSelectedPhotoId(photoId);
+            } catch (err) {
+                console.error('Error processing lining photo upload:', err);
+            }
         }
     };
 
