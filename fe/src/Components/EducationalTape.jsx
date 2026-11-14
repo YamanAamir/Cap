@@ -1,12 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-    generateAllEmbroideryMaps,
-    preloadAlphabetMaps,
-    sanitizeEmbroideryLetters,
-    sendEmbroideryMapsToIframes,
-    isArabicText,
-    sendArabicTextToIframes,
-} from '../utils/embroideryAlphabet';
+import { sanitizeEmbroideryLetters } from '../utils/embroideryAlphabet';
+import { updateEmbroidery } from '../utils/embroideryBridge';
 import { translateTextToArabic } from '../utils/arabicTranslator';
 import coverColorOptionsimg2 from '../assets/cover images/none.webp';
 import matteleather from '../assets/button images/matteleather.webp';
@@ -119,6 +113,15 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
     const [isConvertingArabic, setIsConvertingArabic] = useState(false);
     const lastAppliedFrontTextRef = useRef(selectedOptions['Broderi foran'] || '');
 
+    const sendMessageToIframes = (msg) => {
+        ['preview-iframe', 'preview-iframe2'].forEach((id) => {
+            const iframe = document.getElementById(id);
+            if (iframe?.contentWindow) {
+                iframe.contentWindow.postMessage(msg, "*");
+            }
+        });
+    };
+
     const handleApplyEmbroideryText = async () => {
         if (isApplyingText) return;
         const upperText = sanitizeEmbroideryLetters(inputEmbroideryText, 20);
@@ -132,13 +135,11 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
             lastAppliedFrontTextRef.current = upperText;
             setEmbroideryText(upperText);
             onOptionChange('Broderi foran', upperText);
-            if (isArabicText(upperText)) {
-                sendArabicTextToIframes(upperText);
-            } else {
-                sendArabicTextToIframes('clear');
-                const result = await generateAllEmbroideryMaps(upperText);
-                sendEmbroideryMapsToIframes('front', result);
-            }
+            updateEmbroidery('front', {
+                name: upperText,
+                colorName: selectedEmbroideryColor,
+                hex: getTextColorHex(),
+            });
             sendMessageToIframes("broderifarve camera");
         } catch (err) {
             console.error('Error applying front embroidery:', err);
@@ -154,20 +155,11 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
         setIsApplyingText(true);
         await new Promise(r => setTimeout(r, 10));
         try {
-            const wasArabic = isArabicText(embroideryText) || isArabicText(inputEmbroideryText);
             setInputEmbroideryText('');
             setEmbroideryText('');
             onOptionChange('Broderi foran', '');
-            if (lastAppliedFrontTextRef.current) {
-                lastAppliedFrontTextRef.current = '';
-                if (wasArabic) {
-                    sendArabicTextToIframes('clear');
-                } else {
-                    const result = await generateAllEmbroideryMaps('');
-                    sendEmbroideryMapsToIframes('front', result);
-                    sendArabicTextToIframes('clear');
-                }
-            }
+            lastAppliedFrontTextRef.current = '';
+            updateEmbroidery('front', { name: '' });
         } catch (err) {
             console.error('Error clearing front embroidery:', err);
         } finally {
@@ -198,8 +190,16 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
         }
     };
 
+    // Seed the PlayCanvas bridge with the restored text (tab switch / remount)
     useEffect(() => {
-        preloadAlphabetMaps();
+        const initial = (selectedOptions['Broderi foran'] || '').trim();
+        if (initial) {
+            updateEmbroidery('front', {
+                name: initial,
+                colorName: selectedEmbroideryColor,
+                hex: getTextColorHex(),
+            });
+        }
     }, []);
 
 
@@ -336,31 +336,11 @@ const EducationalTape = ({ selectedOptions = {}, onOptionChange, program, pakke,
         onOptionChange('Broderi farve', selectedEmbroideryColor)
     }, [selectedEmbroideryColor])
     useEffect(() => {
-        const colorMap = {
-            'hhx': 'broderiForanfarve:HHX',
-            'htx': 'broderiForanfarve:HTX',
-            'stx': 'broderiForanfarve:STX',
-            'hf': 'broderiForanfarve:HF',
-            'eux': 'broderiForanfarve:EUX',
-            'eud': 'broderiForanfarve:EUD',
-            'hvid': 'broderiForanfarve:Hvid',
-            'sort': 'broderiForanfarve:Sort',
-            'guld': 'broderiForanfarve:Guld',
-            'sølv': 'broderiForanfarve:Sølv'
-        };
         if (!selectedHatbandColor) return;
-        // lowercase safety
-        const message = colorMap[selectedEmbroideryColor.toLowerCase()];
-        if (!message) return;
-        const sendMessageToIframes = (msg) => {
-            ['preview-iframe', 'preview-iframe2'].forEach((id) => {
-                const iframe = document.getElementById(id);
-                if (iframe?.contentWindow) {
-                    iframe.contentWindow.postMessage(msg, "*");
-                }
-            });
-        };
-        sendMessageToIframes(message);
+        updateEmbroidery('front', {
+            colorName: selectedEmbroideryColor,
+            hex: getTextColorHex(),
+        });
         if (cameraTriggers.current['broderifarve']) { sendMessageToIframes("broderifarve camera") } else { cameraTriggers.current['broderifarve'] = true }
     }, [selectedEmbroideryColor])
     useEffect(() => {
